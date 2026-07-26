@@ -50,6 +50,8 @@ class Layer:
         dataset_id: The dataset the layer came from (e.g. ``"nhdplus_hr"``).
         huc4: The HUC4 region code the layer covers.
         geometries: The layer's shapely geometries.
+        crs: The layer's coordinate reference system (e.g. ``"EPSG:4269"``),
+            or ``None`` if unknown.
         attributes: Optional per-geometry attribute dicts, parallel to
             ``geometries``.
     """
@@ -58,6 +60,7 @@ class Layer:
     dataset_id: str
     huc4: str
     geometries: tuple[Any, ...] = ()
+    crs: str | None = None
     attributes: tuple[dict, ...] | None = None
 
 
@@ -123,6 +126,7 @@ class PyogrioLayerLoader:
                     dataset_id=dataset_id,
                     huc4=huc4,
                     geometries=tuple(frame.geometry.values),
+                    crs=str(frame.crs) if frame.crs is not None else None,
                 )
             )
         return layers

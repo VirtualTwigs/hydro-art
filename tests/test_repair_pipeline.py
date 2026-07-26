@@ -40,7 +40,7 @@ class DirtyLayerLoader:
             Polygon([(0, 0), (1, 1), (1, 0), (0, 1), (0, 0)]),  # invalid bowtie
             MultiLineString([[(3, 3), (4, 4)]]),                # singleton multipart
         )
-        return [Layer("NHDFlowline", dataset_id, huc4, geoms)]
+        return [Layer("NHDFlowline", dataset_id, huc4, geoms, crs="EPSG:4326")]
 
 
 def _pipeline(tmp_path):

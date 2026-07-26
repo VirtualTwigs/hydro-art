@@ -18,9 +18,11 @@ from rich.console import Console
 from src.cache import Cache, DownloaderLike, ensure_cached, extract_all
 from src.config import Settings
 from src.datasets import resolve_required_files
+from src.clipping import clip_layers, region_boundary
 from src.download import Downloader, UrllibFetcher
 from src.geometry import RepairStats, repair_layer
 from src.loading import LayerLoader, PyogrioLayerLoader
+from src.projection import reproject_layer
 
 __all__ = ["Stage", "RunContext", "PIPELINE_STAGES", "Pipeline"]
 
@@ -120,11 +122,37 @@ def _repair_stage(ctx: RunContext) -> None:
     )
 
 
+def _reproject_stage(ctx: RunContext) -> None:
+    """Normalize every repaired layer to the configured internal projection."""
+    target = ctx.settings.projection
+    layers = ctx.artifacts["repaired_layers"]
+    projected = [reproject_layer(layer, target) for layer in layers]
+    ctx.artifacts["projected_layers"] = projected
+    ctx.log(f"[bold]reproject[/bold] normalized {len(projected)} layer(s) to {target}")
+
+
+def _clip_stage(ctx: RunContext) -> None:
+    """Clip the projected hydrography to the region boundary (WBD polygons)."""
+    layers = ctx.artifacts["projected_layers"]
+    boundary = region_boundary(layers)
+    clipped, stats = clip_layers(layers, boundary)
+    ctx.artifacts["region_boundary"] = boundary
+    ctx.artifacts["clipped_layers"] = clipped
+    ctx.artifacts["clip_stats"] = stats
+    ctx.log(
+        f"[bold]clip_to_region[/bold] {stats.total_in}->{stats.total_out} "
+        f"(dropped {stats.dropped_outside} outside, "
+        f"trimmed {stats.clipped_partial})"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
     "validate": _validate_stage,
     "repair_geometries": _repair_stage,
+    "reproject": _reproject_stage,
+    "clip_to_region": _clip_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;
