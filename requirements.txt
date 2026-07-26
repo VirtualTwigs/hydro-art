@@ -1,0 +1,8 @@
+# Runtime dependencies for the config & CLI foundation.
+# GIS/rendering dependencies (geopandas, shapely, gdal, networkx, svgwrite,
+# etc.) are added by later roadmap items as those stages are implemented.
+pyyaml>=6.0
+rich>=13.0
+
+# Development / testing
+pytest>=8.0

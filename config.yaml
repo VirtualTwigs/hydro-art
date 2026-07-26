@@ -1,0 +1,17 @@
+# Hydrographic Vector Art Generator — example configuration.
+# All keys are optional; omitted keys fall back to built-in defaults.
+# CLI flags override any value set here.
+
+region:
+  - Oregon
+  - Washington
+projection: EPSG:5070
+stream_order: all
+background: "#000000"
+line_width: 0.35
+palette: neon
+glow: false
+output:
+  svg: true
+  png: false
+  pdf: false
