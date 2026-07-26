@@ -21,6 +21,7 @@ from src.datasets import resolve_required_files
 from src.clipping import clip_layers, region_boundary
 from src.download import Downloader, UrllibFetcher
 from src.geometry import RepairStats, repair_layer
+from src.graph import build_graph
 from src.loading import LayerLoader, PyogrioLayerLoader
 from src.projection import reproject_layer
 
@@ -146,6 +147,20 @@ def _clip_stage(ctx: RunContext) -> None:
     )
 
 
+def _build_graph_stage(ctx: RunContext) -> None:
+    """Construct the directed river network from the clipped flowlines."""
+    layers = ctx.artifacts["clipped_layers"]
+    hydro_graph = build_graph(layers)
+    stats = hydro_graph.statistics()
+    ctx.artifacts["hydro_graph"] = hydro_graph
+    ctx.artifacts["network_stats"] = stats
+    ctx.log(
+        f"[bold]build_graph[/bold] {stats.num_nodes} nodes, {stats.num_edges} "
+        f"segments ({stats.num_sources} sources, {stats.num_outlets} outlets, "
+        f"{stats.total_length:.1f} total length)"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
@@ -153,6 +168,7 @@ _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "repair_geometries": _repair_stage,
     "reproject": _reproject_stage,
     "clip_to_region": _clip_stage,
+    "build_graph": _build_graph_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;

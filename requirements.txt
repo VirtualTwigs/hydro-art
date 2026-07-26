@@ -10,5 +10,8 @@ geopandas>=1.0
 pyogrio>=0.10
 numpy>=2.0
 
+# River-network graph (roadmap item #5)
+networkx>=3.0
+
 # Development / testing
 pytest>=8.0
