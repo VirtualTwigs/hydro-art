@@ -26,6 +26,7 @@ from src.graph import build_graph
 from src.loading import LayerLoader, PyogrioLayerLoader
 from src.ordering import assign_stream_order
 from src.projection import reproject_layer
+from src.rendering import render_svg
 from src.watersheds import group_segments_by_huc, watershed_stats
 
 __all__ = ["Stage", "RunContext", "PIPELINE_STAGES", "Pipeline"]
@@ -208,6 +209,34 @@ def _assign_colors_stage(ctx: RunContext) -> None:
     )
 
 
+def _generate_svg_stage(ctx: RunContext) -> None:
+    """Render the colored network into a layered SVG document (in memory)."""
+    hydro_graph = ctx.artifacts["hydro_graph"]
+    segment_colors = ctx.artifacts["segment_colors"]
+    watersheds = ctx.artifacts["watersheds"]
+
+    geometries = {
+        data["segment_id"]: data["geometry"]
+        for _, _, data in hydro_graph.digraph.edges(data=True)
+    }
+    svg = render_svg(
+        geometries,
+        segment_colors,
+        watersheds,
+        background=ctx.settings.background,
+        line_width=ctx.settings.line_width,
+    )
+    ctx.artifacts["svg"] = svg
+
+    groups = sum(
+        1 for code, ids in watersheds.items() if any(sid in geometries for sid in ids)
+    )
+    ctx.log(
+        f"[bold]generate_svg[/bold] rendered {len(geometries)} path(s) in "
+        f"{groups} watershed layer(s); {len(svg)} bytes"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
@@ -218,6 +247,7 @@ _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "build_graph": _build_graph_stage,
     "compute_watersheds": _compute_watersheds_stage,
     "assign_colors": _assign_colors_stage,
+    "generate_svg": _generate_svg_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;

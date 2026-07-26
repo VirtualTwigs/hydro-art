@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-26, after roadmap item #7._
+_Last updated: 2026-07-26, after roadmap item #8._
 
 ## Project
 Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS→SVG
@@ -19,8 +19,8 @@ User drives with two commands:
    commit without this.
 
 ## Status
-Items 1–7 implemented. 1–6 committed; **item #7 committed?** check `git log`.
-Full suite: 106 tests passing (as of item #7).
+Items 1–8 implemented. 1–7 committed; **item #8 committed?** check `git log`.
+Full suite: 120 tests passing (as of item #8).
 
 | # | Item | State |
 |---|------|-------|
@@ -30,9 +30,10 @@ Full suite: 106 tests passing (as of item #7).
 | 4 | Projection & region clipping | committed (094ce41) |
 | 5 | Hydrography graph construction | committed (fde1950) |
 | 6 | Stream ordering & watershed grouping | committed (70d96c6) |
-| 7 | Deterministic basin coloring | implemented; commit pending unless done |
-| 8 | Layered SVG rendering | NEXT |
-| 9–10 | glow+optimize / export | not started |
+| 7 | Deterministic basin coloring | committed (31f93ca) |
+| 8 | Layered SVG rendering | implemented; commit pending unless done |
+| 9 | Optional glow & SVG optimization | NEXT |
+| 10 | Multi-format export & reproducibility | not started |
 
 ## Key conventions
 - Run tests: `.venv/bin/python -m pytest -q`
@@ -45,13 +46,16 @@ Full suite: 106 tests passing (as of item #7).
   hand-built shapely/graph inputs — no GDAL, no real data.
 - Module errors subclass `AcquisitionError` (`src/datasets.py`).
 
-## Item #8 (layered SVG rendering) starting points
-- Consume artifacts item #7 produced: `segment_colors` (segment_id→hex),
-  `watershed_colors` (HUC code→hex), plus `watersheds` (HUC code→segment ids)
-  for grouping `<g>` layers, and each edge's `geometry`/`length` in `hydro_graph`.
-- Goal: render each river as a round-capped/round-joined vector path colored by
-  `segment_colors`, grouped per watershed, on `settings.background`, base stroke
-  `settings.line_width`; optional width scaling off `stream_orders`/`max_stream_order`.
-- Fits the `generate_svg` pipeline stage (currently a stub in `_STAGE_FUNCS`).
-- See `agent-os/specs/2026-07-26-deterministic-basin-coloring/implementation/report.md`
-  ("Notes for next feature") for the input seams.
+## Item #9 (optional glow & SVG optimization) starting points
+- Input seam: `artifacts["svg"]` (the SVG document string from item #8's
+  `generate_svg` stage). `render_svg` (`src/rendering.py`) emits a bare `<defs/>`
+  for glow filters to populate.
+- Glow: `settings.glow` bool already exists (Mode A pure-vector / Mode B SVG
+  Gaussian blur, PRD §20); add a configurable radius (no config field yet).
+- SVGO optimization (PRD §21) is a Node subprocess — keep it behind an
+  injectable seam (mirror the Downloader/LayerLoader pattern) so tests stay
+  offline. Fits the `optimize_svg` stage (still a stub in `_STAGE_FUNCS`).
+- SVG chosen over `svgwrite`: hand-rolled stdlib serializer for determinism +
+  offline tests (see item #8 report). `export` (item #10) writes files to disk.
+- See `agent-os/specs/2026-07-26-layered-svg-rendering/implementation/report.md`
+  ("Notes for next feature") for details.
