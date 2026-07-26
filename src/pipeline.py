@@ -24,6 +24,7 @@ from src.download import Downloader, UrllibFetcher
 from src.geometry import RepairStats, repair_layer
 from src.graph import build_graph
 from src.loading import LayerLoader, PyogrioLayerLoader
+from src.optimize import SvgOptimizer, SvgoOptimizer
 from src.ordering import assign_stream_order
 from src.projection import reproject_layer
 from src.rendering import render_svg
@@ -43,6 +44,7 @@ class RunContext:
         datasets_dir: Directory for extracted GIS data.
         downloader: Injected downloader used by the acquisition stage.
         loader: Injected layer loader used by the validate stage.
+        optimizer: Injected SVG optimizer used by the optimize_svg stage.
         artifacts: Mutable bag of results passed between stages.
     """
 
@@ -52,6 +54,7 @@ class RunContext:
     datasets_dir: Path
     downloader: DownloaderLike
     loader: LayerLoader
+    optimizer: SvgOptimizer
     artifacts: dict[str, Any] = field(default_factory=dict)
 
     def log(self, message: str) -> None:
@@ -225,6 +228,9 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         watersheds,
         background=ctx.settings.background,
         line_width=ctx.settings.line_width,
+        glow=ctx.settings.glow,
+        glow_mode=ctx.settings.glow_mode,
+        glow_radius=ctx.settings.glow_radius,
     )
     ctx.artifacts["svg"] = svg
 
@@ -234,6 +240,16 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     ctx.log(
         f"[bold]generate_svg[/bold] rendered {len(geometries)} path(s) in "
         f"{groups} watershed layer(s); {len(svg)} bytes"
+    )
+
+
+def _optimize_svg_stage(ctx: RunContext) -> None:
+    """Run the generated SVG through the injected optimizer (SVGO)."""
+    svg = ctx.artifacts["svg"]
+    optimized = ctx.optimizer.optimize(svg)
+    ctx.artifacts["optimized_svg"] = optimized
+    ctx.log(
+        f"[bold]optimize_svg[/bold] {len(svg)} -> {len(optimized)} bytes"
     )
 
 
@@ -248,6 +264,7 @@ _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "compute_watersheds": _compute_watersheds_stage,
     "assign_colors": _assign_colors_stage,
     "generate_svg": _generate_svg_stage,
+    "optimize_svg": _optimize_svg_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;
@@ -282,6 +299,7 @@ class Pipeline:
         datasets_dir: str | Path = "datasets",
         downloader: DownloaderLike | None = None,
         loader: LayerLoader | None = None,
+        optimizer: SvgOptimizer | None = None,
     ) -> None:
         self._stages = stages
         self._console = console or Console()
@@ -289,6 +307,7 @@ class Pipeline:
         self._datasets_dir = Path(datasets_dir)
         self._downloader = downloader
         self._loader = loader
+        self._optimizer = optimizer
 
     @property
     def stage_names(self) -> tuple[str, ...]:
@@ -304,6 +323,7 @@ class Pipeline:
             datasets_dir=self._datasets_dir,
             downloader=self._downloader or Downloader(UrllibFetcher()),
             loader=self._loader or PyogrioLayerLoader(),
+            optimizer=self._optimizer or SvgoOptimizer(),
         )
         for stage in self._stages:
             stage.run(context)

@@ -39,6 +39,8 @@ def _render_settings(settings: Settings, console: Console) -> None:
     table.add_row("line_width", str(settings.line_width))
     table.add_row("palette", settings.palette)
     table.add_row("glow", str(settings.glow))
+    table.add_row("glow_mode", settings.glow_mode)
+    table.add_row("glow_radius", str(settings.glow_radius))
     table.add_row("outputs", ", ".join(sorted(settings.outputs)))
     console.print(table)
 

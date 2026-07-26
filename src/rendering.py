@@ -38,6 +38,12 @@ _WIDTH_PRECISION = 3
 #: Color used for a segment that has no assigned watershed color.
 DEFAULT_FALLBACK_COLOR = "#ffffff"
 
+#: ``id`` of the Gaussian-blur glow filter injected into ``<defs>`` (blur mode).
+GLOW_FILTER_ID = "hydro-glow"
+
+#: Stroke opacity of a pure-vector glow halo (vector mode).
+_HALO_OPACITY = 0.4
+
 
 def _iter_line_parts(geom: Any) -> Iterator[Any]:
     """Yield the LineString parts of a (possibly multi) line geometry."""
@@ -145,6 +151,81 @@ def _path_element(
     return "    <path " + " ".join(attrs) + "/>"
 
 
+def _glow_filter_lines(radius: float) -> list[str]:
+    """SVG ``<filter>`` lines for the Gaussian-blur glow (PRD section 20, Mode B)."""
+    std = format_number(radius, _WIDTH_PRECISION)
+    return [
+        f'    <filter id="{GLOW_FILTER_ID}" x="-20%" y="-20%" width="140%" height="140%">',
+        f'      <feGaussianBlur stdDeviation="{std}" result="blur"/>',
+        "      <feMerge>",
+        '        <feMergeNode in="blur"/>',
+        '        <feMergeNode in="SourceGraphic"/>',
+        "      </feMerge>",
+        "    </filter>",
+    ]
+
+
+def _group_lines(
+    group_id: str,
+    color: str | None,
+    segment_ids: list[int],
+    geometries: Mapping[int, Any],
+    segment_colors: Mapping[int, str],
+    fallback_color: str,
+    min_x: float,
+    max_y: float,
+    precision: int,
+    stroke_widths: Mapping[int, float] | None,
+    filter_ref: str | None,
+) -> list[str]:
+    """Serialize a river ``<g>`` layer. ``color=None`` → per-path stroke."""
+    attrs = [f'id="{group_id}"']
+    if color is not None:
+        attrs.append(f'stroke="{color}"')
+    if filter_ref is not None:
+        attrs.append(f'filter="{filter_ref}"')
+    lines = [f"  <g {' '.join(attrs)}>"]
+    for sid in segment_ids:
+        stroke = None if color is not None else segment_colors.get(sid, fallback_color)
+        lines.append(
+            _path_element(
+                sid, geometries[sid], min_x, max_y, precision, stroke, stroke_widths
+            )
+        )
+    lines.append("  </g>")
+    return lines
+
+
+def _halo_lines(
+    group_id: str,
+    color: str | None,
+    segment_ids: list[int],
+    geometries: Mapping[int, Any],
+    segment_colors: Mapping[int, str],
+    fallback_color: str,
+    min_x: float,
+    max_y: float,
+    precision: int,
+    halo_width: str,
+) -> list[str]:
+    """Serialize a wider, translucent halo ``<g>`` (PRD section 20, Mode A)."""
+    opacity = format_number(_HALO_OPACITY, 2)
+    attrs = [f'id="{group_id}_glow"']
+    if color is not None:
+        attrs.append(f'stroke="{color}"')
+    attrs.append(f'stroke-width="{halo_width}"')
+    attrs.append(f'stroke-opacity="{opacity}"')
+    lines = [f"  <g {' '.join(attrs)}>"]
+    for sid in segment_ids:
+        stroke = None if color is not None else segment_colors.get(sid, fallback_color)
+        path_attrs = [f'd="{path_d(geometries[sid], min_x, max_y, precision)}"']
+        if stroke is not None:
+            path_attrs.append(f'stroke="{stroke}"')
+        lines.append("    <path " + " ".join(path_attrs) + "/>")
+    lines.append("  </g>")
+    return lines
+
+
 def render_svg(
     geometries: Mapping[int, Any],
     segment_colors: Mapping[int, str],
@@ -155,6 +236,9 @@ def render_svg(
     precision: int = 3,
     stroke_widths: Mapping[int, float] | None = None,
     fallback_color: str = DEFAULT_FALLBACK_COLOR,
+    glow: bool = False,
+    glow_mode: str = "blur",
+    glow_radius: float = 2.0,
 ) -> str:
     """Render the colored river network as a single layered SVG document.
 
@@ -182,14 +266,23 @@ def render_svg(
         stroke_widths: Optional per-segment stroke widths (enables width
             scaling); omitted segments inherit ``line_width``.
         fallback_color: Stroke color for a segment lacking an assigned color.
+        glow: Whether to add the optional glow effect (PRD section 20).
+        glow_mode: ``"blur"`` (Gaussian-blur filter) or ``"vector"`` (halo).
+        glow_radius: Glow radius in SVG user units.
 
     Returns:
-        The SVG document as a string (trailing newline included).
+        The SVG document as a string (trailing newline included). With
+        ``glow=False`` the output is identical to the un-glowed render.
     """
     min_x, min_y, max_x, max_y = bounds(geometries.values())
     width = format_number(max_x - min_x, precision)
     height = format_number(max_y - min_y, precision)
     base_width = format_number(line_width, _WIDTH_PRECISION)
+
+    blur_glow = glow and glow_mode == "blur"
+    vector_glow = glow and glow_mode == "vector"
+    filter_ref = f"url(#{GLOW_FILTER_ID})" if blur_glow else None
+    halo_width = format_number(line_width + 2 * glow_radius, _WIDTH_PRECISION)
 
     lines: list[str] = ['<?xml version="1.0" encoding="UTF-8"?>']
     lines.append(
@@ -198,7 +291,12 @@ def render_svg(
         'fill="none" stroke-linecap="round" stroke-linejoin="round" '
         f'stroke-width="{base_width}">'
     )
-    lines.append("  <defs/>")
+    if blur_glow:
+        lines.append("  <defs>")
+        lines.extend(_glow_filter_lines(glow_radius))
+        lines.append("  </defs>")
+    else:
+        lines.append("  <defs/>")
     lines.append('  <g id="background">')
     lines.append(
         f'    <rect x="0" y="0" width="{width}" height="{height}" fill="{background}"/>'
@@ -207,31 +305,32 @@ def render_svg(
 
     grouped: set[int] = set().union(*watersheds.values()) if watersheds else set()
 
+    # Ordered river layers: watershed groups (sorted) then any unassigned.
+    river_groups: list[tuple[str, str | None, list[int]]] = []
     for code in sorted(watersheds):
         segment_ids = sorted(sid for sid in watersheds[code] if sid in geometries)
         if not segment_ids:
             continue
         color = segment_colors.get(segment_ids[0], fallback_color)
-        lines.append(f'  <g id="watershed_{code}" stroke="{color}">')
-        for sid in segment_ids:
-            lines.append(
-                _path_element(
-                    sid, geometries[sid], min_x, max_y, precision, None, stroke_widths
-                )
-            )
-        lines.append("  </g>")
-
+        river_groups.append((f"watershed_{code}", color, segment_ids))
     unassigned = sorted(sid for sid in geometries if sid not in grouped)
     if unassigned:
-        lines.append('  <g id="rivers_unassigned">')
-        for sid in unassigned:
-            color = segment_colors.get(sid, fallback_color)
-            lines.append(
-                _path_element(
-                    sid, geometries[sid], min_x, max_y, precision, color, stroke_widths
+        river_groups.append(("rivers_unassigned", None, unassigned))
+
+    for group_id, color, segment_ids in river_groups:
+        if vector_glow:
+            lines.extend(
+                _halo_lines(
+                    group_id, color, segment_ids, geometries, segment_colors,
+                    fallback_color, min_x, max_y, precision, halo_width,
                 )
             )
-        lines.append("  </g>")
+        lines.extend(
+            _group_lines(
+                group_id, color, segment_ids, geometries, segment_colors,
+                fallback_color, min_x, max_y, precision, stroke_widths, filter_ref,
+            )
+        )
 
     lines.append("</svg>")
     return "\n".join(lines) + "\n"

@@ -29,6 +29,7 @@ __all__ = [
     "SUPPORTED_STREAM_METHODS",
     "SUPPORTED_HUC_LEVELS",
     "SUPPORTED_PALETTES",
+    "SUPPORTED_GLOW_MODES",
     "load_yaml",
     "build_settings",
 ]
@@ -72,6 +73,10 @@ SUPPORTED_HUC_LEVELS: tuple[str, ...] = (
 #: in :mod:`src.coloring`; this allowlist gates the ``palette`` config value.
 SUPPORTED_PALETTES: tuple[str, ...] = ("neon",)
 
+#: Glow rendering modes (PRD section 20): ``vector`` (pure-vector halo) or
+#: ``blur`` (SVG Gaussian-blur filter). Only used when ``glow`` is enabled.
+SUPPORTED_GLOW_MODES: tuple[str, ...] = ("vector", "blur")
+
 _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 #: Built-in defaults, reflecting PRD sections 19 and 25.
@@ -85,6 +90,8 @@ DEFAULTS: dict[str, Any] = {
     "line_width": 0.35,
     "palette": "neon",
     "glow": False,
+    "glow_mode": "blur",
+    "glow_radius": 2.0,
     "output": {"svg": True, "png": False, "pdf": False},
 }
 
@@ -103,6 +110,8 @@ class Settings:
         line_width: Default stroke width in SVG user units; must be > 0.
         palette: Named color palette (e.g. ``"neon"``).
         glow: Whether the optional glow effect is enabled.
+        glow_mode: Glow style when enabled (``"vector"`` or ``"blur"``).
+        glow_radius: Glow radius in SVG user units; must be > 0.
         outputs: Set of output formats to produce (subset of
             :data:`SUPPORTED_OUTPUTS`).
     """
@@ -116,6 +125,8 @@ class Settings:
     line_width: float
     palette: str
     glow: bool
+    glow_mode: str
+    glow_radius: float
     outputs: frozenset[str]
 
 
@@ -230,6 +241,26 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         )
 
     glow = bool(values.get("glow", DEFAULTS["glow"]))
+
+    glow_mode = str(values.get("glow_mode", DEFAULTS["glow_mode"])).lower()
+    if glow_mode not in SUPPORTED_GLOW_MODES:
+        valid = ", ".join(SUPPORTED_GLOW_MODES)
+        raise ConfigError(
+            f"Unsupported glow_mode: {glow_mode!r}. Valid: {valid}."
+        )
+
+    try:
+        glow_radius = float(values.get("glow_radius", DEFAULTS["glow_radius"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid glow_radius: {values.get('glow_radius')!r}. "
+            "Expected a positive number."
+        )
+    if glow_radius <= 0:
+        raise ConfigError(
+            f"glow_radius must be greater than 0, got {glow_radius}."
+        )
+
     outputs = _coerce_outputs(values.get("output", DEFAULTS["output"]))
     if not outputs:
         raise ConfigError("At least one output format must be enabled.")
@@ -244,6 +275,8 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         line_width=line_width,
         palette=palette,
         glow=glow,
+        glow_mode=glow_mode,
+        glow_radius=glow_radius,
         outputs=outputs,
     )
 

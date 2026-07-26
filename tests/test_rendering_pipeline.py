@@ -83,9 +83,12 @@ def test_pipeline_svg_is_deterministic(tmp_path):
 
 
 def test_downstream_stages_remain_stubs(tmp_path):
+    import warnings
+
     settings = build_settings({"region": ["Oregon"]})
-    context = _pipeline(tmp_path).run(settings)
-    # generate_svg produced output; optimize/export haven't (still stubs).
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        context = _pipeline(tmp_path).run(settings)
+    # generate_svg produced output; export hasn't run yet (still a stub).
     assert "svg" in context.artifacts
-    assert "optimized_svg" not in context.artifacts
     assert "export_paths" not in context.artifacts

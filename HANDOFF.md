@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-26, after roadmap item #8._
+_Last updated: 2026-07-26, after roadmap item #9._
 
 ## Project
 Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS→SVG
@@ -19,8 +19,8 @@ User drives with two commands:
    commit without this.
 
 ## Status
-Items 1–8 implemented. 1–7 committed; **item #8 committed?** check `git log`.
-Full suite: 120 tests passing (as of item #8).
+Items 1–9 implemented. 1–8 committed; **item #9 commit pending** (awaiting
+"commit item #9"). Full suite: 134 tests passing (as of item #9).
 
 | # | Item | State |
 |---|------|-------|
@@ -31,9 +31,9 @@ Full suite: 120 tests passing (as of item #8).
 | 5 | Hydrography graph construction | committed (fde1950) |
 | 6 | Stream ordering & watershed grouping | committed (70d96c6) |
 | 7 | Deterministic basin coloring | committed (31f93ca) |
-| 8 | Layered SVG rendering | implemented; commit pending unless done |
-| 9 | Optional glow & SVG optimization | NEXT |
-| 10 | Multi-format export & reproducibility | not started |
+| 8 | Layered SVG rendering | committed |
+| 9 | Optional glow & SVG optimization | implemented; commit pending |
+| 10 | Multi-format export & reproducibility | NEXT |
 
 ## Key conventions
 - Run tests: `.venv/bin/python -m pytest -q`
@@ -46,16 +46,15 @@ Full suite: 120 tests passing (as of item #8).
   hand-built shapely/graph inputs — no GDAL, no real data.
 - Module errors subclass `AcquisitionError` (`src/datasets.py`).
 
-## Item #9 (optional glow & SVG optimization) starting points
-- Input seam: `artifacts["svg"]` (the SVG document string from item #8's
-  `generate_svg` stage). `render_svg` (`src/rendering.py`) emits a bare `<defs/>`
-  for glow filters to populate.
-- Glow: `settings.glow` bool already exists (Mode A pure-vector / Mode B SVG
-  Gaussian blur, PRD §20); add a configurable radius (no config field yet).
-- SVGO optimization (PRD §21) is a Node subprocess — keep it behind an
-  injectable seam (mirror the Downloader/LayerLoader pattern) so tests stay
-  offline. Fits the `optimize_svg` stage (still a stub in `_STAGE_FUNCS`).
-- SVG chosen over `svgwrite`: hand-rolled stdlib serializer for determinism +
-  offline tests (see item #8 report). `export` (item #10) writes files to disk.
-- See `agent-os/specs/2026-07-26-layered-svg-rendering/implementation/report.md`
+## Item #10 (multi-format export & reproducibility) starting points
+- Input seam: `artifacts["optimized_svg"]` (the optimized SVG string from item
+  #9's `optimize_svg` stage). Everything is still in memory — `export` owns all
+  filesystem writes.
+- `export` is the last remaining stub in `_STAGE_FUNCS` (`src/pipeline.py`).
+  Write the SVG to disk and convert to the requested `settings.outputs`
+  (svg/pdf/png). No output dir wiring exists on `RunContext` yet.
+- Reproducibility: pipeline is deterministic (identical inputs → identical
+  bytes); export should preserve that and likely record a manifest/provenance.
+- See
+  `agent-os/specs/2026-07-26-glow-and-svg-optimization/implementation/report.md`
   ("Notes for next feature") for details.

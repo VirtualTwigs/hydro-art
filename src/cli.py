@@ -71,6 +71,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable the optional glow effect.",
     )
     parser.add_argument(
+        "--glow-mode",
+        default=None,
+        help="Glow style when enabled: vector blur.",
+    )
+    parser.add_argument(
+        "--glow-radius",
+        default=None,
+        help="Glow radius in SVG user units (positive number).",
+    )
+    parser.add_argument(
         "--output",
         nargs="+",
         default=None,
@@ -97,6 +107,10 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["huc_level"] = args.huc_level
     if args.glow is not None:
         overrides["glow"] = args.glow
+    if args.glow_mode is not None:
+        overrides["glow_mode"] = args.glow_mode
+    if args.glow_radius is not None:
+        overrides["glow_radius"] = args.glow_radius
     if args.output is not None:
         overrides["output"] = args.output
     return overrides
