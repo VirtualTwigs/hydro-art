@@ -55,6 +55,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Named color palette (e.g. neon).",
     )
     parser.add_argument(
+        "--stream-method",
+        default=None,
+        help="Stream-hierarchy method: strahler shreve hack custom.",
+    )
+    parser.add_argument(
+        "--huc-level",
+        default=None,
+        help="Watershed grouping level: HUC2 HUC4 HUC6 HUC8 HUC10 HUC12.",
+    )
+    parser.add_argument(
         "--glow",
         action="store_true",
         default=None,
@@ -81,6 +91,10 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["region"] = args.region
     if args.palette is not None:
         overrides["palette"] = args.palette
+    if args.stream_method is not None:
+        overrides["stream_method"] = args.stream_method
+    if args.huc_level is not None:
+        overrides["huc_level"] = args.huc_level
     if args.glow is not None:
         overrides["glow"] = args.glow
     if args.output is not None:

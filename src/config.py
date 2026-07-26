@@ -26,6 +26,8 @@ __all__ = [
     "SUPPORTED_REGIONS",
     "SUPPORTED_PROJECTIONS",
     "SUPPORTED_OUTPUTS",
+    "SUPPORTED_STREAM_METHODS",
+    "SUPPORTED_HUC_LEVELS",
     "load_yaml",
     "build_settings",
 ]
@@ -52,6 +54,19 @@ SUPPORTED_PROJECTIONS: tuple[str, ...] = ("EPSG:5070", "EPSG:4326", "EPSG:3857")
 #: are handled by a later roadmap item.
 SUPPORTED_OUTPUTS: tuple[str, ...] = ("svg", "pdf", "png")
 
+#: Stream-hierarchy methods (PRD section 12), user selectable.
+SUPPORTED_STREAM_METHODS: tuple[str, ...] = ("strahler", "shreve", "hack", "custom")
+
+#: Watershed HUC levels (PRD section 13), user selectable.
+SUPPORTED_HUC_LEVELS: tuple[str, ...] = (
+    "HUC2",
+    "HUC4",
+    "HUC6",
+    "HUC8",
+    "HUC10",
+    "HUC12",
+)
+
 _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 #: Built-in defaults, reflecting PRD sections 19 and 25.
@@ -59,6 +74,8 @@ DEFAULTS: dict[str, Any] = {
     "region": ["Oregon", "Washington"],
     "projection": "EPSG:5070",
     "stream_order": "all",
+    "stream_method": "strahler",
+    "huc_level": "HUC4",
     "background": "#000000",
     "line_width": 0.35,
     "palette": "neon",
@@ -74,7 +91,9 @@ class Settings:
     Attributes:
         regions: Canonical region names to build (e.g. ``("Oregon",)``).
         projection: Internal EPSG code used for all geometry operations.
-        stream_order: Stream-hierarchy selection (e.g. ``"all"``).
+        stream_order: Stream-order render filter (e.g. ``"all"``).
+        stream_method: Stream-hierarchy method (strahler/shreve/hack/custom).
+        huc_level: Watershed grouping level (HUC2..HUC12).
         background: Background color as a hex string (e.g. ``"#000000"``).
         line_width: Default stroke width in SVG user units; must be > 0.
         palette: Named color palette (e.g. ``"neon"``).
@@ -86,6 +105,8 @@ class Settings:
     regions: tuple[str, ...]
     projection: str
     stream_order: str
+    stream_method: str
+    huc_level: str
     background: str
     line_width: float
     palette: str
@@ -181,6 +202,21 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         )
 
     stream_order = str(values.get("stream_order", DEFAULTS["stream_order"]))
+
+    stream_method = str(values.get("stream_method", DEFAULTS["stream_method"])).lower()
+    if stream_method not in SUPPORTED_STREAM_METHODS:
+        valid = ", ".join(SUPPORTED_STREAM_METHODS)
+        raise ConfigError(
+            f"Unsupported stream_method: {stream_method!r}. Valid: {valid}."
+        )
+
+    huc_level = str(values.get("huc_level", DEFAULTS["huc_level"])).upper()
+    if huc_level not in SUPPORTED_HUC_LEVELS:
+        valid = ", ".join(SUPPORTED_HUC_LEVELS)
+        raise ConfigError(
+            f"Unsupported huc_level: {huc_level!r}. Valid: {valid}."
+        )
+
     palette = str(values.get("palette", DEFAULTS["palette"]))
     glow = bool(values.get("glow", DEFAULTS["glow"]))
     outputs = _coerce_outputs(values.get("output", DEFAULTS["output"]))
@@ -191,6 +227,8 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         regions=regions,
         projection=projection,
         stream_order=stream_order,
+        stream_method=stream_method,
+        huc_level=huc_level,
         background=background,
         line_width=line_width,
         palette=palette,

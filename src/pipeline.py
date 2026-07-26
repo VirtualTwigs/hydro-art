@@ -23,7 +23,9 @@ from src.download import Downloader, UrllibFetcher
 from src.geometry import RepairStats, repair_layer
 from src.graph import build_graph
 from src.loading import LayerLoader, PyogrioLayerLoader
+from src.ordering import assign_stream_order
 from src.projection import reproject_layer
+from src.watersheds import group_segments_by_huc, watershed_stats
 
 __all__ = ["Stage", "RunContext", "PIPELINE_STAGES", "Pipeline"]
 
@@ -161,6 +163,27 @@ def _build_graph_stage(ctx: RunContext) -> None:
     )
 
 
+def _compute_watersheds_stage(ctx: RunContext) -> None:
+    """Compute stream orders and watershed (HUC) groups from the hydro graph."""
+    hydro_graph = ctx.artifacts["hydro_graph"]
+    method = ctx.settings.stream_method
+    level = ctx.settings.huc_level
+
+    stream_orders = assign_stream_order(hydro_graph, method)
+    max_order = max(stream_orders.values(), default=0)
+    watersheds = group_segments_by_huc(hydro_graph, level)
+    stats = watershed_stats(watersheds)
+
+    ctx.artifacts["stream_orders"] = stream_orders
+    ctx.artifacts["watersheds"] = watersheds
+    ctx.artifacts["max_stream_order"] = max_order
+    ctx.log(
+        f"[bold]compute_watersheds[/bold] {method} order (max {max_order}) "
+        f"for {len(stream_orders)} segments; {stats.num_watersheds} {level} "
+        f"watershed(s) over {stats.num_segments} segments"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
@@ -169,6 +192,7 @@ _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "reproject": _reproject_stage,
     "clip_to_region": _clip_stage,
     "build_graph": _build_graph_stage,
+    "compute_watersheds": _compute_watersheds_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;

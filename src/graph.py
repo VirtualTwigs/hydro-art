@@ -141,6 +141,7 @@ def build_graph(layers: Iterable[Layer], snap_tolerance: float = 0.0) -> HydroGr
                     segment_id=segment_id,
                     geometry=segment,
                     length=segment.length,
+                    huc4=layer.huc4,
                 )
                 segment_id += 1
 

@@ -33,6 +33,8 @@ def _render_settings(settings: Settings, console: Console) -> None:
     table.add_row("regions", ", ".join(settings.regions))
     table.add_row("projection", settings.projection)
     table.add_row("stream_order", settings.stream_order)
+    table.add_row("stream_method", settings.stream_method)
+    table.add_row("huc_level", settings.huc_level)
     table.add_row("background", settings.background)
     table.add_row("line_width", str(settings.line_width))
     table.add_row("palette", settings.palette)
