@@ -1,12 +1,44 @@
 """Tests for the build.py entry point and pipeline skeleton (Task Group 3)."""
 
+import io
+import zipfile
+from pathlib import Path
+
+from rich.console import Console
+
 from build import main
 from src.pipeline import PIPELINE_STAGES, Pipeline
 
 
+class FakeZipDownloader:
+    """Offline downloader that writes a small valid zip to the destination."""
+
+    def fetch(self, descriptor, dest):
+        dest = Path(dest)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr(f"{descriptor.huc4}.gdb", b"data")
+        dest.write_bytes(buf.getvalue())
+        return dest
+
+
+def _offline_pipeline(tmp_path):
+    return Pipeline(
+        console=Console(),
+        cache_dir=tmp_path / "cache",
+        datasets_dir=tmp_path / "datasets",
+        downloader=FakeZipDownloader(),
+    )
+
+
 def test_main_with_defaults_exits_zero(tmp_path):
-    # Point at a nonexistent config so defaults are used deterministically.
-    assert main(["--config", str(tmp_path / "none.yaml")]) == 0
+    # Nonexistent config -> defaults; fake downloader keeps it offline.
+    code = main(
+        ["--config", str(tmp_path / "none.yaml")],
+        pipeline=_offline_pipeline(tmp_path),
+    )
+    assert code == 0
 
 
 def test_main_with_invalid_region_exits_nonzero(tmp_path):

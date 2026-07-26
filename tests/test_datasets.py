@@ -1,0 +1,51 @@
+"""Tests for the dataset registry and resolution (Item #2, Task Group 1)."""
+
+from src.config import build_settings
+from src.datasets import (
+    DATASETS,
+    REGION_HUC4,
+    Dataset,
+    resolve_required_files,
+)
+
+
+def _settings(*regions):
+    return build_settings({"region": list(regions)})
+
+
+def test_registry_priority_order_and_primary():
+    priorities = [d.priority for d in DATASETS]
+    assert priorities == sorted(priorities)
+    primary = min(DATASETS, key=lambda d: d.priority)
+    assert primary.id == "nhdplus_hr"
+    assert primary.required is True
+
+
+def test_only_required_datasets_are_resolved():
+    files = resolve_required_files(_settings("Oregon"))
+    dataset_ids = {f.dataset_id for f in files}
+    required_ids = {d.id for d in DATASETS if d.required}
+    assert dataset_ids == required_ids
+    assert "nhd" not in dataset_ids  # fallback, not required
+
+
+def test_region_resolves_expected_huc4s():
+    files = resolve_required_files(_settings("Oregon"))
+    hucs = {f.huc4 for f in files}
+    assert hucs == set(REGION_HUC4["Oregon"])
+
+
+def test_shared_huc4_is_deduplicated_across_regions():
+    files = resolve_required_files(_settings("Oregon", "Washington"))
+    keys = [f.key for f in files]
+    assert len(keys) == len(set(keys))  # no duplicate files
+    # 1708 and 1710 are shared; each appears once per required dataset.
+    nhd_1708 = [f for f in files if f.huc4 == "1708" and f.dataset_id == "nhdplus_hr"]
+    assert len(nhd_1708) == 1
+
+
+def test_descriptor_url_and_filename_are_derived():
+    files = resolve_required_files(_settings("Washington"))
+    sample = next(f for f in files if f.dataset_id == "nhdplus_hr")
+    assert sample.url.endswith(f"NHDPLUS_H_{sample.huc4}_HU4_GDB.zip")
+    assert sample.filename == f"NHDPLUS_H_{sample.huc4}_HU4_GDB.zip"
