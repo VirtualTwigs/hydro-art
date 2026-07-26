@@ -9,7 +9,7 @@ shares results through ``context.artifacts``; there is no global state.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -19,6 +19,8 @@ from src.cache import Cache, DownloaderLike, ensure_cached, extract_all
 from src.config import Settings
 from src.datasets import resolve_required_files
 from src.download import Downloader, UrllibFetcher
+from src.geometry import RepairStats, repair_layer
+from src.loading import LayerLoader, PyogrioLayerLoader
 
 __all__ = ["Stage", "RunContext", "PIPELINE_STAGES", "Pipeline"]
 
@@ -33,6 +35,7 @@ class RunContext:
         cache_dir: Directory for cached archives.
         datasets_dir: Directory for extracted GIS data.
         downloader: Injected downloader used by the acquisition stage.
+        loader: Injected layer loader used by the validate stage.
         artifacts: Mutable bag of results passed between stages.
     """
 
@@ -41,6 +44,7 @@ class RunContext:
     cache_dir: Path
     datasets_dir: Path
     downloader: DownloaderLike
+    loader: LayerLoader
     artifacts: dict[str, Any] = field(default_factory=dict)
 
     def log(self, message: str) -> None:
@@ -83,9 +87,44 @@ def _extract_stage(ctx: RunContext) -> None:
     ctx.artifacts["dataset_dirs"] = dirs
 
 
+def _validate_stage(ctx: RunContext) -> None:
+    """Load every extracted dataset's hydrography layers into memory."""
+    descriptors = ctx.artifacts["descriptors"]
+    dataset_dirs = ctx.artifacts["dataset_dirs"]
+    layers = []
+    for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
+        layers.extend(
+            ctx.loader.load_layers(dataset_dir, descriptor.dataset_id, descriptor.huc4)
+        )
+    ctx.artifacts["layers"] = layers
+    total = sum(len(layer.geometries) for layer in layers)
+    ctx.log(f"[bold]validate[/bold] loaded {len(layers)} layer(s), {total} geometries")
+
+
+def _repair_stage(ctx: RunContext) -> None:
+    """Repair invalid/degenerate geometries and record repair statistics."""
+    layers = ctx.artifacts["layers"]
+    repaired = []
+    stats = RepairStats()
+    for layer in layers:
+        kept, layer_stats = repair_layer(layer.geometries)
+        stats = stats.merge(layer_stats)
+        repaired.append(replace(layer, geometries=tuple(kept)))
+    ctx.artifacts["repaired_layers"] = repaired
+    ctx.artifacts["repair_stats"] = stats
+    dropped = stats.empties_dropped + stats.collapsed_dropped
+    ctx.log(
+        f"[bold]repair_geometries[/bold] {stats.total_in}->{stats.total_out} "
+        f"(fixed {stats.invalid_fixed} invalid, dropped {dropped}, "
+        f"removed {stats.duplicate_vertices_removed} dup vertices)"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
+    "validate": _validate_stage,
+    "repair_geometries": _repair_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;
@@ -119,12 +158,14 @@ class Pipeline:
         cache_dir: str | Path = "cache",
         datasets_dir: str | Path = "datasets",
         downloader: DownloaderLike | None = None,
+        loader: LayerLoader | None = None,
     ) -> None:
         self._stages = stages
         self._console = console or Console()
         self._cache_dir = Path(cache_dir)
         self._datasets_dir = Path(datasets_dir)
         self._downloader = downloader
+        self._loader = loader
 
     @property
     def stage_names(self) -> tuple[str, ...]:
@@ -139,6 +180,7 @@ class Pipeline:
             cache_dir=self._cache_dir,
             datasets_dir=self._datasets_dir,
             downloader=self._downloader or Downloader(UrllibFetcher()),
+            loader=self._loader or PyogrioLayerLoader(),
         )
         for stage in self._stages:
             stage.run(context)

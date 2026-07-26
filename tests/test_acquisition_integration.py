@@ -32,12 +32,20 @@ class CountingZipDownloader:
         return dest
 
 
+class NullLayerLoader:
+    """Offline loader that yields no layers (fake extracts aren't real GDBs)."""
+
+    def load_layers(self, dataset_dir, dataset_id, huc4):
+        return []
+
+
 def _pipeline(tmp_path, downloader):
     return Pipeline(
         console=Console(),
         cache_dir=tmp_path / "cache",
         datasets_dir=tmp_path / "datasets",
         downloader=downloader,
+        loader=NullLayerLoader(),
     )
 
 
