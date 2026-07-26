@@ -85,7 +85,13 @@ def build_parser() -> argparse.ArgumentParser:
         nargs="+",
         default=None,
         metavar="FORMAT",
-        help="One or more output formats: svg pdf png.",
+        help="One or more output formats: svg pdf png tiff eps.",
+    )
+    parser.add_argument(
+        "--png-size",
+        type=int,
+        default=None,
+        help="Raster export size in pixels: 4096 8192 16384 32768 65536.",
     )
     return parser
 
@@ -113,6 +119,8 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["glow_radius"] = args.glow_radius
     if args.output is not None:
         overrides["output"] = args.output
+    if args.png_size is not None:
+        overrides["png_size"] = args.png_size
     return overrides
 
 

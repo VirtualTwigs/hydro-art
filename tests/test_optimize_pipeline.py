@@ -59,6 +59,7 @@ def _pipeline(tmp_path, optimizer=None):
         console=Console(),
         cache_dir=tmp_path / "cache",
         datasets_dir=tmp_path / "datasets",
+        output_dir=tmp_path / "output",
         downloader=FakeZipDownloader(),
         loader=NetworkLoader(),
         optimizer=optimizer,
@@ -101,9 +102,9 @@ def test_default_optimizer_degrades_without_svgo(tmp_path):
     assert context.artifacts["optimized_svg"] == context.artifacts["svg"]
 
 
-def test_export_remains_a_stub(tmp_path):
+def test_optimized_svg_feeds_export(tmp_path):
     settings = build_settings({"region": ["Oregon"]})
     context = _pipeline(tmp_path, optimizer=FakeOptimizer()).run(settings)
-    # optimize_svg produced output; export hasn't (still a stub).
+    # optimize_svg produced output which the export stage (item #10) consumes.
     assert "optimized_svg" in context.artifacts
-    assert "export_paths" not in context.artifacts
+    assert "export_paths" in context.artifacts

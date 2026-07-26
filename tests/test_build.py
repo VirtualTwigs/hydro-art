@@ -35,6 +35,7 @@ def _offline_pipeline(tmp_path):
         console=Console(),
         cache_dir=tmp_path / "cache",
         datasets_dir=tmp_path / "datasets",
+        output_dir=tmp_path / "output",
         downloader=FakeZipDownloader(),
         loader=NullLayerLoader(),
     )

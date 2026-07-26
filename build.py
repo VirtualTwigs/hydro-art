@@ -41,6 +41,7 @@ def _render_settings(settings: Settings, console: Console) -> None:
     table.add_row("glow", str(settings.glow))
     table.add_row("glow_mode", settings.glow_mode)
     table.add_row("glow_radius", str(settings.glow_radius))
+    table.add_row("png_size", str(settings.png_size))
     table.add_row("outputs", ", ".join(sorted(settings.outputs)))
     console.print(table)
 
@@ -66,7 +67,7 @@ def main(argv: Sequence[str] | None = None, pipeline: Pipeline | None = None) ->
     except AcquisitionError as exc:
         Console(stderr=True).print(f"[bold red]Acquisition error:[/] {exc}")
         return 2
-    console.print("[bold green]Done.[/] (downstream stages are stubs)")
+    console.print("[bold green]Done.[/]")
     return 0
 
 

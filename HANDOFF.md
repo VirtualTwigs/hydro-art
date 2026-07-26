@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-26, after roadmap item #9._
+_Last updated: 2026-07-26, after roadmap item #10 (final item)._
 
 ## Project
 Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS→SVG
@@ -19,8 +19,9 @@ User drives with two commands:
    commit without this.
 
 ## Status
-Items 1–9 implemented. 1–8 committed; **item #9 commit pending** (awaiting
-"commit item #9"). Full suite: 134 tests passing (as of item #9).
+All 10 roadmap items implemented — the PRD §8 pipeline runs end-to-end with no
+stubs. Items 1–9 committed; **item #10 commit pending** (awaiting "commit item
+#10"). Full suite: 147 tests passing (as of item #10).
 
 | # | Item | State |
 |---|------|-------|
@@ -31,9 +32,9 @@ Items 1–9 implemented. 1–8 committed; **item #9 commit pending** (awaiting
 | 5 | Hydrography graph construction | committed (fde1950) |
 | 6 | Stream ordering & watershed grouping | committed (70d96c6) |
 | 7 | Deterministic basin coloring | committed (31f93ca) |
-| 8 | Layered SVG rendering | committed |
-| 9 | Optional glow & SVG optimization | implemented; commit pending |
-| 10 | Multi-format export & reproducibility | NEXT |
+| 8 | Layered SVG rendering | committed (3c3df62) |
+| 9 | Optional glow & SVG optimization | committed (06869ba) |
+| 10 | Multi-format export & reproducibility | implemented; commit pending |
 
 ## Key conventions
 - Run tests: `.venv/bin/python -m pytest -q`
@@ -46,15 +47,18 @@ Items 1–9 implemented. 1–8 committed; **item #9 commit pending** (awaiting
   hand-built shapely/graph inputs — no GDAL, no real data.
 - Module errors subclass `AcquisitionError` (`src/datasets.py`).
 
-## Item #10 (multi-format export & reproducibility) starting points
-- Input seam: `artifacts["optimized_svg"]` (the optimized SVG string from item
-  #9's `optimize_svg` stage). Everything is still in memory — `export` owns all
-  filesystem writes.
-- `export` is the last remaining stub in `_STAGE_FUNCS` (`src/pipeline.py`).
-  Write the SVG to disk and convert to the requested `settings.outputs`
-  (svg/pdf/png). No output dir wiring exists on `RunContext` yet.
-- Reproducibility: pipeline is deterministic (identical inputs → identical
-  bytes); export should preserve that and likely record a manifest/provenance.
-- See
-  `agent-os/specs/2026-07-26-glow-and-svg-optimization/implementation/report.md`
-  ("Notes for next feature") for details.
+## Roadmap complete — where things stand
+- The full PRD §8 pipeline is implemented (`download → extract → validate →
+  repair_geometries → reproject → clip_to_region → build_graph →
+  compute_watersheds → assign_colors → generate_svg → optimize_svg → export`);
+  no stage is a stub.
+- `export` (`src/pipeline.py` `_export_stage`) writes `output_dir/<regions>.<fmt>`
+  for each `settings.outputs`, records `artifacts["export_paths"]` and
+  `artifacts["svg_sha256"]`. SVG is written with pure stdlib.
+- External tools are optional and injected, both degrading gracefully when
+  absent: `svgo` (`SvgoOptimizer`, optimize_svg) and `rsvg-convert`
+  (`FileExporter`, export). Installing them unlocks optimized / rasterized
+  outputs; without them SVG still ships.
+- Possible follow-ups (not roadmap items): package/document the optional CLI
+  tools (or add a `cairosvg` fallback), real raster tiling for 65536px, and the
+  PRD §33 future-work outputs (web/animated/GeoJSON/vector tiles).

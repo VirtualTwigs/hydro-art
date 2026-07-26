@@ -9,6 +9,7 @@ shares results through ``context.artifacts``; there is no global state.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
@@ -21,6 +22,7 @@ from src.datasets import resolve_required_files
 from src.clipping import clip_layers, region_boundary
 from src.coloring import assign_colors
 from src.download import Downloader, UrllibFetcher
+from src.export import Exporter, FileExporter
 from src.geometry import RepairStats, repair_layer
 from src.graph import build_graph
 from src.loading import LayerLoader, PyogrioLayerLoader
@@ -42,9 +44,11 @@ class RunContext:
         console: Rich console for user-facing output.
         cache_dir: Directory for cached archives.
         datasets_dir: Directory for extracted GIS data.
+        output_dir: Directory where exported files are written.
         downloader: Injected downloader used by the acquisition stage.
         loader: Injected layer loader used by the validate stage.
         optimizer: Injected SVG optimizer used by the optimize_svg stage.
+        exporter: Injected exporter used by the export stage.
         artifacts: Mutable bag of results passed between stages.
     """
 
@@ -52,9 +56,11 @@ class RunContext:
     console: Console
     cache_dir: Path
     datasets_dir: Path
+    output_dir: Path
     downloader: DownloaderLike
     loader: LayerLoader
     optimizer: SvgOptimizer
+    exporter: Exporter
     artifacts: dict[str, Any] = field(default_factory=dict)
 
     def log(self, message: str) -> None:
@@ -253,6 +259,27 @@ def _optimize_svg_stage(ctx: RunContext) -> None:
     )
 
 
+def _export_stage(ctx: RunContext) -> None:
+    """Write the optimized SVG to disk and export the requested formats."""
+    svg = ctx.artifacts["optimized_svg"]
+    stem = "-".join(region.lower() for region in ctx.settings.regions)
+    export_paths: dict[str, Path] = {}
+    for fmt in sorted(ctx.settings.outputs):
+        dest = ctx.output_dir / f"{stem}.{fmt}"
+        written = ctx.exporter.export(svg, dest, fmt, png_size=ctx.settings.png_size)
+        if written is not None:
+            export_paths[fmt] = written
+
+    digest = hashlib.sha256(svg.encode("utf-8")).hexdigest()
+    ctx.artifacts["export_paths"] = export_paths
+    ctx.artifacts["svg_sha256"] = digest
+    written_fmts = ", ".join(sorted(export_paths)) or "none"
+    ctx.log(
+        f"[bold]export[/bold] wrote {len(export_paths)} file(s) to "
+        f"{ctx.output_dir} ({written_fmts}); svg sha256 {digest[:12]}"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
@@ -265,6 +292,7 @@ _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "assign_colors": _assign_colors_stage,
     "generate_svg": _generate_svg_stage,
     "optimize_svg": _optimize_svg_stage,
+    "export": _export_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;
@@ -297,17 +325,21 @@ class Pipeline:
         console: Console | None = None,
         cache_dir: str | Path = "cache",
         datasets_dir: str | Path = "datasets",
+        output_dir: str | Path = "output",
         downloader: DownloaderLike | None = None,
         loader: LayerLoader | None = None,
         optimizer: SvgOptimizer | None = None,
+        exporter: Exporter | None = None,
     ) -> None:
         self._stages = stages
         self._console = console or Console()
         self._cache_dir = Path(cache_dir)
         self._datasets_dir = Path(datasets_dir)
+        self._output_dir = Path(output_dir)
         self._downloader = downloader
         self._loader = loader
         self._optimizer = optimizer
+        self._exporter = exporter
 
     @property
     def stage_names(self) -> tuple[str, ...]:
@@ -321,9 +353,11 @@ class Pipeline:
             console=self._console,
             cache_dir=self._cache_dir,
             datasets_dir=self._datasets_dir,
+            output_dir=self._output_dir,
             downloader=self._downloader or Downloader(UrllibFetcher()),
             loader=self._loader or PyogrioLayerLoader(),
             optimizer=self._optimizer or SvgoOptimizer(),
+            exporter=self._exporter or FileExporter(),
         )
         for stage in self._stages:
             stage.run(context)

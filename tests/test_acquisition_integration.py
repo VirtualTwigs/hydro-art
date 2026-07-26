@@ -44,6 +44,7 @@ def _pipeline(tmp_path, downloader):
         console=Console(),
         cache_dir=tmp_path / "cache",
         datasets_dir=tmp_path / "datasets",
+        output_dir=tmp_path / "output",
         downloader=downloader,
         loader=NullLayerLoader(),
     )

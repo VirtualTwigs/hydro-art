@@ -26,6 +26,7 @@ __all__ = [
     "SUPPORTED_REGIONS",
     "SUPPORTED_PROJECTIONS",
     "SUPPORTED_OUTPUTS",
+    "SUPPORTED_PNG_SIZES",
     "SUPPORTED_STREAM_METHODS",
     "SUPPORTED_HUC_LEVELS",
     "SUPPORTED_PALETTES",
@@ -52,9 +53,13 @@ SUPPORTED_REGIONS: tuple[str, ...] = ("Oregon", "Washington")
 #: Coordinate reference systems the pipeline knows how to handle.
 SUPPORTED_PROJECTIONS: tuple[str, ...] = ("EPSG:5070", "EPSG:4326", "EPSG:3857")
 
-#: Output formats selectable in this feature. Additional formats (tiff, eps)
-#: are handled by a later roadmap item.
-SUPPORTED_OUTPUTS: tuple[str, ...] = ("svg", "pdf", "png")
+#: Output formats selectable via config/CLI (PRD section 22): SVG is required,
+#: the rest optional and produced by converting the SVG (PRD section 23).
+SUPPORTED_OUTPUTS: tuple[str, ...] = ("svg", "pdf", "png", "tiff", "eps")
+
+#: Raster export sizes in pixels (PRD section 23), user selectable via
+#: ``png_size``. The largest relies on the converter's tile rendering.
+SUPPORTED_PNG_SIZES: tuple[int, ...] = (4096, 8192, 16384, 32768, 65536)
 
 #: Stream-hierarchy methods (PRD section 12), user selectable.
 SUPPORTED_STREAM_METHODS: tuple[str, ...] = ("strahler", "shreve", "hack", "custom")
@@ -92,6 +97,7 @@ DEFAULTS: dict[str, Any] = {
     "glow": False,
     "glow_mode": "blur",
     "glow_radius": 2.0,
+    "png_size": 4096,
     "output": {"svg": True, "png": False, "pdf": False},
 }
 
@@ -112,6 +118,8 @@ class Settings:
         glow: Whether the optional glow effect is enabled.
         glow_mode: Glow style when enabled (``"vector"`` or ``"blur"``).
         glow_radius: Glow radius in SVG user units; must be > 0.
+        png_size: Raster export size in pixels (one of
+            :data:`SUPPORTED_PNG_SIZES`).
         outputs: Set of output formats to produce (subset of
             :data:`SUPPORTED_OUTPUTS`).
     """
@@ -127,6 +135,7 @@ class Settings:
     glow: bool
     glow_mode: str
     glow_radius: float
+    png_size: int
     outputs: frozenset[str]
 
 
@@ -261,6 +270,17 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             f"glow_radius must be greater than 0, got {glow_radius}."
         )
 
+    try:
+        png_size = int(values.get("png_size", DEFAULTS["png_size"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid png_size: {values.get('png_size')!r}. "
+            f"Expected one of: {', '.join(str(s) for s in SUPPORTED_PNG_SIZES)}."
+        )
+    if png_size not in SUPPORTED_PNG_SIZES:
+        valid = ", ".join(str(s) for s in SUPPORTED_PNG_SIZES)
+        raise ConfigError(f"Unsupported png_size: {png_size}. Valid: {valid}.")
+
     outputs = _coerce_outputs(values.get("output", DEFAULTS["output"]))
     if not outputs:
         raise ConfigError("At least one output format must be enabled.")
@@ -277,6 +297,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         glow=glow,
         glow_mode=glow_mode,
         glow_radius=glow_radius,
+        png_size=png_size,
         outputs=outputs,
     )
 
