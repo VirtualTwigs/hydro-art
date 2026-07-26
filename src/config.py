@@ -28,6 +28,7 @@ __all__ = [
     "SUPPORTED_OUTPUTS",
     "SUPPORTED_STREAM_METHODS",
     "SUPPORTED_HUC_LEVELS",
+    "SUPPORTED_PALETTES",
     "load_yaml",
     "build_settings",
 ]
@@ -66,6 +67,10 @@ SUPPORTED_HUC_LEVELS: tuple[str, ...] = (
     "HUC10",
     "HUC12",
 )
+
+#: Named color palettes (PRD section 16), user selectable. Palette colors live
+#: in :mod:`src.coloring`; this allowlist gates the ``palette`` config value.
+SUPPORTED_PALETTES: tuple[str, ...] = ("neon",)
 
 _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
@@ -217,7 +222,13 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             f"Unsupported huc_level: {huc_level!r}. Valid: {valid}."
         )
 
-    palette = str(values.get("palette", DEFAULTS["palette"]))
+    palette = str(values.get("palette", DEFAULTS["palette"])).lower()
+    if palette not in SUPPORTED_PALETTES:
+        valid = ", ".join(SUPPORTED_PALETTES)
+        raise ConfigError(
+            f"Unsupported palette: {palette!r}. Valid: {valid}."
+        )
+
     glow = bool(values.get("glow", DEFAULTS["glow"]))
     outputs = _coerce_outputs(values.get("output", DEFAULTS["output"]))
     if not outputs:

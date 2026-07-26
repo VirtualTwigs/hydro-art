@@ -19,6 +19,7 @@ from src.cache import Cache, DownloaderLike, ensure_cached, extract_all
 from src.config import Settings
 from src.datasets import resolve_required_files
 from src.clipping import clip_layers, region_boundary
+from src.coloring import assign_colors
 from src.download import Downloader, UrllibFetcher
 from src.geometry import RepairStats, repair_layer
 from src.graph import build_graph
@@ -184,6 +185,29 @@ def _compute_watersheds_stage(ctx: RunContext) -> None:
     )
 
 
+def _assign_colors_stage(ctx: RunContext) -> None:
+    """Assign deterministic, high-contrast colors to each watershed."""
+    hydro_graph = ctx.artifacts["hydro_graph"]
+    watersheds = ctx.artifacts["watersheds"]
+    palette = ctx.settings.palette
+
+    watershed_colors = assign_colors(hydro_graph, watersheds, palette)
+    segment_colors = {
+        segment_id: watershed_colors[code]
+        for code, segment_ids in watersheds.items()
+        for segment_id in segment_ids
+    }
+
+    ctx.artifacts["watershed_colors"] = watershed_colors
+    ctx.artifacts["segment_colors"] = segment_colors
+    ctx.artifacts["palette"] = palette
+    ctx.log(
+        f"[bold]assign_colors[/bold] colored {len(watershed_colors)} watershed(s) "
+        f"({len(set(watershed_colors.values()))} distinct {palette} color(s)) "
+        f"over {len(segment_colors)} segments"
+    )
+
+
 _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "download": _download_stage,
     "extract": _extract_stage,
@@ -193,6 +217,7 @@ _STAGE_FUNCS: dict[str, Callable[[RunContext], None]] = {
     "clip_to_region": _clip_stage,
     "build_graph": _build_graph_stage,
     "compute_watersheds": _compute_watersheds_stage,
+    "assign_colors": _assign_colors_stage,
 }
 
 #: Stage order per PRD section 8. Implemented stages use their real function;

@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-26, after roadmap item #6._
+_Last updated: 2026-07-26, after roadmap item #7._
 
 ## Project
 Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS→SVG
@@ -19,8 +19,8 @@ User drives with two commands:
    commit without this.
 
 ## Status
-Items 1–6 implemented. 1–5 committed; **item #6 committed?** check `git log`.
-Full suite: 91 tests passing (as of item #6).
+Items 1–7 implemented. 1–6 committed; **item #7 committed?** check `git log`.
+Full suite: 106 tests passing (as of item #7).
 
 | # | Item | State |
 |---|------|-------|
@@ -29,9 +29,10 @@ Full suite: 91 tests passing (as of item #6).
 | 3 | Data loading & geometry repair | committed (546b97a) |
 | 4 | Projection & region clipping | committed (094ce41) |
 | 5 | Hydrography graph construction | committed (fde1950) |
-| 6 | Stream ordering & watershed grouping | implemented; commit pending unless done |
-| 7 | Deterministic basin coloring | NEXT |
-| 8–10 | SVG rendering / glow+optimize / export | not started |
+| 6 | Stream ordering & watershed grouping | committed (70d96c6) |
+| 7 | Deterministic basin coloring | implemented; commit pending unless done |
+| 8 | Layered SVG rendering | NEXT |
+| 9–10 | glow+optimize / export | not started |
 
 ## Key conventions
 - Run tests: `.venv/bin/python -m pytest -q`
@@ -44,11 +45,13 @@ Full suite: 91 tests passing (as of item #6).
   hand-built shapely/graph inputs — no GDAL, no real data.
 - Module errors subclass `AcquisitionError` (`src/datasets.py`).
 
-## Item #7 (basin coloring) starting points
-- Consume artifacts item #6 produced: `stream_orders` (segment_id→order),
-  `watersheds` (HUC code→segment ids), `max_stream_order`.
-- Goal: deterministic graph-coloring of adjacent watersheds for max contrast,
-  then neon-palette assignment; identical inputs → identical colors (no random).
-- Fits the `assign_colors` pipeline stage (currently a stub in `_STAGE_FUNCS`).
-- See `agent-os/specs/2026-07-26-stream-ordering-and-watershed-grouping/implementation/report.md`
+## Item #8 (layered SVG rendering) starting points
+- Consume artifacts item #7 produced: `segment_colors` (segment_id→hex),
+  `watershed_colors` (HUC code→hex), plus `watersheds` (HUC code→segment ids)
+  for grouping `<g>` layers, and each edge's `geometry`/`length` in `hydro_graph`.
+- Goal: render each river as a round-capped/round-joined vector path colored by
+  `segment_colors`, grouped per watershed, on `settings.background`, base stroke
+  `settings.line_width`; optional width scaling off `stream_orders`/`max_stream_order`.
+- Fits the `generate_svg` pipeline stage (currently a stub in `_STAGE_FUNCS`).
+- See `agent-os/specs/2026-07-26-deterministic-basin-coloring/implementation/report.md`
   ("Notes for next feature") for the input seams.
