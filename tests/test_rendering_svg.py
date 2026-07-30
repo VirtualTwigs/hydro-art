@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 
 from shapely.geometry import LineString
 
-from src.rendering import render_svg, stream_order_widths
+from src.rendering import flow_widths, render_svg, stream_order_widths
 
 # Two watersheds: 'A' (segments 0,1) and 'B' (segment 2).
 GEOMS = {
@@ -100,3 +100,19 @@ def test_stroke_widths_override_and_stream_order_scaling():
     root = _svg_root(svg)
     seg2 = root.find(".//*[@id='watershed_B']/*")
     assert seg2.get("stroke-width") == "1.05"  # 0.35 * 3
+
+
+def test_flow_widths_log_scaled_between_base_and_top():
+    # Discharge spans orders of magnitude; smallest flow -> base, largest -> top,
+    # and the mapping is log-linear (a geometric mid-point lands at the midpoint).
+    widths = flow_widths({0: 1.0, 1: 100.0, 2: 10000.0}, base_width=0.6, max_scale=6.0)
+    assert widths[0] == 0.6
+    assert widths[2] == 0.6 * 6.0
+    assert abs(widths[1] - (0.6 + (0.6 * 6.0 - 0.6) * 0.5)) < 1e-9
+
+
+def test_flow_widths_floors_nonpositive_and_handles_degenerate():
+    # Zero/negative flow is floored (finite, at base); an all-equal network is uniform.
+    w = flow_widths({0: 0.0, 1: -5.0, 2: 1.0}, base_width=0.6, max_scale=6.0, floor=1.0)
+    assert w[0] == w[1] == w[2] == 0.6  # all floored to 1.0 -> single value -> uniform
+    assert flow_widths({}, base_width=0.6) == {}

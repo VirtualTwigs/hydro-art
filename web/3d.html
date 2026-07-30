@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hydro-Art · 3D Terrain Lab</title>
+  <style>
+    :root { --bg:#05070d; --panel:#111522; --line:#283146; --ink:#edf3ff; --muted:#8e9ab2; --cyan:#39e9ff; --lime:#9cff57; }
+    * { box-sizing:border-box } html,body { height:100%; margin:0 } body { background:var(--bg); color:var(--ink); font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; display:grid; grid-template-columns:330px 1fr }
+    aside { z-index:2; overflow:auto; padding:18px; background:var(--panel); border-right:1px solid var(--line) }
+    h1 { margin:0 0 4px; font-size:16px; letter-spacing:.04em } .intro,.hint { color:var(--muted); font-size:11px } .intro { margin-bottom:18px }
+    fieldset { margin:0 0 13px; padding:11px; border:1px solid var(--line); border-radius:9px } legend { padding:0 5px; color:var(--cyan); font-size:11px; letter-spacing:.08em; text-transform:uppercase }
+    label { display:block; margin:9px 0 3px; color:var(--muted); font-size:11px } output { float:right; color:var(--cyan) } input[type=range] { width:100%; accent-color:var(--cyan) }
+    button { color:var(--ink); background:#0a0e18; border:1px solid var(--line); border-radius:6px; padding:7px 8px; cursor:pointer; font:inherit } button:hover,button.active { border-color:var(--cyan); color:var(--cyan) } .row { display:flex; gap:6px } .row button { flex:1 }
+    .callout { margin-top:8px; padding:8px; border-left:2px solid var(--lime); color:var(--muted); background:#0a0e18; font-size:11px }
+    main { min-width:0; position:relative } canvas { width:100%; height:100%; display:block; cursor:grab; touch-action:none } canvas:active { cursor:grabbing }
+    #hud { position:absolute; top:16px; right:16px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:rgba(5,7,13,.8); color:var(--muted); font-size:11px; pointer-events:none }
+    #hud b { color:var(--lime); font-weight:600 } #empty { position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); pointer-events:none; font-size:12px }
+    #previewWrap { position:absolute; right:16px; bottom:16px; width:210px; height:155px; border:1px solid var(--cyan); border-radius:8px; overflow:hidden; background:#05070d; box-shadow:0 8px 30px #0008; pointer-events:none }
+    #preview { width:100%; height:100%; cursor:default } #previewLabel { position:absolute; left:7px; top:5px; color:var(--cyan); font-size:10px; letter-spacing:.06em; text-transform:uppercase; background:#05070dbb; padding:2px 4px; border-radius:3px }
+    @media(max-width:720px) { body { grid-template-columns:1fr; grid-template-rows:auto 65vh } aside { border-right:0; border-bottom:1px solid var(--line) } }
+  </style>
+</head>
+<body>
+  <aside>
+    <h1>Hydro-Art · 3D Lab</h1>
+    <div class="intro">A spatial preview of the project’s real hydrography SVGs. Drag the model to orbit; use the controls to test a future 3D export direction.</div>
+
+    <fieldset><legend>Example dataset</legend>
+      <div class="row"><button id="load" class="active">Oregon rivers</button><button id="loadWA">Washington</button><button id="loadClark">Clark County, WA</button></div>
+      <div class="row"><button id="openFile">Open local SVG</button><button id="reset">Reset</button></div>
+      <input id="filePicker" type="file" accept=".svg,image/svg+xml" hidden>
+      <div class="hint" id="source">Loading <code>output/oregon_display.svg</code>…</div>
+    </fieldset>
+
+    <fieldset><legend>Camera</legend>
+      <label>Yaw <output id="yawOut"></output></label><input id="yaw" type="range" min="-180" max="180" value="0">
+      <label>Pitch <output id="pitchOut"></output></label><input id="pitch" type="range" min="-85" max="85" value="0">
+      <label>Roll <output id="rollOut"></output></label><input id="roll" type="range" min="-45" max="45" value="0">
+      <label>Zoom <output id="zoomOut"></output></label><input id="zoom" type="range" min="0.35" max="2.4" step="0.01" value="1">
+      <div class="row"><button id="spin">Auto rotate: off</button><button id="center">Center model</button><button id="top">Top-down</button></div>
+    </fieldset>
+
+    <fieldset><legend>Preset views</legend>
+      <div class="row" id="presets"><button data-view="iso">Isometric</button><button data-view="sideX">Side X</button><button data-view="sideY">Side Y</button></div>
+      <div class="hint">Side views make the elevation amplitude and river lift easiest to inspect.</div>
+    </fieldset>
+
+    <fieldset><legend>Z-axis / elevation</legend>
+      <label>Terrain amplitude <output id="ampOut"></output></label><input id="amp" type="range" min="0" max="1.5" step="0.01" value="0.14">
+      <label>Relief frequency <output id="freqOut"></output></label><input id="freq" type="range" min="0.5" max="5" step="0.1" value="2.1">
+      <label>Vertical exaggeration <output id="exagOut"></output></label><input id="exag" type="range" min="0.2" max="4" step="0.1" value="1.3">
+      <label>River lift above terrain <output id="liftOut"></output></label><input id="lift" type="range" min="0" max="0.18" step="0.01" value="0.035">
+      <div class="row"><button id="elevMode">Elevation: stream order</button></div>
+      <button id="realistic" class="active">Set realistic vertical scale</button>
+      <div class="callout" id="realisticNote">“Realistic” sets a ~0.01 normalized Z amplitude: Oregon’s ~3.4 km maximum relief relative to its ~600 km width. This is still a visual elevation field, not DEM-derived terrain. The future pipeline can replace <code>elevationAt()</code> with sampled DEM elevations while preserving the same controls.</div>
+    </fieldset>
+
+    <fieldset><legend>Model style</legend>
+      <label>Terrain mesh <output id="meshOut"></output></label><input id="mesh" type="range" min="8" max="44" step="1" value="26">
+      <label>River intensity <output id="riverOut"></output></label><input id="river" type="range" min="0.15" max="1" step="0.05" value="0.85">
+      <label>Perspective <output id="perspOut"></output></label><input id="persp" type="range" min="0" max="1" step="0.05" value="0.6">
+    </fieldset>
+    <div class="hint">When opening this page directly from Finder, choose <code>output/oregon_display.svg</code> with “Open local SVG.” Or run <code>.venv/bin/python -m http.server 8000</code> and open <code>/web/3d.html</code> to load it automatically.</div>
+  </aside>
+  <main><canvas id="view"></canvas><div id="empty">Preparing model…</div><div id="hud"><b id="count">0</b> river segments · <span id="modelName">Oregon</span><br>drag to orbit · wheel to zoom</div><div id="previewWrap"><canvas id="preview"></canvas><span id="previewLabel">Interaction preview</span></div></main>
+<script>
+"use strict";
+const $=id=>document.getElementById(id), canvas=$("view"), preview=$("preview"); let ctx=canvas.getContext("2d"), activeWidth=canvas.width, activeHeight=canvas.height, activeOffset=[0,0], lowDetail=false;
+const state={yaw:0,pitch:0,roll:0,zoom:1,amp:.14,freq:2.1,exag:1.3,lift:.035,mesh:26,river:.85,persp:.6,spin:false,elevMode:"order"};
+const DATASETS={oregon:{url:"../output/oregon_display.svg",label:"Oregon",realisticAmp:.012,note:"Oregon’s ~3.4 km maximum relief relative to its ~600 km width."},washington:{url:"../output/washington_display.svg",label:"Washington",realisticAmp:.0074,note:"Washington’s ~4.4 km maximum relief (Mount Rainier) relative to its ~590 km width."},clark:{url:"../output/clark_county.svg",label:"Clark County, WA",realisticAmp:.026,note:"Clark County’s approximate 1.3 km relief relative to its ~50 km width."}};let activeDataset="oregon", rivers=[], bounds=null, widthRange=[1,1], dragging=false, last=null, raf=0, centerOffset=[0,0];
+const controls=["yaw","pitch","roll","zoom","amp","freq","exag","lift","mesh","river","persp"];
+function sync(commit=true){ for(const k of controls){ $(k).value=state[k]; $(k+"Out").textContent=k==="yaw"||k==="pitch"||k==="roll"?Math.round(state[k])+"°":k==="zoom"?state[k].toFixed(2)+"×":k==="amp"?state[k].toFixed(2)+" units":k==="freq"?state[k].toFixed(1)+"×":k==="exag"?state[k].toFixed(1)+"×":k==="lift"?state[k].toFixed(3):state[k]; } commit?request():drawPreview(); }
+controls.forEach(k=>{const input=$(k);input.addEventListener("input",e=>{state[k]=+e.target.value;sync(false)});input.addEventListener("change",()=>sync(true));});
+function parseSvg(text){
+  const xml=new DOMParser().parseFromString(text,"image/svg+xml"), svg=xml.querySelector("svg"), vb=svg.getAttribute("viewBox").trim().split(/[ ,]+/).map(Number);
+  const rootW=parseFloat(svg.getAttribute("stroke-width"))||1;
+  const out=[]; let wmin=Infinity,wmax=-Infinity;
+  for(const path of xml.querySelectorAll("path")){
+    const nums=(path.getAttribute("d").match(/-?[\d.]+(?:e[-+]?\d+)?/ig)||[]).map(Number); const p=[]; for(let i=0;i+1<nums.length;i+=2)p.push([nums[i],nums[i+1]]); if(p.length<2)continue;
+    // Per-path stroke colour + width come from the path or nearest ancestor <g>/<svg>
+    // (the pipeline authors colour on the watershed <g> and flow-scaled width per path).
+    let el=path,color=null,sw=null;
+    while(el&&el!==xml){ if(el.getAttribute){ if(!color){const c=el.getAttribute("stroke"); if(c&&c!=="none")color=c;} if(sw==null){const w=el.getAttribute("stroke-width"); if(w!=null)sw=parseFloat(w);} } el=el.parentNode; }
+    if(!color)color="#00c8ff"; if(sw==null||!isFinite(sw))sw=rootW;
+    wmin=Math.min(wmin,sw); wmax=Math.max(wmax,sw);
+    out.push({pts:p,color,width:sw});
+  }
+  if(!isFinite(wmin)){wmin=1;wmax=1;}
+  bounds={x:vb[0],y:vb[1],w:vb[2],h:vb[3],maxDim:Math.max(vb[2],vb[3])}; widthRange=[wmin,wmax]; return out;
+}
+function elevationAt(x,y){ // x/y are normalized to -1..1; deliberately a replaceable seam for a DEM sampler.
+  const f=state.freq, ridge=.54*Math.sin((x*.9+y*.42)*Math.PI*f)+.28*Math.cos((x-y*.7)*Math.PI*f*1.4)+.18*Math.sin(y*Math.PI*f*2.2);
+  return ridge*state.amp*state.exag;
+}
+// Elevation derived from the hydrography itself: flow-scaled stroke width is a
+// proxy for USGS Strahler order, so thin headwaters ride high and thick mainstems
+// sink to the valley floor (matches tools/render_county_3d.py). t: 0=thinnest..1=thickest.
+function orderT(width){ const [a,b]=widthRange; return b>a?(width-a)/(b-a):0; }
+function riverHeight(width){ return (1-orderT(width))*state.amp*state.exag*3; }
+function coreWidth(width){ return 0.8+2.4*orderT(width); }
+// Aspect-true normalization (single maxDim scale) so the model keeps the map's shape.
+function point(x,y,lift=0,h=null){ const nx=((x-bounds.x)-bounds.w/2)/(bounds.maxDim/2), ny=-(((y-bounds.y)-bounds.h/2)/(bounds.maxDim/2)), z=(state.elevMode==="order"&&h!=null?h:elevationAt(nx,ny))+lift; return [nx,ny,z]; }
+function rotate(p){ const a=state.yaw*Math.PI/180,b=state.pitch*Math.PI/180,c=state.roll*Math.PI/180; let [x,y,z]=p; let q=x*Math.cos(a)-z*Math.sin(a); z=x*Math.sin(a)+z*Math.cos(a); x=q; q=y*Math.cos(b)-z*Math.sin(b); z=y*Math.sin(b)+z*Math.cos(b); y=q; q=x*Math.cos(c)-y*Math.sin(c); y=x*Math.sin(c)+y*Math.cos(c); return [q,y,z]; }
+function project(p){ let [x,y,z]=rotate(p), d=3.5, perspective=1/(1+state.persp*(z+1)/d); const scale=Math.min(activeWidth,activeHeight)*.38*state.zoom; return [activeWidth/2+x*scale*perspective+activeOffset[0],activeHeight/2-y*scale*perspective+activeOffset[1],z]; }
+function request(){ if(!raf)raf=requestAnimationFrame(draw); }
+function line(points, color, width, alpha=1){ if(points.length<2)return; ctx.beginPath(); points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.strokeStyle=color;ctx.lineWidth=width;ctx.globalAlpha=alpha;ctx.stroke(); }
+function drawMesh(){ const n=lowDetail?Math.min(9,state.mesh):state.mesh; const lines=[]; for(let i=0;i<=n;i++){let a=[],b=[];for(let j=0;j<=n;j++){let x=-1+2*i/n,y=-1+2*j/n;a.push(project([x,y,elevationAt(x,y)]));b.push(project([y,x,elevationAt(y,x)]));}lines.push(a,b)} lines.sort((a,b)=>Math.min(...a.map(p=>p[2]))-Math.min(...b.map(p=>p[2]))); for(const l of lines)line(l,"#4d6f92",.65,.32); }
+function drawAxes(){ const origin=project([0,0,0]), axes=[[[.38,0,0],"X","#ff6680"],[[0,.38,0],"Y","#9cff57"],[[0,0,.38],"Z","#39e9ff"]]; ctx.font="11px ui-monospace,monospace";ctx.textAlign="center";ctx.textBaseline="middle";for(const [v,label,color] of axes){const end=project(v);line([origin,end],color,1.4,.95);ctx.fillStyle=color;ctx.globalAlpha=1;ctx.fillText(label,end[0],end[1]-10);} }
+function drawCardinals(){ const dirs=[[[0,.88,0],"N"],[[0,-.88,0],"S"],[[.88,0,0],"E"],[[-.88,0,0],"W"]];ctx.font="bold 12px ui-monospace,monospace";ctx.textAlign="center";ctx.textBaseline="middle";for(const [v,label] of dirs){const p=project(v);ctx.globalAlpha=.95;ctx.strokeStyle="#05070d";ctx.lineWidth=4;ctx.strokeText(label,p[0],p[1]);ctx.fillStyle="#e8f2ff";ctx.fillText(label,p[0],p[1]);} }
+function size(target){const r=target.getBoundingClientRect(),w=Math.max(1,Math.floor(r.width)),h=Math.max(1,Math.floor(r.height));if(target.width!==w||target.height!==h){target.width=w;target.height=h;}}
+function centerModel(){ if(!rivers.length)return; size(canvas);ctx=canvas.getContext("2d");activeWidth=canvas.width;activeHeight=canvas.height;activeOffset=centerOffset; const pts=rivers.flatMap(r=>r.pts.map(([x,y])=>project(point(x,y,state.lift,riverHeight(r.width))))); const minX=Math.min(...pts.map(p=>p[0])),maxX=Math.max(...pts.map(p=>p[0])),minY=Math.min(...pts.map(p=>p[1])),maxY=Math.max(...pts.map(p=>p[1])); centerOffset[0]+=activeWidth/2-(minX+maxX)/2;centerOffset[1]+=activeHeight/2-(minY+maxY)/2;request(); }
+function render(target,previewMode=false){size(target);ctx=target.getContext("2d");activeWidth=target.width;activeHeight=target.height;activeOffset=previewMode?[0,0]:centerOffset;lowDetail=previewMode;ctx.fillStyle="#05070d";ctx.fillRect(0,0,activeWidth,activeHeight);if(!bounds)return;if(state.elevMode!=="order")drawMesh();drawAxes();const bigState=activeDataset==="washington"||activeDataset==="oregon",step=previewMode?(activeDataset==="clark"?80:bigState?120:18):(activeDataset==="clark"?4:bigState?8:1),lifted=state.lift,shaped=rivers.filter((_,i)=>i%step===0).map(r=>({pts:r.pts.map(([x,y])=>project(point(x,y,lifted,riverHeight(r.width)))),color:r.color,width:r.width}));shaped.sort((a,b)=>Math.max(...a.pts.map(p=>p[2]))-Math.max(...b.pts.map(p=>p[2])));ctx.lineCap="round";ctx.lineJoin="round";for(const r of shaped){const w=coreWidth(r.width)*(previewMode?.7:1);line(r.pts,r.color,w*2.6,state.river*.28);line(r.pts,r.color,w,state.river)}drawCardinals();}
+function drawPreview(){render(preview,true);}
+function draw(){raf=0;render(canvas,false);if(state.spin){state.yaw+=.22;$("yaw").value=state.yaw;$("yawOut").textContent=Math.round(state.yaw)+"°";request();}}
+function setDataset(key){activeDataset=key;const d=DATASETS[key];$("modelName").textContent=d.label;$("realisticNote").textContent="“Realistic” sets a vertical scale for "+d.note+" This remains a visual elevation field, not DEM-derived terrain.";$("load").classList.toggle("active",key==="oregon");$("loadWA").classList.toggle("active",key==="washington");$("loadClark").classList.toggle("active",key==="clark");}
+function useSvg(text,label){ rivers=parseSvg(text); state.elevMode=widthRange[1]>widthRange[0]*1.05?"order":"field"; $("elevMode").textContent="Elevation: "+(state.elevMode==="order"?"stream order":"terrain field"); $("count").textContent=rivers.length.toLocaleString(); $("source").textContent="Loaded actual "+DATASETS[activeDataset].label+" river paths from "+label+"."; $("empty")?.remove(); centerOffset=[0,0]; request(); }
+async function load(key=activeDataset){setDataset(key);const d=DATASETS[key];try { const res=await fetch(d.url); if(!res.ok)throw Error(res.status); useSvg(await res.text(),d.url.replace("../","")); } catch(e) { $("source").textContent="Direct file mode blocks automatic loading. Choose the matching SVG with Open local SVG."; $("empty").textContent="Choose the "+d.label+" SVG to load the real-data model."; } }
+canvas.addEventListener("pointerdown",e=>{dragging=true;last=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)});canvas.addEventListener("pointermove",e=>{if(!dragging)return;state.yaw+=(e.clientX-last[0])*.45;state.pitch=Math.max(-85,Math.min(85,state.pitch+(e.clientY-last[1])*.35));last=[e.clientX,e.clientY];sync(false)});canvas.addEventListener("pointerup",()=>{dragging=false;sync(true)});canvas.addEventListener("wheel",e=>{e.preventDefault();state.zoom=Math.max(.35,Math.min(2.4,state.zoom*(e.deltaY>0?.92:1.08)));sync(false);clearTimeout(canvas._commit);canvas._commit=setTimeout(()=>sync(true),140)},{passive:false});
+$("spin").onclick=()=>{state.spin=!state.spin;$("spin").textContent="Auto rotate: "+(state.spin?"on":"off");request()};$("center").onclick=centerModel;$("top").onclick=()=>{state.pitch=0;state.yaw=0;state.roll=0;centerOffset=[0,0];sync()};$("reset").onclick=()=>{Object.assign(state,{yaw:0,pitch:0,roll:0,zoom:1,amp:.14,freq:2.1,exag:1.3,lift:.035,mesh:26,river:.85,persp:.6,spin:false});centerOffset=[0,0];$("spin").textContent="Auto rotate: off";sync()};
+$("realistic").onclick=()=>{Object.assign(state,{amp:DATASETS[activeDataset].realisticAmp,exag:1,lift:.002});sync();};
+$("elevMode").onclick=()=>{state.elevMode=state.elevMode==="order"?"field":"order";$("elevMode").textContent="Elevation: "+(state.elevMode==="order"?"stream order":"terrain field");centerOffset=[0,0];sync();};
+const views={iso:{yaw:-35,pitch:48,roll:0},sideX:{yaw:0,pitch:78,roll:0},sideY:{yaw:90,pitch:78,roll:0}};$("presets").onclick=e=>{const b=e.target.closest("button"),view=b&&views[b.dataset.view];if(!view)return;Object.assign(state,view);centerOffset=[0,0];sync();centerModel();};
+$("load").onclick=()=>load("oregon");$("loadWA").onclick=()=>load("washington");$("loadClark").onclick=()=>load("clark");
+$("openFile").onclick=()=>$("filePicker").click();$("filePicker").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{useSvg(await file.text(),file.name)}catch(err){$("source").textContent="That file could not be parsed as an SVG river model."}};
+const _params=new URLSearchParams(location.search), _v=views[_params.get("view")]; if(_v)Object.assign(state,_v);
+sync();load(DATASETS[_params.get("dataset")]?_params.get("dataset"):"oregon");
+</script></body></html>

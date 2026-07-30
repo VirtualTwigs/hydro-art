@@ -18,6 +18,7 @@ by ``-min_x``) to keep north up in the rendered image.
 
 from __future__ import annotations
 
+import math
 from typing import Any, Iterable, Iterator, Mapping
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "path_d",
     "render_svg",
     "stream_order_widths",
+    "flow_widths",
 ]
 
 Coord = tuple[float, float]
@@ -69,7 +71,7 @@ def bounds(geometries: Iterable[Any]) -> tuple[float, float, float, float]:
     seen = False
     for geom in geometries:
         for part in _iter_line_parts(geom):
-            for x, y in part.coords:
+            for x, y, *_ in part.coords:
                 seen = True
                 if x < min_x:
                     min_x = x
@@ -111,7 +113,7 @@ def transform_coords(
             format_number(x - min_x, precision),
             format_number(max_y - y, precision),
         )
-        for x, y in coords
+        for x, y, *_ in coords
     ]
 
 
@@ -370,3 +372,44 @@ def stream_order_widths(
             frac = (order - 1) / (max_order - 1)
             widths[sid] = base_width + (top - base_width) * frac
     return widths
+
+
+def flow_widths(
+    flows: Mapping[int, float],
+    base_width: float,
+    max_scale: float = 6.0,
+    floor: float = 1e-2,
+) -> dict[int, float]:
+    """Scale stroke width by discharge, so each channel widens with its flow.
+
+    Unlike :func:`stream_order_widths` (which steps up only at Strahler-order
+    confluences), this uses the NHDPlus EROM mean-annual discharge (``QAMA``,
+    cfs) so a channel visibly widens at *every* tributary junction — width tracks
+    flow "at that point." Discharge spans ~5 orders of magnitude (a headwater
+    trickle to the Columbia), so the mapping is logarithmic: the network's
+    smallest flow maps to ``base_width`` and its largest to
+    ``base_width * max_scale``, interpolating on ``log(flow)``. Deterministic; a
+    degenerate (single-value) network yields a uniform ``base_width``.
+
+    Args:
+        flows: Mapping of ``segment_id`` -> discharge (any positive flow metric).
+        base_width: Stroke width at the smallest flow.
+        max_scale: Multiplier applied at the largest flow.
+        floor: Minimum flow substituted for non-positive values before the log
+            (keeps zero/So headwaters finite and at ``base_width``).
+
+    Returns:
+        Mapping of ``segment_id`` -> stroke width.
+    """
+    top = base_width * max_scale
+    logs = {sid: math.log(max(q, floor)) for sid, q in flows.items()}
+    if not logs:
+        return {}
+    lo, hi = min(logs.values()), max(logs.values())
+    if hi - lo < 1e-9:
+        return {sid: base_width for sid in flows}
+    span = hi - lo
+    return {
+        sid: base_width + (top - base_width) * ((v - lo) / span)
+        for sid, v in logs.items()
+    }
