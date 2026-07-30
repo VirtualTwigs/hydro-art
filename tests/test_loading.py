@@ -6,10 +6,12 @@ from shapely.geometry import LineString
 
 from src.loading import (
     HYDRO_LAYER_ALLOWLIST,
+    WATERBODY_LAYER_ALLOWLIST,
     Layer,
     LayerLoader,
     PyogrioLayerLoader,
     discover_layers,
+    discover_waterbody_layers,
 )
 
 
@@ -56,3 +58,16 @@ def test_pyogrio_loader_warns_and_returns_empty_when_no_source(tmp_path):
 def test_allowlist_includes_flowline_and_wbd():
     assert "NHDFlowline" in HYDRO_LAYER_ALLOWLIST
     assert any(name.startswith("WBDHU") for name in HYDRO_LAYER_ALLOWLIST)
+
+
+def test_waterbody_allowlist_is_separate_from_flowline_discovery():
+    # Waterbody polygon layers must not leak into the flowline load path.
+    assert "NHDWaterbody" in WATERBODY_LAYER_ALLOWLIST
+    assert "NHDArea" in WATERBODY_LAYER_ALLOWLIST
+    assert "NHDWaterbody" not in HYDRO_LAYER_ALLOWLIST
+    assert "NHDArea" not in HYDRO_LAYER_ALLOWLIST
+
+
+def test_discover_waterbody_layers_filters_case_insensitively():
+    available = ["NHDFlowline", "NHDWaterbody", "nhdarea", "WBDHU8"]
+    assert discover_waterbody_layers(available) == ["NHDWaterbody", "nhdarea"]

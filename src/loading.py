@@ -22,7 +22,10 @@ __all__ = [
     "LayerLoader",
     "PyogrioLayerLoader",
     "HYDRO_LAYER_ALLOWLIST",
+    "WATERBODY_LAYER_ALLOWLIST",
+    "WATERBODY_ATTRIBUTE_FIELDS",
     "discover_layers",
+    "discover_waterbody_layers",
 ]
 
 
@@ -38,6 +41,25 @@ HYDRO_LAYER_ALLOWLIST: tuple[str, ...] = (
     "WBDHU4",
     "WBDHU8",
     "WBDHU12",
+)
+
+#: Areal-water polygon layers (Item W1). Kept separate from
+#: :data:`HYDRO_LAYER_ALLOWLIST` so waterbody polygons never leak into the
+#: flowline/graph load path; classification lives in :mod:`src.waterbodies`.
+WATERBODY_LAYER_ALLOWLIST: tuple[str, ...] = (
+    "NHDWaterbody",
+    "NHDArea",
+)
+
+#: Source attribute columns needed to classify waterbodies by type/code and to
+#: retain provenance (name + stable source id). Loaded case-insensitively.
+WATERBODY_ATTRIBUTE_FIELDS: tuple[str, ...] = (
+    "FType",
+    "FCode",
+    "GNIS_Name",
+    "Permanent_Identifier",
+    "ReachCode",
+    "AreaSqKm",
 )
 
 
@@ -68,6 +90,16 @@ def discover_layers(layer_names: list[str], allowlist: tuple[str, ...] = HYDRO_L
     """Filter available layer names to those in the allowlist (case-insensitive)."""
     wanted = {name.lower() for name in allowlist}
     return [name for name in layer_names if name.lower() in wanted]
+
+
+def discover_waterbody_layers(layer_names: list[str]) -> list[str]:
+    """Filter available layer names to the areal-water polygon layers.
+
+    Convenience wrapper over :func:`discover_layers` using
+    :data:`WATERBODY_LAYER_ALLOWLIST`, so waterbody discovery is explicit and
+    independent of the flowline/WBD load path.
+    """
+    return discover_layers(layer_names, WATERBODY_LAYER_ALLOWLIST)
 
 
 @runtime_checkable
@@ -127,6 +159,69 @@ class PyogrioLayerLoader:
                     huc4=huc4,
                     geometries=tuple(frame.geometry.values),
                     crs=str(frame.crs) if frame.crs is not None else None,
+                )
+            )
+        return layers
+
+    def load_waterbody_layers(
+        self, dataset_dir: Path, dataset_id: str, huc4: str
+    ) -> list[Layer]:  # pragma: no cover - requires GDAL + real data
+        """Load areal-water polygon layers with classification attributes.
+
+        Unlike :meth:`load_layers`, this discovers only
+        :data:`WATERBODY_LAYER_ALLOWLIST` layers and preserves the per-feature
+        source attributes (:data:`WATERBODY_ATTRIBUTE_FIELDS`) needed to
+        classify features by type/code in :mod:`src.waterbodies`.
+        """
+        try:
+            import geopandas as gpd
+            from pyogrio import list_layers
+        except ImportError as exc:
+            raise GeometryError(
+                "geopandas/pyogrio are required to load GIS data; install the "
+                "GIS dependencies from requirements.txt."
+            ) from exc
+
+        source = self._find_source(dataset_dir)
+        if source is None:
+            warnings.warn(
+                f"No .gdb/.shp source found under {dataset_dir}; skipping "
+                f"waterbodies for {dataset_id}/{huc4}.",
+                stacklevel=2,
+            )
+            return []
+
+        available = [str(row[0]) for row in list_layers(source)]
+        selected = discover_waterbody_layers(available)
+        if not selected:
+            warnings.warn(
+                f"No known waterbody layers in {source} "
+                f"(saw {available}); skipping {dataset_id}/{huc4}.",
+                stacklevel=2,
+            )
+            return []
+
+        wanted = {field.lower(): field for field in WATERBODY_ATTRIBUTE_FIELDS}
+        layers: list[Layer] = []
+        for name in selected:
+            frame = gpd.read_file(source, layer=name)
+            present = {
+                col: wanted[col.lower()]
+                for col in frame.columns
+                if col.lower() in wanted
+            }
+            attributes = tuple(
+                {canonical: row[col] for col, canonical in present.items()}
+                for _, row in frame.iterrows()
+            )
+            layers.append(
+                Layer(
+                    name=name,
+                    dataset_id=dataset_id,
+                    huc4=huc4,
+                    geometries=tuple(frame.geometry.values),
+                    crs=str(frame.crs) if frame.crs is not None else None,
+                    attributes=attributes,
                 )
             )
         return layers
