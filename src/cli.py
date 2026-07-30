@@ -93,6 +93,23 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Raster export size in pixels: 4096 8192 16384 32768 65536.",
     )
+    parser.add_argument(
+        "--waterbodies",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Render waterbody outlines (use --no-waterbodies to disable).",
+    )
+    parser.add_argument(
+        "--waterbody-color",
+        default=None,
+        help="Waterbody outline stroke color (hex, e.g. #2ec4ff).",
+    )
+    parser.add_argument(
+        "--waterbody-stroke-width",
+        type=float,
+        default=None,
+        help="Waterbody outline stroke width in SVG user units (positive number).",
+    )
     return parser
 
 
@@ -121,6 +138,18 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["output"] = args.output
     if args.png_size is not None:
         overrides["png_size"] = args.png_size
+
+    # Waterbody sub-keys are collected under a nested mapping so precedence can
+    # deep-merge them onto YAML/defaults (see :func:`resolve_settings`).
+    waterbodies: dict[str, Any] = {}
+    if args.waterbodies is not None:
+        waterbodies["enabled"] = args.waterbodies
+    if args.waterbody_color is not None:
+        waterbodies["color"] = args.waterbody_color
+    if args.waterbody_stroke_width is not None:
+        waterbodies["stroke_width"] = args.waterbody_stroke_width
+    if waterbodies:
+        overrides["waterbodies"] = waterbodies
     return overrides
 
 
@@ -146,5 +175,17 @@ def resolve_settings(argv: Sequence[str] | None = None) -> Settings:
     """
     args = build_parser().parse_args(argv)
     yaml_values = load_yaml(args.config)
-    merged = merge_values(dict(DEFAULTS), yaml_values, cli_overrides(args))
+    overrides = cli_overrides(args)
+    merged = merge_values(dict(DEFAULTS), yaml_values, overrides)
+
+    # `waterbodies` is a nested block; a shallow merge would let a later layer
+    # replace the whole dict. Deep-merge its sub-keys so YAML < CLI precedence
+    # holds per sub-key (e.g. --no-waterbodies keeps a YAML stroke_width).
+    waterbodies: dict[str, Any] = dict(DEFAULTS["waterbodies"])
+    for layer in (yaml_values, overrides):
+        block = layer.get("waterbodies")
+        if isinstance(block, dict):
+            waterbodies.update(block)
+    merged["waterbodies"] = waterbodies
+
     return build_settings(merged)

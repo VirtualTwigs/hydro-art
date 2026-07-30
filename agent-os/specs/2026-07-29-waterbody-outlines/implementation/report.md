@@ -67,10 +67,140 @@ byte-identical; nothing in the live pipeline calls the new code yet.
   discovery; `discover_waterbody_layers` case-insensitive filtering.
 - New tests: 9. Full suite: **159 passed**, no regressions.
 
-## Follow-ups (W2+)
+## Follow-ups (W3+)
 
-- W2: polygon repair → EPSG:5070 → region clip → `area_m2` measurement →
-  threshold/coastal selection + duplicate-edge QA + `WaterbodySelection` report.
 - W3: `waterbodies` config block (enabled/color/threshold/coast) + a pipeline
   stage + dedicated no-fill SVG layers.
-- Wire `load_waterbody_layers` into the pipeline (unused until W2/W3).
+- Wire `load_waterbody_layers` + `process_waterbodies` into the pipeline and
+  persist the `WaterbodySelection` report to `RunContext.artifacts` (unused
+  until W3).
+
+---
+
+# W2 — Waterbody repair, clipping & selection
+
+_Date: 2026-07-29 · Epoch 1.5, Phase 1.5.2 · Task Group 2._
+
+## Scope
+
+Added the **normalization & cartographic selection** library. Still no pipeline
+stage/config/rendering (W3), so default 2D builds remain byte-identical.
+
+## Changes
+
+- `src/waterbodies.py`: added `area_m2: float | None = None` to
+  `WaterbodyFeature` (populated during selection; W1 tests unaffected).
+- `src/waterbody_selection.py` (new):
+  - `process_waterbodies()` runs each classified feature through
+    repair → reproject(EPSG:5070) → region clip → area → policy, reusing
+    `src.geometry.repair_geometry` and `src.clipping.clip_geometry` so
+    waterbodies inherit identical repair/clip semantics (holes + multipart
+    preserved by shapely). Reprojection is an injectable seam whose default
+    lazily imports pyproj — offline tests pass EPSG:5070 inputs so it's a
+    no-op.
+  - `WaterbodySelectionPolicy`: `min_inland_area_m2` (default **0**),
+    `min_coastal_area_m2`, `pond_max_area_m2` (0 disables lake→pond split),
+    `coastal_mode` (default **conservative**).
+  - **Conservative coast policy**: a coastal-class feature (bay/inlet/coastal)
+    trimmed by the region clip is a clip-boundary fragment → excluded. Open
+    ocean is already excluded upstream (W1). Inland features near the border
+    are trimmed and kept (flagged `clipped`).
+  - `WaterbodySelection` report: `selected`/`excluded` (every candidate in
+    exactly one bucket), `counts` (candidates/selected/excluded/by_class),
+    `policy_version`, and `shared_edge_pairs`.
+  - Determinism: input order preserved; exact-duplicate footprints
+    de-duplicated via normalized-WKB key (first kept, rest excluded);
+    shared coincident boundary segments counted via STRtree and flagged
+    `shared_edge` (informs W3 stroke de-dup).
+
+## Area semantics
+
+EPSG:5070 is equal-area, so shapely's planar `area` is directly m². Thresholds
+compare `area_m2 >= threshold` (inclusive), so `min_*_area_m2 = 0` keeps every
+valid feature.
+
+## Tests
+
+- `tests/test_waterbody_selection.py` (8): m² measurement + zero threshold;
+  inclusive area boundary; invalid (bowtie) repair then measure; hole
+  preservation reduces area; clip trims partial / drops outside; conservative
+  coast excludes clipped bay but keeps inland bay; duplicate-geometry dedup;
+  report completeness + shared-edge flag.
+- New tests: 8. Full suite: **167 passed**, no regressions.
+
+---
+
+# W3 — Waterbody rendering & configuration
+
+_Date: 2026-07-30 · Epoch 1.5, Phase 1.5.3 · Task Group 3._
+
+## Scope
+
+Wired the W1/W2 library into the live pipeline: a validated `waterbodies` config
+block, dedicated no-fill SVG outline layers, and pipeline plumbing that loads →
+classifies → selects → renders areal water. This is the first item to change the
+default 2D build — but only when areal-water data is actually present: with a
+river-only loader (or `--no-waterbodies`) the output stays byte-identical.
+
+## Changes
+
+- `src/config.py`
+  - `WaterbodySettings` frozen dataclass (enabled, color, stroke_width,
+    min_inland_area_m2, min_coastal_area_m2, coastal_mode, render_order) as a new
+    `Settings.waterbodies` field.
+  - `DEFAULTS["waterbodies"]` (on by default, `#2ec4ff`, stroke 0.45, thresholds
+    0, conservative, below) + `SUPPORTED_COASTAL_MODES`/`SUPPORTED_RENDER_ORDERS`.
+  - `_coerce_waterbodies()` validates at the boundary (hex color, positive
+    stroke, non-negative areas, allowlisted coastal_mode/render_order) and
+    tolerates a partial mapping by filling missing sub-keys from defaults.
+- `src/cli.py`
+  - `--waterbodies/--no-waterbodies` (BooleanOptionalAction), `--waterbody-color`,
+    `--waterbody-stroke-width`. Overrides collect under a nested `waterbodies`
+    block; `resolve_settings` **deep-merges** it so YAML < CLI precedence holds
+    per sub-key (e.g. `--no-waterbodies` keeps a YAML `stroke_width`).
+- `src/rendering.py`
+  - `polygon_path_d()` — one explicitly-closed `M…L…Z` subpath per ring
+    (exterior + holes, multipart-aware), dropping shapely's duplicate closing
+    vertex.
+  - `_waterbody_lines()` — emits `<g id="waterbodies" fill="none" stroke=… …>`
+    with per-feature `<g id="waterbody_{id}" data-class="{cls}">` and
+    `<path id="waterbody_{id}_outline">`.
+  - `render_svg` gained `waterbodies`/`waterbody_color`/`waterbody_stroke_width`/
+    `waterbody_order` params. `waterbodies=None`/`[]` → byte-identical to the
+    prior river-only render; bounds only extend when items are present;
+    `below`/`above` control z-order relative to the flowline layers.
+- `src/pipeline.py`
+  - `validate` stage additionally loads waterbody layers, but only when
+    `settings.waterbodies.enabled` **and** `hasattr(loader,
+    "load_waterbody_layers")` — river-only loaders are untouched.
+  - `generate_svg` calls `_select_waterbody_outlines()` (classify → `process_
+    waterbodies` against the reprojected `region_boundary` → outline items),
+    stashes the `WaterbodySelection` in `artifacts["waterbody_selection"]`, and
+    passes outlines + configured style/order to `render_svg`.
+
+## Byte-identical guarantee
+
+Three layers of protection keep default builds unchanged where there's no areal
+water: `render_svg` returns identical bytes for `waterbodies=None`; the validate
+stage skips loading unless enabled AND supported; and `_select_waterbody_outlines`
+returns `[]` (→ `waterbodies=None`) when disabled or empty. Verified by
+`test_disabled_waterbodies_build_is_byte_identical`.
+
+## Tests
+
+- `tests/test_waterbody_config.py` (8): defaults on/valid; partial dict fills
+  defaults; invalid color/coastal_mode/stroke_width raise; YAML override; CLI
+  `--no-waterbodies` keeps YAML sub-keys; CLI color/width override.
+- `tests/test_waterbody_rendering.py` (5): ring closure (exterior+hole); no-
+  waterbody render byte-identical; fill:none group with stable IDs; configured
+  color/width; below-vs-above z-order.
+- `tests/test_waterbody_pipeline.py` (4): river-only loader has no group;
+  disabled build byte-identical; enabled loader renders a lake outline; the
+  `WaterbodySelection` lands in artifacts.
+- New tests: 17. Full suite: **184 passed**, no regressions.
+
+## Follow-ups (W4)
+
+- Geographic QA against real Clark County / Oregon / Washington samples;
+  approved state/county/print thresholds + coastal examples; SVG size /
+  rasterization impact and a documented detail policy.

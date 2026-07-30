@@ -30,6 +30,11 @@ from src.optimize import SvgOptimizer, SvgoOptimizer
 from src.ordering import assign_stream_order
 from src.projection import reproject_layer
 from src.rendering import render_svg
+from src.waterbodies import classify_layer
+from src.waterbody_selection import (
+    WaterbodySelectionPolicy,
+    process_waterbodies,
+)
 from src.watersheds import group_segments_by_huc, watershed_stats
 
 __all__ = ["Stage", "RunContext", "PIPELINE_STAGES", "Pipeline"]
@@ -115,6 +120,25 @@ def _validate_stage(ctx: RunContext) -> None:
     ctx.artifacts["layers"] = layers
     total = sum(len(layer.geometries) for layer in layers)
     ctx.log(f"[bold]validate[/bold] loaded {len(layers)} layer(s), {total} geometries")
+
+    # Areal-water is an additive layer: only loaded when enabled AND the loader
+    # supports it, so river-only loaders (and disabled builds) stay untouched.
+    if ctx.settings.waterbodies.enabled and hasattr(
+        ctx.loader, "load_waterbody_layers"
+    ):
+        wb_layers = []
+        for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
+            wb_layers.extend(
+                ctx.loader.load_waterbody_layers(
+                    dataset_dir, descriptor.dataset_id, descriptor.huc4
+                )
+            )
+        ctx.artifacts["waterbody_layers"] = wb_layers
+        wb_total = sum(len(layer.geometries) for layer in wb_layers)
+        ctx.log(
+            f"[bold]validate[/bold] loaded {len(wb_layers)} waterbody layer(s), "
+            f"{wb_total} polygons"
+        )
 
 
 def _repair_stage(ctx: RunContext) -> None:
@@ -228,6 +252,10 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         data["segment_id"]: data["geometry"]
         for _, _, data in hydro_graph.digraph.edges(data=True)
     }
+
+    waterbody_items = _select_waterbody_outlines(ctx)
+
+    wb = ctx.settings.waterbodies
     svg = render_svg(
         geometries,
         segment_colors,
@@ -237,6 +265,10 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         glow=ctx.settings.glow,
         glow_mode=ctx.settings.glow_mode,
         glow_radius=ctx.settings.glow_radius,
+        waterbodies=waterbody_items or None,
+        waterbody_color=wb.color,
+        waterbody_stroke_width=wb.stroke_width,
+        waterbody_order=wb.render_order,
     )
     ctx.artifacts["svg"] = svg
 
@@ -245,8 +277,43 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     )
     ctx.log(
         f"[bold]generate_svg[/bold] rendered {len(geometries)} path(s) in "
-        f"{groups} watershed layer(s); {len(svg)} bytes"
+        f"{groups} watershed layer(s), {len(waterbody_items)} waterbody outline(s); "
+        f"{len(svg)} bytes"
     )
+
+
+def _select_waterbody_outlines(ctx: RunContext) -> list[tuple]:
+    """Classify + select loaded waterbody layers into render-ready outline items.
+
+    Returns a list of ``(feature_id, geometry, wb_class)`` tuples for the
+    selected features, stashing the full :class:`WaterbodySelection` report in
+    ``artifacts["waterbody_selection"]``. Returns ``[]`` when the feature is
+    disabled or no waterbody layers were loaded, leaving the render river-only.
+    """
+    wb = ctx.settings.waterbodies
+    wb_layers = ctx.artifacts.get("waterbody_layers")
+    if not wb.enabled or not wb_layers:
+        return []
+
+    features = [feat for layer in wb_layers for feat in classify_layer(layer)]
+    policy = WaterbodySelectionPolicy(
+        min_inland_area_m2=wb.min_inland_area_m2,
+        min_coastal_area_m2=wb.min_coastal_area_m2,
+        coastal_mode=wb.coastal_mode,
+    )
+    selection = process_waterbodies(
+        features,
+        boundary=ctx.artifacts.get("region_boundary"),
+        policy=policy,
+        target_crs=ctx.settings.projection,
+    )
+    ctx.artifacts["waterbody_selection"] = selection
+
+    items: list[tuple] = []
+    for index, feat in enumerate(selection.selected):
+        feature_id = feat.source_id or f"wb{index}"
+        items.append((feature_id, feat.geometry, feat.wb_class))
+    return items
 
 
 def _optimize_svg_stage(ctx: RunContext) -> None:

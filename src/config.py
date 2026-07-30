@@ -22,6 +22,7 @@ import yaml
 __all__ = [
     "ConfigError",
     "Settings",
+    "WaterbodySettings",
     "DEFAULTS",
     "SUPPORTED_REGIONS",
     "SUPPORTED_PROJECTIONS",
@@ -31,6 +32,8 @@ __all__ = [
     "SUPPORTED_HUC_LEVELS",
     "SUPPORTED_PALETTES",
     "SUPPORTED_GLOW_MODES",
+    "SUPPORTED_COASTAL_MODES",
+    "SUPPORTED_RENDER_ORDERS",
     "load_yaml",
     "build_settings",
 ]
@@ -82,6 +85,14 @@ SUPPORTED_PALETTES: tuple[str, ...] = ("neon",)
 #: ``blur`` (SVG Gaussian-blur filter). Only used when ``glow`` is enabled.
 SUPPORTED_GLOW_MODES: tuple[str, ...] = ("vector", "blur")
 
+#: Coast-handling policies for waterbody outlines (Item W2/W3).
+#: ``conservative`` excludes coastal clip-boundary fragments (avoids portraying
+#: truncated sea as closed shapes); ``permissive`` treats coastal like inland.
+SUPPORTED_COASTAL_MODES: tuple[str, ...] = ("conservative", "permissive")
+
+#: Where the waterbody-outline layer sits relative to the flowline layers.
+SUPPORTED_RENDER_ORDERS: tuple[str, ...] = ("below", "above")
+
 _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 #: Built-in defaults, reflecting PRD sections 19 and 25.
@@ -99,7 +110,43 @@ DEFAULTS: dict[str, Any] = {
     "glow_radius": 2.0,
     "png_size": 4096,
     "output": {"svg": True, "png": False, "pdf": False},
+    "waterbodies": {
+        "enabled": True,
+        "color": "#2ec4ff",
+        "stroke_width": 0.45,
+        "min_inland_area_m2": 0.0,
+        "min_coastal_area_m2": 0.0,
+        "coastal_mode": "conservative",
+        "render_order": "below",
+    },
 }
+
+
+@dataclass(frozen=True)
+class WaterbodySettings:
+    """Validated settings for the optional waterbody-outline layer (Item W3).
+
+    Attributes:
+        enabled: Whether waterbody outlines are rendered (on by default).
+        color: Single distinct water stroke color (hex), independent of the
+            watershed palette.
+        stroke_width: Outline stroke width in SVG user units; must be > 0.
+        min_inland_area_m2: Minimum projected area (m²) for inland classes;
+            ``0`` keeps every valid inland feature.
+        min_coastal_area_m2: Minimum projected area (m²) for coastal classes.
+        coastal_mode: Coast-handling policy (one of
+            :data:`SUPPORTED_COASTAL_MODES`).
+        render_order: Waterbody layer position relative to flowlines (one of
+            :data:`SUPPORTED_RENDER_ORDERS`).
+    """
+
+    enabled: bool
+    color: str
+    stroke_width: float
+    min_inland_area_m2: float
+    min_coastal_area_m2: float
+    coastal_mode: str
+    render_order: str
 
 
 @dataclass(frozen=True)
@@ -122,6 +169,7 @@ class Settings:
             :data:`SUPPORTED_PNG_SIZES`).
         outputs: Set of output formats to produce (subset of
             :data:`SUPPORTED_OUTPUTS`).
+        waterbodies: Validated waterbody-outline settings (Item W3).
     """
 
     regions: tuple[str, ...]
@@ -137,6 +185,7 @@ class Settings:
     glow_radius: float
     png_size: int
     outputs: frozenset[str]
+    waterbodies: WaterbodySettings
 
 
 def _normalize_region(name: str) -> str:
@@ -180,6 +229,87 @@ def _coerce_outputs(output: Any) -> frozenset[str]:
             f"Valid formats are: {valid}."
         )
     return frozenset(requested)
+
+
+def _coerce_waterbodies(value: Any) -> WaterbodySettings:
+    """Validate the ``waterbodies`` block into a :class:`WaterbodySettings`.
+
+    A partial mapping is tolerated: any sub-key the caller omits falls back to
+    :data:`DEFAULTS`, so ``{"enabled": False}`` keeps every other default. This
+    makes both direct ``build_settings`` calls and merged CLI/YAML input safe.
+
+    Raises:
+        ConfigError: If any provided sub-value is invalid.
+    """
+    defaults = DEFAULTS["waterbodies"]
+    if value is None:
+        merged = dict(defaults)
+    elif isinstance(value, Mapping):
+        merged = {**defaults, **value}
+    else:
+        raise ConfigError(
+            f"Invalid 'waterbodies' value: {value!r}. Expected a mapping."
+        )
+
+    enabled = bool(merged.get("enabled", defaults["enabled"]))
+
+    color = str(merged.get("color", defaults["color"]))
+    if not _HEX_COLOR.match(color):
+        raise ConfigError(
+            f"Invalid waterbodies.color: {color!r}. Expected a hex color like "
+            "'#2ec4ff'."
+        )
+
+    try:
+        stroke_width = float(merged.get("stroke_width", defaults["stroke_width"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid waterbodies.stroke_width: {merged.get('stroke_width')!r}. "
+            "Expected a positive number."
+        )
+    if stroke_width <= 0:
+        raise ConfigError(
+            f"waterbodies.stroke_width must be greater than 0, got {stroke_width}."
+        )
+
+    areas: dict[str, float] = {}
+    for field_name in ("min_inland_area_m2", "min_coastal_area_m2"):
+        try:
+            area = float(merged.get(field_name, defaults[field_name]))
+        except (TypeError, ValueError):
+            raise ConfigError(
+                f"Invalid waterbodies.{field_name}: {merged.get(field_name)!r}. "
+                "Expected a non-negative number."
+            )
+        if area < 0:
+            raise ConfigError(
+                f"waterbodies.{field_name} must be >= 0, got {area}."
+            )
+        areas[field_name] = area
+
+    coastal_mode = str(merged.get("coastal_mode", defaults["coastal_mode"])).lower()
+    if coastal_mode not in SUPPORTED_COASTAL_MODES:
+        valid = ", ".join(SUPPORTED_COASTAL_MODES)
+        raise ConfigError(
+            f"Unsupported waterbodies.coastal_mode: {coastal_mode!r}. Valid: {valid}."
+        )
+
+    render_order = str(merged.get("render_order", defaults["render_order"])).lower()
+    if render_order not in SUPPORTED_RENDER_ORDERS:
+        valid = ", ".join(SUPPORTED_RENDER_ORDERS)
+        raise ConfigError(
+            f"Unsupported waterbodies.render_order: {render_order!r}. Valid: {valid}."
+        )
+
+    return WaterbodySettings(
+        enabled=enabled,
+        color=color,
+        stroke_width=stroke_width,
+        min_inland_area_m2=areas["min_inland_area_m2"],
+        min_coastal_area_m2=areas["min_coastal_area_m2"],
+        coastal_mode=coastal_mode,
+        render_order=render_order,
+    )
 
 
 def build_settings(values: Mapping[str, Any]) -> Settings:
@@ -285,6 +415,8 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
     if not outputs:
         raise ConfigError("At least one output format must be enabled.")
 
+    waterbodies = _coerce_waterbodies(values.get("waterbodies", DEFAULTS["waterbodies"]))
+
     return Settings(
         regions=regions,
         projection=projection,
@@ -299,6 +431,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         glow_radius=glow_radius,
         png_size=png_size,
         outputs=outputs,
+        waterbodies=waterbodies,
     )
 
 

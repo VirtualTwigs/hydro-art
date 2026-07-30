@@ -26,6 +26,7 @@ __all__ = [
     "format_number",
     "transform_coords",
     "path_d",
+    "polygon_path_d",
     "render_svg",
     "stream_order_widths",
     "flow_widths",
@@ -132,6 +133,90 @@ def path_d(geom: Any, min_x: float, max_y: float, precision: int) -> str:
         commands += [f"L {x},{y}" for x, y in points[1:]]
         subpaths.append(" ".join(commands))
     return " ".join(subpaths)
+
+
+def _iter_polygon_rings(geom: Any) -> Iterator[Any]:
+    """Yield each ring (exterior then interiors) of a (multi)polygon geometry."""
+    if geom is None or geom.is_empty:
+        return
+    kind = geom.geom_type
+    if kind == "Polygon":
+        yield geom.exterior.coords
+        for interior in geom.interiors:
+            yield interior.coords
+    elif kind == "MultiPolygon":
+        for part in geom.geoms:
+            yield from _iter_polygon_rings(part)
+
+
+def polygon_bounds(geometries: Iterable[Any]) -> tuple[float, float, float, float] | None:
+    """Return ``(min_x, min_y, max_x, max_y)`` over polygon rings, or ``None``."""
+    min_x = min_y = float("inf")
+    max_x = max_y = float("-inf")
+    seen = False
+    for geom in geometries:
+        for ring in _iter_polygon_rings(geom):
+            for x, y, *_ in ring:
+                seen = True
+                if x < min_x:
+                    min_x = x
+                if y < min_y:
+                    min_y = y
+                if x > max_x:
+                    max_x = x
+                if y > max_y:
+                    max_y = y
+    if not seen:
+        return None
+    return (min_x, min_y, max_x, max_y)
+
+
+def polygon_path_d(geom: Any, min_x: float, max_y: float, precision: int) -> str:
+    """Build an SVG path ``d`` for a (multi)polygon as closed ring subpaths.
+
+    Each ring (exterior and every hole) becomes an ``M … L … Z`` closed
+    subpath, so holes are preserved as independent outlines under ``fill=none``.
+    Shapely rings repeat their first point to close; that duplicate is dropped
+    in favor of the explicit ``Z``.
+    """
+    subpaths: list[str] = []
+    for ring in _iter_polygon_rings(geom):
+        points = transform_coords(ring, min_x, max_y, precision)
+        if len(points) > 1 and points[0] == points[-1]:
+            points = points[:-1]
+        if len(points) < 2:
+            continue
+        commands = [f"M {points[0][0]},{points[0][1]}"]
+        commands += [f"L {x},{y}" for x, y in points[1:]]
+        commands.append("Z")
+        subpaths.append(" ".join(commands))
+    return " ".join(subpaths)
+
+
+def _waterbody_lines(
+    items: list[tuple],
+    color: str,
+    stroke_width: float,
+    min_x: float,
+    max_y: float,
+    precision: int,
+) -> list[str]:
+    """Serialize the ``<g id="waterbodies">`` layer (no fill, one path per feature)."""
+    width = format_number(stroke_width, _WIDTH_PRECISION)
+    lines = [
+        f'  <g id="waterbodies" fill="none" stroke="{color}" stroke-width="{width}">'
+    ]
+    for feature_id, geom, *rest in items:
+        wb_class = rest[0] if rest else None
+        group_attrs = [f'id="waterbody_{feature_id}"']
+        if wb_class:
+            group_attrs.append(f'data-class="{wb_class}"')
+        lines.append(f"    <g {' '.join(group_attrs)}>")
+        d = polygon_path_d(geom, min_x, max_y, precision)
+        lines.append(f'      <path id="waterbody_{feature_id}_outline" d="{d}"/>')
+        lines.append("    </g>")
+    lines.append("  </g>")
+    return lines
 
 
 def _path_element(
@@ -241,6 +326,10 @@ def render_svg(
     glow: bool = False,
     glow_mode: str = "blur",
     glow_radius: float = 2.0,
+    waterbodies: Iterable[tuple] | None = None,
+    waterbody_color: str = "#2ec4ff",
+    waterbody_stroke_width: float = 0.45,
+    waterbody_order: str = "below",
 ) -> str:
     """Render the colored river network as a single layered SVG document.
 
@@ -271,12 +360,28 @@ def render_svg(
         glow: Whether to add the optional glow effect (PRD section 20).
         glow_mode: ``"blur"`` (Gaussian-blur filter) or ``"vector"`` (halo).
         glow_radius: Glow radius in SVG user units.
+        waterbodies: Optional iterable of ``(feature_id, geometry[, wb_class])``
+            polygon outlines rendered in a dedicated no-fill layer (Item W3).
+            ``None``/empty produces output byte-identical to a river-only render.
+        waterbody_color: Stroke color for the waterbody outline layer.
+        waterbody_stroke_width: Stroke width for the waterbody outline layer.
+        waterbody_order: ``"below"`` places the waterbody layer beneath the
+            flowline layers (rivers stay legible); ``"above"`` places it on top.
 
     Returns:
         The SVG document as a string (trailing newline included). With
         ``glow=False`` the output is identical to the un-glowed render.
     """
+    waterbody_items = list(waterbodies) if waterbodies else []
     min_x, min_y, max_x, max_y = bounds(geometries.values())
+    if waterbody_items:
+        pb = polygon_bounds(item[1] for item in waterbody_items)
+        if pb is not None:
+            if not geometries:
+                min_x, min_y, max_x, max_y = pb
+            else:
+                min_x, min_y = min(min_x, pb[0]), min(min_y, pb[1])
+                max_x, max_y = max(max_x, pb[2]), max(max_y, pb[3])
     width = format_number(max_x - min_x, precision)
     height = format_number(max_y - min_y, precision)
     base_width = format_number(line_width, _WIDTH_PRECISION)
@@ -305,6 +410,14 @@ def render_svg(
     )
     lines.append("  </g>")
 
+    if waterbody_items and waterbody_order == "below":
+        lines.extend(
+            _waterbody_lines(
+                waterbody_items, waterbody_color, waterbody_stroke_width,
+                min_x, max_y, precision,
+            )
+        )
+
     grouped: set[int] = set().union(*watersheds.values()) if watersheds else set()
 
     # Ordered river layers: watershed groups (sorted) then any unassigned.
@@ -331,6 +444,14 @@ def render_svg(
             _group_lines(
                 group_id, color, segment_ids, geometries, segment_colors,
                 fallback_color, min_x, max_y, precision, stroke_widths, filter_ref,
+            )
+        )
+
+    if waterbody_items and waterbody_order == "above":
+        lines.extend(
+            _waterbody_lines(
+                waterbody_items, waterbody_color, waterbody_stroke_width,
+                min_x, max_y, precision,
             )
         )
 
