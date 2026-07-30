@@ -204,3 +204,53 @@ returns `[]` (→ `waterbodies=None`) when disabled or empty. Verified by
 - Geographic QA against real Clark County / Oregon / Washington samples;
   approved state/county/print thresholds + coastal examples; SVG size /
   rasterization impact and a documented detail policy.
+
+---
+
+# W4 — Waterbody QA & regional presets (offline slice)
+
+_Date: 2026-07-30 · Epoch 1.5, Phase 1.5.4 · Task Group 4 (partial by design)._
+
+## Scope
+
+W4 mixes work I can do offline with parts that require real NHD data (NAS +
+GDAL) and approved art-direction numbers. Per an explicit scoping decision with
+the user, this delivers only the **offline-verifiable slice** plus a **runnable
+harness** for the real-data part; preset values and the real-region visual
+validation are deferred (see below), so W4's checkbox is intentionally partial.
+
+## Changes
+
+- `src/rendering.py` — spec-conformance: the `<g id="waterbodies">` group now
+  declares `stroke-linecap="round" stroke-linejoin="round"` explicitly. The root
+  `<svg>` already sets these (they inherit), so rendered output is visually
+  unchanged; the explicit attributes keep outlines correct when a single group
+  is **extracted standalone** (as `tools/rasterize_layered.py` does per layer).
+- `tools/waterbody_qa.py` (new) — real-data QA harness. Loads NHD waterbody/area
+  polygons for a region, runs the *same* `classify_waterbody` +
+  `process_waterbodies` the pipeline uses, and prints a report cross-checking the
+  `WaterbodySelection`: class counts, hole/multipolygon counts, coastal
+  kept-vs-dropped, coastal-fragment and duplicate-geometry drops, shared-edge
+  pairs, and source-id traceability. Clips to a US state (Census shapefile, as
+  `render_region_clip.py`), an optional county, or `--no-clip`. Eager GIS
+  imports → outside the offline suite.
+
+## Tests
+
+- `tests/test_waterbody_qa.py` (5): waterbodies group declares round line
+  join/cap; a donut's hole survives into the outline path (2 subpaths); a
+  MultiPolygon renders as one group with a multi-subpath path; conservative
+  coast drops a clipped bay end-to-end while keeping an inland lake (and the
+  render omits the dropped bay); shared-edge lakes are both kept, flagged, and
+  rendered rather than silently dropped.
+- New tests: 5. Full suite: **189 passed**, no regressions.
+
+## Deferred (require environments/decisions I don't have here)
+
+1. **Real-region validation** — run `tools/waterbody_qa.py --state Oregon` /
+   `--state Washington` / a Clark County build on the NAS-mounted datasets and
+   visually confirm no accidental coast closure. The harness is ready; only the
+   real run remains.
+2. **Regional presets & detail policy** — exact print/screen threshold and
+   stroke/size numbers are art-direction decisions the spec says must be
+   approved before coding; deferred pending those values.

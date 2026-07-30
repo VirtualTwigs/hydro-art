@@ -204,7 +204,8 @@ def _waterbody_lines(
     """Serialize the ``<g id="waterbodies">`` layer (no fill, one path per feature)."""
     width = format_number(stroke_width, _WIDTH_PRECISION)
     lines = [
-        f'  <g id="waterbodies" fill="none" stroke="{color}" stroke-width="{width}">'
+        f'  <g id="waterbodies" fill="none" stroke="{color}" '
+        f'stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round">'
     ]
     for feature_id, geom, *rest in items:
         wb_class = rest[0] if rest else None

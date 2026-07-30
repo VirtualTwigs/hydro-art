@@ -45,11 +45,21 @@ threshold 0, conservative coast policy. **Task Groups 1–3 (W1–W3) implemente
   pipeline wiring loads/classifies/selects only when enabled AND the loader supports it —
   `tests/test_waterbody_pipeline.py`, 4 tests, including a byte-identical disabled build.)
 
-## Task Group 4: Geographic QA and performance
+## Task Group 4: Geographic QA and performance — offline slice done; real-data/presets deferred
 
-- [ ] Validate real Clark County, Oregon, and Washington samples against source feature IDs.
-- [ ] Establish approved state/county/print thresholds and coastal examples.
-- [ ] Measure SVG size/rasterization impact and establish a documented detail policy.
+- [x] Offline fixture QA proving holes, multipolygons, conservative coastal-fragment exclusion,
+  and shared/duplicate-edge reporting through the full selection→render path
+  (`tests/test_waterbody_qa.py`, 5 tests); plus spec-conformance
+  `stroke-linejoin="round"`/`stroke-linecap="round"` on the `waterbodies` group
+  (`src/rendering.py`).
+- [x] Runnable real-data QA harness for Clark County / Oregon / Washington against source feature
+  IDs (`tools/waterbody_qa.py`): reuses the pipeline's classify + `process_waterbodies`, prints a
+  report cross-checking holes/multipart/coastal/duplicate-edge counts + source-id traceability.
+  Runs in the full (NAS + GDAL) environment, outside the offline suite.
+- [ ] **Deferred — needs a real (NAS-mounted) run:** execute `tools/waterbody_qa.py` on real
+  Clark County / Oregon / Washington and visually confirm no accidental coast closure.
+- [ ] **Deferred — needs art-direction approval:** establish state/county/print threshold presets
+  and a documented SVG-size / rasterization detail policy.
 
 ## Verification gates
 

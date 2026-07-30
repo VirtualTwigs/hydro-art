@@ -10,9 +10,13 @@ in-flight Epoch 1.5 (waterbody outlines) work and the uncommitted tree._
 - **W2 (waterbody repair/clip/area/selection) — implemented, NOT committed.**
   Waiting on an explicit "commit item W2".
 - **W3 (config + CLI + pipeline wiring + no-fill SVG render layers) —
-  implemented, NOT committed.** Waiting on an explicit "commit item W3".
-- Full suite: **184 passed** (offline, no GDAL/network).
-- Next roadmap item: **W4** (geographic QA & regional presets).
+  committed** as `4acbdd4` (W2 as `86189d8`).
+- **W4 (QA & regional presets) — offline slice implemented, NOT committed.**
+  Fixture QA + `stroke-linejoin` fix + `tools/waterbody_qa.py`. Real-region
+  validation and preset numbers deferred (need NAS run / art-direction approval).
+- Full suite: **189 passed** (offline, no GDAL/network).
+- Epoch 1.5 gate essentially met; next is **Epoch 2** (elevation) once W4's
+  deferred real-data validation + presets are closed out.
 
 ## Roadmap position (`agent-os/product/roadmap.md`)
 
@@ -22,9 +26,9 @@ outlines**, four phases W1–W4:
 | Item | Phase | State |
 |------|-------|-------|
 | W1 | 1.5.1 Source layers & classification | committed `46a0766` |
-| W2 | 1.5.2 Repair, clip & selection | implemented; **commit pending** |
-| W3 | 1.5.3 Layered rendering & config | implemented; **commit pending** |
-| W4 | 1.5.4 QA & regional presets | not started |
+| W2 | 1.5.2 Repair, clip & selection | committed `86189d8` |
+| W3 | 1.5.3 Layered rendering & config | committed `4acbdd4` |
+| W4 | 1.5.4 QA & regional presets | offline slice done; **commit pending**; real-data + presets deferred |
 
 ## Resolved art-direction decisions (apply across W2/W3)
 
@@ -71,33 +75,40 @@ Recorded in `agent-os/specs/2026-07-29-waterbody-outlines/planning/requirements.
   loader or `--no-waterbodies`); verified by
   `test_disabled_waterbodies_build_is_byte_identical`.
 
-## Next step for W4 (when asked "create tasks and implement item W4")
+## What W4 delivered (offline slice) — and what's deferred
 
-Geographic QA against real Clark County / Oregon / Washington samples; approved
-state/county/print thresholds + coastal examples; measure SVG size /
-rasterization impact and document a detail policy.
+- `src/rendering.py` — the `<g id="waterbodies">` group now declares
+  `stroke-linecap/linejoin="round"` explicitly (spec conformance; matters when a
+  group is extracted standalone, e.g. `tools/rasterize_layered.py`).
+- `tools/waterbody_qa.py` (new) — real-data QA harness reusing the pipeline's
+  classify + `process_waterbodies`; prints hole/multipart/coastal/duplicate-edge
+  counts + source-id traceability against the `WaterbodySelection`. Run in the
+  full (NAS + GDAL) env: `python tools/waterbody_qa.py --state Oregon`.
+- **Deferred** (need environments/decisions unavailable offline):
+  1. Real-region validation — run the harness on Oregon / Washington / Clark
+     County and eyeball no coast closure.
+  2. Regional presets & detail policy — art-direction numbers awaiting approval.
 
 ## Uncommitted tree — IMPORTANT
 
 `git status` mixes multiple unrelated buckets. Do **not** `git add -A`.
+W1–W3 are committed (`46a0766`, `86189d8`, `4acbdd4`).
 
-**A. W2 — ready to commit:**
-- `src/waterbody_selection.py` (new)
-- `tests/test_waterbody_selection.py` (new)
-- `src/waterbodies.py` (added `area_m2`)
-- `agent-os/specs/2026-07-29-waterbody-outlines/tasks.md` (ticked Task Group 2 — now also TG3)
-- `agent-os/specs/2026-07-29-waterbody-outlines/implementation/report.md` (W2 section — now also W3)
+**A. W4 offline slice — ready to commit:**
+- `src/rendering.py` (linecap/linejoin on the waterbodies group)
+- `tests/test_waterbody_qa.py` (new)
+- `tools/waterbody_qa.py` (new)
+- `agent-os/specs/2026-07-29-waterbody-outlines/tasks.md` (TG4 offline items ticked)
+- `agent-os/specs/2026-07-29-waterbody-outlines/implementation/report.md` (W4 section)
+- `CARRYOVER.md`
 
-**A2. W3 — ready to commit (this session):**
-- `src/config.py`, `src/cli.py`, `src/rendering.py`, `src/pipeline.py` (modified)
-- `tests/test_waterbody_config.py`, `tests/test_waterbody_rendering.py`,
-  `tests/test_waterbody_pipeline.py` (new)
-- Shared with W2: the `tasks.md` TG3 ticks + `report.md` W3 section, and this
-  `CARRYOVER.md`.
-
-Note: W2 and W3 both touch `src/waterbodies.py`'s neighborhood, `tasks.md`, and
-`report.md`. If committing separately, W2 first, then W3; or bundle W2+W3 in one
-commit if the user prefers. Stage waterbody files **by name**, never `-A`.
+Suggested commit (stage **by name**, never `-A`):
+```bash
+git add src/rendering.py tests/test_waterbody_qa.py tools/waterbody_qa.py \
+        agent-os/specs/2026-07-29-waterbody-outlines/tasks.md \
+        agent-os/specs/2026-07-29-waterbody-outlines/implementation/report.md \
+        CARRYOVER.md
+```
 
 **B. Pre-existing unrelated work (NOT this session; belongs in its own commits):**
 - Modified: `CLAUDE.md`, `agent-os/product/roadmap.md` (large restructure),
