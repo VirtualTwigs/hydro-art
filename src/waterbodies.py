@@ -97,6 +97,8 @@ class WaterbodyFeature:
         wb_class: Normalized class (one of :data:`WATERBODY_CLASSES`).
         source_crs: The feature's original CRS, or ``None`` if unknown.
         attributes: The retained source attribute subset.
+        area_m2: Projected area in m² (EPSG:5070), or ``None`` until measured
+            during selection (Item W2).
         inclusion_reason: Human-readable explanation of the classification.
         qa_flags: Data-quality flags (e.g. ``("missing_ftype",)``).
     """
@@ -112,6 +114,7 @@ class WaterbodyFeature:
     wb_class: str
     source_crs: str | None = None
     attributes: dict = field(default_factory=dict)
+    area_m2: float | None = None
     inclusion_reason: str = ""
     qa_flags: tuple[str, ...] = ()
 
