@@ -141,8 +141,15 @@ Split across roadmap items 14 (terrain sampling service) and 15 (Z attribution &
   lists, counts, and per-asset SHA-256; `export_scene` bundles GLB + OBJ + MTL +
   manifest through an injected `writer` seam. `tests/test_export3d.py`, 8 tests.
   Resolves decision #4: GLB + OBJ this epoch, terrain GeoTIFF deferred.)
-- [ ] Generate browser-ready preview assets; replace synthetic Z in the 3D lab.
-  (Roadmap item 18 — browser/Phase G work on `web/3d.html`; next up.)
+- [x] Generate browser-ready preview assets; replace synthetic Z in the 3D lab.
+  (Roadmap item 18 `src/preview.py`: `build_preview_asset` → deterministic
+  coarse-`interaction` + fine-`commit` heightfield tiles (row-major z, nodata →
+  `null`), bounds/z-range from the commit grid, per-LOD `cell_size_m`, optional
+  Z-attributed rivers as `[x,y,z]` meter polylines; `preview_json` = stable
+  `sort_keys` serializer. `web/3d.html` loads the asset and `elevationAt()`
+  bilinearly samples the interaction tile while orbiting / commit tile on release,
+  replacing the synthetic field (now labeled experimental). `tests/test_preview.py`,
+  8 tests, offline.)
 - [ ] Verify Clark County, WA end-to-end before statewide rollout. (Depends on a
   real (non-offline) DEM run; the deterministic offline path is covered by tests.)
 

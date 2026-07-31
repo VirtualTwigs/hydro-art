@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-30, after roadmap item #19 (Epoch 4, reproducible 3D export)._
+_Last updated: 2026-07-30, after roadmap item #18 (Epoch 4, progressive 3D preview) — final spec item._
 
 ## Current state (2026-07-30)
 
@@ -47,12 +47,19 @@ _Last updated: 2026-07-30, after roadmap item #19 (Epoch 4, reproducible 3D expo
   per-asset SHA-256). Geometry exported at true 1× m; exaggeration recorded, not
   baked. **Decision #4 resolved: GLB + OBJ** (GeoTIFF deferred). Built before #18
   per the spec's Phase F→G dependency. No open spec decisions remain.
-- **Next / last spec item:** #18 (progressive 3D preview) — replace
-  `web/3d.html`'s synthetic `elevationAt()` with DEM-derived preview assets
-  (reuse `mesh_from_dem` coarse LOD + `export_scene`), low-res interaction + full
-  commit. This is browser/Phase G work. Acceptance-criterion #1 (a real Clark
-  County end-to-end build) needs a non-offline DEM run.
-- Full suite: **268 passing**. Spec artifacts:
+- **Epoch 4 #18 (progressive 3D preview):** implemented 2026-07-30,
+  **uncommitted**. `src/preview.py` + `tests/test_preview.py` (8):
+  `build_preview_asset` → deterministic coarse-`interaction` + fine-`commit`
+  heightfield tiles (row-major z, nodata → `null`), bounds/z-range from the
+  commit grid, per-LOD `cell_size_m`, optional Z-rivers as `[x,y,z]` meter
+  polylines; `preview_json` = stable `sort_keys` serializer. `web/3d.html` gains
+  a "Load DEM preview…" control; `elevationAt()` bilinearly samples the
+  interaction tile while orbiting / commit tile on release, replacing the
+  synthetic field (now labeled experimental, still toggleable).
+- **Spec complete:** all coded items (#11–19) done. Remaining acceptance gate:
+  a real (non-offline) Clark County / Oregon end-to-end DEM build to generate a
+  live preview asset — needs GDAL + network.
+- Full suite: **276 passing**. Spec artifacts:
   `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling/`.
 
 ---

@@ -326,11 +326,35 @@ spec's Phase F→G dependency (browser preview consumes the export layer).
 
 - New tests: **8 passed**. Full suite: **268 passed** (was 260; +8), no regressions.
 
+## Item 18 — Progressive 3D preview (Phase 4.2)
+
+`src/preview.py` turns a normalized DEM pyramid into browser-ready heightfield
+tiles, and `web/3d.html` consumes them in place of the synthetic `elevationAt()`.
+
+- `build_preview_asset(dem, *, boundary_id, interaction_level=1, commit_level=0,
+  rivers=(), segment_colors=None)`: emits a coarse `interaction` tile (a coarser
+  pyramid level) and a fine `commit` tile (finest level). Each tile is a
+  row-major `z` array with DEM nodata surfaced as `null` (never substituted).
+  Bounds and `min_z`/`max_z` come from the commit grid, excluding nodata;
+  `cell_size_m` is reported per LOD. Optional Z-attributed `ElevatedLine`s become
+  `[x, y, z]` meter polylines colored by watershed (`segment_colors`), with
+  per-vertex nodata as `null`. Requested levels clamp to the pyramid, so a
+  single-level DEM collapses both LODs onto level 0.
+- `preview_json(asset)`: stable `sort_keys` serializer — identical DEM + settings
+  yield byte-identical JSON that round-trips.
+- `web/3d.html`: a "Load DEM preview…" control ingests the JSON; `elevationAt()`
+  then bilinearly samples the interaction tile while orbiting and the commit tile
+  on release (progressive detail), with nodata treated as the low-water floor.
+  The synthetic field is retained but labeled experimental and toggleable.
+
+### Verification (item 18)
+
+- New tests: **8 passed** (`tests/test_preview.py`). Full suite: **276 passed**
+  (was 268; +8), no regressions.
+
 ### Remaining
 
-Roadmap item 18 (progressive 3D preview — replace `web/3d.html`'s synthetic
-`elevationAt()` with DEM-derived preview assets, low-res interaction + full-detail
-commit) is the last spec item. It is browser/Phase G work; the deterministic
-asset-generation side can reuse `mesh_from_dem` (coarse LOD) + `export_scene`.
-Acceptance-criterion #1 (a real Clark County end-to-end build) needs a non-offline
-DEM run.
+Acceptance-criterion #1 (a real Clark County / Oregon end-to-end build with the
+preview asset generated from live 3DEP tiles) still needs a non-offline DEM run;
+the deterministic asset-generation and browser-sampling paths are covered by
+tests. This completes all coded work for the spec.

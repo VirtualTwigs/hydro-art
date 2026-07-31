@@ -52,8 +52,10 @@
       <label>Vertical exaggeration <output id="exagOut"></output></label><input id="exag" type="range" min="0.2" max="4" step="0.1" value="1.3">
       <label>River lift above terrain <output id="liftOut"></output></label><input id="lift" type="range" min="0" max="0.18" step="0.01" value="0.035">
       <div class="row"><button id="elevMode">Elevation: stream order</button></div>
+      <div class="row"><button id="loadDem">Load DEM preview…</button><button id="clearDem" hidden>Use synthetic field</button></div>
+      <input id="demPicker" type="file" accept=".json,application/json" hidden>
       <button id="realistic" class="active">Set realistic vertical scale</button>
-      <div class="callout" id="realisticNote">“Realistic” sets a ~0.01 normalized Z amplitude: Oregon’s ~3.4 km maximum relief relative to its ~600 km width. This is still a visual elevation field, not DEM-derived terrain. The future pipeline can replace <code>elevationAt()</code> with sampled DEM elevations while preserving the same controls.</div>
+      <div class="callout" id="realisticNote">The terrain field below is <b>experimental/synthetic</b>. Load a DEM preview asset (<code>src/preview.py</code> → <code>preview_json</code>) to replace <code>elevationAt()</code> with real sampled elevation — the coarse interaction tile is sampled while orbiting, the fine commit tile on release. “Realistic” sets a ~0.01 normalized Z amplitude (e.g. Oregon’s ~3.4 km relief over ~600 km).</div>
     </fieldset>
 
     <fieldset><legend>Model style</legend>
@@ -89,7 +91,23 @@ function parseSvg(text){
   if(!isFinite(wmin)){wmin=1;wmax=1;}
   bounds={x:vb[0],y:vb[1],w:vb[2],h:vb[3],maxDim:Math.max(vb[2],vb[3])}; widthRange=[wmin,wmax]; return out;
 }
-function elevationAt(x,y){ // x/y are normalized to -1..1; deliberately a replaceable seam for a DEM sampler.
+// A DEM-derived preview asset (from src/preview.py: build_preview_asset →
+// preview_json). When loaded it replaces the synthetic field below: the coarse
+// `interaction` tile is sampled while orbiting, the fine `commit` tile on release.
+let demAsset=null;
+function sampleDemNorm(nx,ny){ // nx/ny normalized -1..1 → normalized elevation -1..1 from DEM tile.
+  const tile=(lowDetail?demAsset.tiles.interaction:demAsset.tiles.commit), {width:w,height:h,z}=tile;
+  const b=demAsset.bounds, span=(b.max_z-b.min_z)||1;
+  const fc=(nx+1)/2*(w-1), fr=(1-(ny+1)/2)*(h-1);
+  const c0=Math.max(0,Math.min(w-1,Math.floor(fc))), r0=Math.max(0,Math.min(h-1,Math.floor(fr)));
+  const c1=Math.min(w-1,c0+1), r1=Math.min(h-1,r0+1), tx=fc-c0, ty=fr-r0;
+  const at=(r,c)=>z[r*w+c]; // null (DEM nodata) → treated as the low-water floor.
+  const g=(r,c)=>{const v=at(r,c); return v==null?b.min_z:v;};
+  const top=g(r0,c0)*(1-tx)+g(r0,c1)*tx, bot=g(r1,c0)*(1-tx)+g(r1,c1)*tx, zv=top*(1-ty)+bot*ty;
+  return ((zv-b.min_z)/span-0.5)*2;
+}
+function elevationAt(x,y){ // x/y are normalized to -1..1; a replaceable seam for a DEM sampler.
+  if(demAsset)return sampleDemNorm(x,y)*state.amp*state.exag;
   const f=state.freq, ridge=.54*Math.sin((x*.9+y*.42)*Math.PI*f)+.28*Math.cos((x-y*.7)*Math.PI*f*1.4)+.18*Math.sin(y*Math.PI*f*2.2);
   return ridge*state.amp*state.exag;
 }
@@ -121,6 +139,9 @@ $("spin").onclick=()=>{state.spin=!state.spin;$("spin").textContent="Auto rotate
 $("realistic").onclick=()=>{Object.assign(state,{amp:DATASETS[activeDataset].realisticAmp,exag:1,lift:.002});sync();};
 $("elevMode").onclick=()=>{state.elevMode=state.elevMode==="order"?"field":"order";$("elevMode").textContent="Elevation: "+(state.elevMode==="order"?"stream order":"terrain field");centerOffset=[0,0];sync();};
 const views={iso:{yaw:-35,pitch:48,roll:0},sideX:{yaw:0,pitch:78,roll:0},sideY:{yaw:90,pitch:78,roll:0}};$("presets").onclick=e=>{const b=e.target.closest("button"),view=b&&views[b.dataset.view];if(!view)return;Object.assign(state,view);centerOffset=[0,0];sync();centerModel();};
+$("loadDem").onclick=()=>$("demPicker").click();
+$("demPicker").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const a=JSON.parse(await file.text());if(!a.tiles||!a.tiles.commit||!a.bounds)throw Error("not a preview asset");demAsset=a;$("clearDem").hidden=false;$("previewLabel").textContent="DEM interaction preview";$("source").textContent="DEM preview loaded ("+(a.boundary_id||"?")+", "+a.crs+") — elevationAt() now samples real terrain.";centerOffset=[0,0];sync();}catch(err){$("source").textContent="That file is not a valid preview asset JSON."}};
+$("clearDem").onclick=()=>{demAsset=null;$("clearDem").hidden=true;$("previewLabel").textContent="Interaction preview";$("source").textContent="Reverted to the synthetic elevation field.";centerOffset=[0,0];sync();};
 $("load").onclick=()=>load("oregon");$("loadWA").onclick=()=>load("washington");$("loadClark").onclick=()=>load("clark");
 $("openFile").onclick=()=>$("filePicker").click();$("filePicker").onchange=async e=>{const file=e.target.files[0];if(!file)return;try{useSvg(await file.text(),file.name)}catch(err){$("source").textContent="That file could not be parsed as an SVG river model."}};
 const _params=new URLSearchParams(location.search), _v=views[_params.get("view")]; if(_v)Object.assign(state,_v);

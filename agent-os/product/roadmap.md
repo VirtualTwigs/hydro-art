@@ -103,9 +103,12 @@ Separate geographic data from camera and artistic styling. `L`
 
 **Phase 4.2 — Interactive preview**
 
-18. [ ] Progressive 3D preview — Replace the prototype's synthetic `elevationAt()` field with
+18. [x] Progressive 3D preview — Replace the prototype's synthetic `elevationAt()` field with
 DEM-backed tiles; use low-resolution interaction previews and commit full detail on release.
 Support Oregon and Clark County, WA first. `L`
+(`src/preview.py` builds deterministic coarse-interaction + fine-commit heightfield tiles;
+`web/3d.html` samples them in place of the synthetic field. Real end-to-end Clark County build
+still needs a non-offline DEM run.)
 
 **Phase 4.3 — 3D export**
 
