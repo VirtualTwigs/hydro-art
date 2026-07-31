@@ -1,32 +1,36 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-30, after roadmap item #13 (Epoch 2, DEM normalization)._
+_Last updated: 2026-07-30, after roadmap items #14–#15 (Epoch 3, Z-hydrography)._
 
 ## Current state (2026-07-30)
 
 - **Epoch 1 (#1–10):** complete and committed.
 - **Epoch 1.5 waterbodies (W1–W4):** complete and committed
   (`46a0766`…`fc60c5c`). Note: the roadmap.md restructure that adds Epochs
-  1.5–5 is still uncommitted and does not yet tick W1–W4.
-- **Epoch 2 #11 (elevation settings & provenance contract):** implemented,
-  **uncommitted** (`src/config.py` elevation block, `src/elevation.py`, CLI
-  flags, +19 tests).
-- **Epoch 2 #12 (3DEP DEM discovery & cache):** implemented 2026-07-30,
-  **uncommitted** — `src/dem.py` + `tests/test_dem.py` (9 tests). Deterministic
-  1-degree COG-grid discovery on the `prd-tnm` S3 bucket for `preview`/`state`
-  tiers; `local` (1 m) deferred. Delivery decisions resolved: AWS S3 COGs;
-  normalize-to-NAVD88 (identity for CONUS 3DEP, enforced later in #13).
-- **Epoch 2 #13 (DEM mosaic/clip/pyramid + bilinear sampling):** implemented
-  2026-07-30, **uncommitted** (awaiting an explicit "commit item #13"; #11/#12
-  are committed as `33a60d9`/`d2296aa`). `src/raster.py` +
-  `tests/test_raster.py` (11 tests): numpy
-  `RasterGrid`, `mosaic`/`clip_grid`/`build_pyramid`, `sample_bilinear` +
-  `GridSampler`, and `normalize_dem` orchestrating read→reproject(EPSG:5070)→
-  mosaic→clip→pyramid via injected `RasterReader`/`RasterReprojector` seams.
-- **Next:** #14 (terrain sampling service + flowline densification, Group 4) can
-  proceed — it consumes `GridSampler`. #16/#17+ (Groups 5–6) blocked on two open
-  decisions (mesh/error budget; GLB-vs-OBJ) in the spec's `planning/requirements.md`.
-- Full suite: **228 passing**. Spec artifacts:
+  1.5–5 does not tick W1–W4 (pre-existing inconsistency, left as-is).
+- **Epoch 2 #11 (elevation settings & provenance contract):** committed
+  `33a60d9`. `src/config.py` elevation block, `src/elevation.py`, CLI flags.
+- **Epoch 2 #12 (3DEP DEM discovery & cache):** committed `d2296aa`. `src/dem.py`
+  — deterministic 1-degree COG-grid discovery on the `prd-tnm` S3 bucket for
+  `preview`/`state` tiers; `local` (1 m) deferred. Decisions resolved: AWS S3
+  COGs; normalize-to-NAVD88 (identity for CONUS 3DEP).
+- **Epoch 2 #13 (DEM mosaic/clip/pyramid + bilinear sampling):** committed
+  `c3468f0`. `src/raster.py` — numpy `RasterGrid`, `mosaic`/`clip_grid`/
+  `build_pyramid`, `sample_bilinear` + `GridSampler`, `normalize_dem`
+  orchestrating read→reproject(EPSG:5070)→mosaic→clip→pyramid via injected
+  `RasterReader`/`RasterReprojector` seams.
+- **Epoch 3 #14 (terrain sampling service):** committed. `src/terrain.py` +
+  `tests/test_terrain.py` (8): `densify_line`
+  at DEM-cell spacing, `TerrainSampler` over an injected `ElevationSampler`,
+  `SampledLine` diagnostics, `dem_cell_size`/`sampler_for_dem`.
+- **Epoch 3 #15 (river Z attribution & QA):** committed.
+  `src/hydro_z.py` + `tests/test_hydro_z.py` (8): `ElevatedLine`
+  (immutable source Z, preserved 2D path), `profile_qa` downstream-inversion
+  detection, opt-in render-only `repair_monotonic` + `RepairPolicy`, `render_z`.
+- **Next:** #16 (adaptive terrain mesh, Group 5) and #17+ (Group 6) are **blocked**
+  on two open decisions — mesh/error budget; GLB-vs-OBJ — in the spec's
+  `planning/requirements.md`.
+- Full suite: **244 passing**. Spec artifacts:
   `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling/`.
 
 ---

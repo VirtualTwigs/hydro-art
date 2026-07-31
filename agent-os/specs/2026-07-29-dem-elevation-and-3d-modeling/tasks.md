@@ -15,8 +15,14 @@ tier is deferred (needs project-based discovery).
 **Task Group 3 (roadmap item 13) implemented 2026-07-30** — DEM raster
 normalization in `src/raster.py` (mosaic/clip/reproject-seam to EPSG:5070,
 deterministic pyramids, bilinear sampling with coverage/nodata diagnostics),
-TDD-first and offline on synthetic numpy grids. Groups 4–6 remain planning-only;
-Groups 5–6 are blocked on the two still-open decisions (mesh budget, GLB-vs-OBJ).
+TDD-first and offline on synthetic numpy grids.
+
+**Task Group 4 (roadmap items 14 & 15) implemented 2026-07-30** — terrain
+sampling service (`src/terrain.py`: densification + injected sampler) and river
+Z attribution/QA (`src/hydro_z.py`: `ElevatedLine`, downstream-inversion QA,
+opt-in render-only monotonic repair, `render_z`), TDD-first and offline. Groups
+5–6 remain planning-only and are blocked on the two still-open decisions (mesh
+budget, GLB-vs-OBJ).
 
 ## Proposed implementation groups
 
@@ -69,11 +75,25 @@ Groups 5–6 are blocked on the two still-open decisions (mesh budget, GLB-vs-OB
   outside extent, `nodata=True` when any neighbor is nodata — never a silent
   substitution. `tests/test_raster.py`, 11 tests with hand-computed results.)
 
-### Task Group 4: Z-enabled hydrography and QA
+### Task Group 4: Z-enabled hydrography and QA — done
 
-- [ ] Densify flowlines and attribute sampled elevation to every generated vertex.
-- [ ] Add downstream-profile QA and explicit render-only monotonic repair policy.
-- [ ] Add integration tests from a small DEM fixture through clipped flowline output.
+Split across roadmap items 14 (terrain sampling service) and 15 (Z attribution & QA).
+
+- [x] Densify flowlines and attribute sampled elevation to every generated vertex.
+  (Item 14 `src/terrain.py`: `densify_line` at DEM-cell spacing preserving
+  originals; `TerrainSampler` over an injected `ElevationSampler` →
+  `SampledLine`/`SampledPoint` with coverage/nodata diagnostics;
+  `dem_cell_size`/`sampler_for_dem` select a pyramid level. Item 15
+  `src/hydro_z.py`: `attribute_line` → `ElevatedLine` (immutable source Z per
+  vertex, original 2D path preserved, nodata count, dem_id/interpolation).)
+- [x] Add downstream-profile QA and explicit render-only monotonic repair policy.
+  (`profile_qa` flags downstream inversions (never alters); `repair_monotonic` +
+  `RepairPolicy` gate an opt-in, render-only non-increasing water surface that
+  leaves source Z intact; `render_z` = source_z·exaggeration + lift.)
+- [x] Add integration tests from a small DEM fixture through clipped flowline
+  output. (`tests/test_terrain.py` 8 + `tests/test_hydro_z.py` 8, incl. a
+  synthetic single-row DEM with a deliberate uphill bump flagged as an inversion
+  and removed by the opt-in repair.)
 
 ### Task Group 5: Terrain mesh and 3D scene
 

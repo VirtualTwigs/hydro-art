@@ -74,13 +74,13 @@ any point in the selected region.
 
 **Phase 3.1 — Ground-elevation sampling**
 
-14. [ ] Terrain sampling service — Provide an injectable bilinear sampler over normalized DEMs;
+14. [x] Terrain sampling service — Provide an injectable bilinear sampler over normalized DEMs;
 return elevation plus nodata/coverage diagnostics. Densify river lines at a spacing tied to
 the active DEM resolution before sampling. `L`
 
 **Phase 3.2 — Z-enabled hydrography**
 
-15. [ ] River elevation attribution & QA — Attach ground elevation to river vertices, preserve
+15. [x] River elevation attribution & QA — Attach ground elevation to river vertices, preserve
 the original 2D geometry path, identify nodata and implausible downstream inversions, and
 offer an explicitly opt-in render-only monotonic water-surface repair. `L`
 

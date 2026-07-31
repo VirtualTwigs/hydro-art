@@ -194,4 +194,52 @@ default 2D build is unchanged and never opens a raster.
 The GDAL-backed `RasterReader`/`RasterReprojector` implementations (real COG
 reads + warp) are the production seams, exercised by fakes here and wired when
 running non-offline. Z-attribution onto flowlines using `GridSampler` is item 14
-(Group 4).
+(Group 4) — see below.
+
+## Task Group 4 — Z-enabled hydrography and QA (roadmap items 14 & 15)
+
+Implemented 2026-07-30, TDD-first, fully offline on synthetic grids. Delivers the
+terrain sampling service (item 14) and river Z attribution + profile QA (item
+15). Still not wired into the pipeline (that is the item-16+ scene work), so a
+default 2D build is unchanged.
+
+### Item 14 — terrain sampling service (`src/terrain.py`, new)
+
+- `densify_line(coords, spacing)`: splits each segment into
+  `ceil(length/spacing)` equal parts, preserving every original vertex (exact 2D
+  path retained); spacing is normally `dem_cell_size` so no DEM cell is skipped.
+- `TerrainSampler(sampler)`: wraps any injected `ElevationSampler` (e.g. a
+  `GridSampler`); `sample_line` densifies then samples, returning a `SampledLine`
+  of `SampledPoint`s with `n_covered`/`n_nodata`/`coverage` diagnostics.
+- `dem_cell_size(dem, level)` / `sampler_for_dem(dem, level)`: pick a pyramid
+  level (coarse for interactive preview, level 0 for commit).
+- Tests: `tests/test_terrain.py` (8) over a tilted-plane DEM (value == x+y) with
+  hand-checked elevations, plus off-grid coverage and nodata cases.
+
+### Item 15 — river elevation attribution & QA (`src/hydro_z.py`, new)
+
+- `attribute_line(...) -> ElevatedLine`: densifies + samples a flowline; each
+  `ElevatedVertex` carries **immutable source Z** (`None` at nodata); the line
+  also keeps the original 2D geometry verbatim, `dem_id`, interpolation method,
+  and a `nodata_count`.
+- `profile_qa`: flags downstream **inversions** (Z rising in vertex/downstream
+  order beyond a tolerance), reporting indices + max rise — it never alters data.
+- `repair_monotonic` + `RepairPolicy`: opt-in (`enabled=False` by default),
+  **render-only** non-increasing water surface; returns a new surface and never
+  mutates source Z; nodata preserved as gaps.
+- `render_z(source_z, vertical_exaggeration, river_lift)`: display-only
+  `source_z·exaggeration + lift`, `None`-safe.
+- Tests: `tests/test_hydro_z.py` (8), incl. a single-row DEM with a deliberate
+  uphill bump flagged as an inversion and clamped by the opt-in repair, and a
+  guard that source Z is untouched.
+
+### Verification
+
+- New tests: **16 passed** (8 + 8). Full suite: **244 passed** (was 228; +16),
+  no regressions.
+- `ruff` not installed in the offline venv; not run.
+
+### Deferred
+
+Groups 5–6 (terrain mesh + 3D scene, GLB export/browser) remain planning-only
+and blocked on the mesh/error-budget and GLB-vs-OBJ decisions.
