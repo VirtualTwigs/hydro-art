@@ -130,10 +130,21 @@ Split across roadmap items 14 (terrain sampling service) and 15 (Z attribution &
 
 ### Task Group 6: GLB/export and browser handoff
 
-- [ ] Select a GLB-writing strategy that preserves testability and deterministic output.
-- [ ] Emit manifest with source/raster/geometry hashes and settings.
+- [x] Select a GLB-writing strategy that preserves testability and deterministic output.
+  (Item 19 `src/export3d.py`: `scene_to_glb` — a pure-stdlib binary-glTF writer,
+  terrain as `TRIANGLES` + rivers as `LINE_STRIP`, per-watershed PBR materials,
+  4-byte-aligned buffer views, `sort_keys` JSON chunk → byte-deterministic, no
+  external glTF dependency.)
+- [x] Emit manifest with source/raster/geometry hashes and settings.
+  (`build_manifest` → JSON with `scene_hash`, `terrain_geometry_hash`,
+  `source_raster_hash`, exaggeration/lift/lod/error budget, material + camera
+  lists, counts, and per-asset SHA-256; `export_scene` bundles GLB + OBJ + MTL +
+  manifest through an injected `writer` seam. `tests/test_export3d.py`, 8 tests.
+  Resolves decision #4: GLB + OBJ this epoch, terrain GeoTIFF deferred.)
 - [ ] Generate browser-ready preview assets; replace synthetic Z in the 3D lab.
-- [ ] Verify Clark County, WA end-to-end before statewide rollout.
+  (Roadmap item 18 — browser/Phase G work on `web/3d.html`; next up.)
+- [ ] Verify Clark County, WA end-to-end before statewide rollout. (Depends on a
+  real (non-offline) DEM run; the deterministic offline path is covered by tests.)
 
 ## Suggested verification gates
 

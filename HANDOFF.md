@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-30, after roadmap item #17 (Epoch 4, 3D scene assembly)._
+_Last updated: 2026-07-30, after roadmap item #19 (Epoch 4, reproducible 3D export)._
 
 ## Current state (2026-07-30)
 
@@ -33,18 +33,26 @@ _Last updated: 2026-07-30, after roadmap item #17 (Epoch 4, 3D scene assembly)._
   `max_points` cap, true-1×-meter `TerrainMesh` with source-raster + deterministic
   geometry hashes; `mesh_from_dem` selects a pyramid LOD. Decision #3 (mesh/error
   budget) resolved: error-bounded max-vertical-deviation.
-- **Epoch 4 #17 (3D scene assembly):** implemented 2026-07-30, **uncommitted**.
-  `src/scene.py` + `tests/test_scene.py` (8): `assemble_scene` → immutable
-  `SceneModel` joining terrain, Z-rivers (source Z at 1× m), deduped `Material`s,
-  N/S/E/W `CardinalAnnotation`s + `AxisInfo`, deterministic top/iso/south
-  `CameraPreset`s, display-only `DisplaySettings`; `render_river_vertices` applies
-  exaggeration+lift on demand; deterministic `scene_hash`; no browser state.
-  Task Group 5 is now complete.
-- **Next:** Group 6 (roadmap #18 progressive preview, #19 reproducible GLB export
-  + manifest, browser handoff) is **blocked** on the one remaining open decision
-  — GLB-only vs. also OBJ/GeoTIFF (decision #4) — in the spec's
-  `planning/requirements.md`.
-- Full suite: **260 passing**. Spec artifacts:
+- **Epoch 4 #17 (3D scene assembly):** committed `4702a50`. `src/scene.py` +
+  `tests/test_scene.py` (8): `assemble_scene` → immutable `SceneModel` joining
+  terrain, Z-rivers (source Z at 1× m), deduped `Material`s, N/S/E/W
+  `CardinalAnnotation`s + `AxisInfo`, deterministic top/iso/south `CameraPreset`s,
+  display-only `DisplaySettings`; `render_river_vertices` applies exaggeration+lift
+  on demand; deterministic `scene_hash`; no browser state. Task Group 5 complete.
+- **Epoch 4 #19 (reproducible 3D export):** implemented 2026-07-30,
+  **uncommitted**. `src/export3d.py` + `tests/test_export3d.py` (8):
+  `scene_to_glb` (pure-stdlib deterministic binary glTF), `scene_to_obj`
+  (OBJ/MTL), `build_manifest` (source/raster/geometry/scene hashes + settings),
+  `export_scene` (writes .glb/.obj/.mtl/.manifest.json via injected writer, with
+  per-asset SHA-256). Geometry exported at true 1× m; exaggeration recorded, not
+  baked. **Decision #4 resolved: GLB + OBJ** (GeoTIFF deferred). Built before #18
+  per the spec's Phase F→G dependency. No open spec decisions remain.
+- **Next / last spec item:** #18 (progressive 3D preview) — replace
+  `web/3d.html`'s synthetic `elevationAt()` with DEM-derived preview assets
+  (reuse `mesh_from_dem` coarse LOD + `export_scene`), low-res interaction + full
+  commit. This is browser/Phase G work. Acceptance-criterion #1 (a real Clark
+  County end-to-end build) needs a non-offline DEM run.
+- Full suite: **268 passing**. Spec artifacts:
   `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling/`.
 
 ---

@@ -109,9 +109,10 @@ Support Oregon and Clark County, WA first. `L`
 
 **Phase 4.3 — 3D export**
 
-19. [ ] Reproducible 3D export — Export a documented, interoperable 3D scene (GLB as the
+19. [x] Reproducible 3D export — Export a documented, interoperable 3D scene (GLB as the
 primary deliverable; OBJ/GeoTIFF terrain as optional follow-ons) and a provenance manifest.
 The same inputs must yield deterministic geometry and manifest values. `XL`
+(Built before #18 per the spec's Phase F→G dependency; GLB + OBJ shipped, GeoTIFF deferred.)
 
 Epoch gate: users can orbit an accurate terrain-and-rivers model and export a portable 3D
 asset whose geography and elevation source are documented.

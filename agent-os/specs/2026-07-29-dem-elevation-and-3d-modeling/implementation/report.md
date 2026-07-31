@@ -297,8 +297,40 @@ shapely, or browser dependency).
 
 - New tests: **8 passed**. Full suite: **260 passed** (was 252; +8), no regressions.
 
-### Deferred
+## Task Group 6 (export slice) — roadmap item 19: reproducible 3D export
 
-Group 6 (GLB export + provenance manifest, browser preview handoff; roadmap items
-18–19) remains planning-only and is still blocked on the open decision #4
-(GLB-only vs. also OBJ/GeoTIFF).
+Implemented 2026-07-30. `src/export3d.py` + `tests/test_export3d.py` (8). Offline
+and deterministic; no external glTF/GDAL dependency. Resolves decision #4:
+**GLB + OBJ** this epoch (terrain GeoTIFF deferred). Built before item 18 per the
+spec's Phase F→G dependency (browser preview consumes the export layer).
+
+- `scene_to_glb(scene, *, apply_exaggeration=False)`: pure-stdlib binary glTF —
+  terrain as a `TRIANGLES` primitive, each river's valid-vertex run as a
+  `LINE_STRIP`, per-watershed PBR materials. Buffer views are 4-byte aligned, the
+  JSON chunk is `sort_keys`-serialized, and floats are packed little-endian, so
+  the exact bytes are reproducible. Validated: header magic/version/length, chunk
+  types, and every buffer-view offset within an aligned buffer.
+- `scene_to_obj(scene, *, name)`: deterministic OBJ (terrain `f` faces + river
+  `l` polylines) + MTL (per-material `Kd`).
+- `build_manifest(scene)`: JSON provenance — `scene_hash`,
+  `terrain_geometry_hash`, `source_raster_hash`, exaggeration/lift/lod/error
+  budget, material + camera lists, vertex/triangle/river counts.
+- `export_scene(scene, *, out_dir, name, writer)`: writes `.glb/.obj/.mtl/
+  .manifest.json` through an injected `writer` seam (defaults to disk); the
+  manifest embeds a SHA-256 per geometry asset. Identical scenes → identical files.
+- **Geographic truth:** geometry exports at true 1× meters by default;
+  exaggeration is recorded in the manifest, not baked in (unless
+  `apply_exaggeration=True`).
+
+### Verification (item 19)
+
+- New tests: **8 passed**. Full suite: **268 passed** (was 260; +8), no regressions.
+
+### Remaining
+
+Roadmap item 18 (progressive 3D preview — replace `web/3d.html`'s synthetic
+`elevationAt()` with DEM-derived preview assets, low-res interaction + full-detail
+commit) is the last spec item. It is browser/Phase G work; the deterministic
+asset-generation side can reuse `mesh_from_dem` (coarse LOD) + `export_scene`.
+Acceptance-criterion #1 (a real Clark County end-to-end build) needs a non-offline
+DEM run.

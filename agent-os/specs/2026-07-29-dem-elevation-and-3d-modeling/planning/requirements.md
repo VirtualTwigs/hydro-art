@@ -87,7 +87,14 @@ Resolved (2026-07-30, unblocking item 16 / Group 5):
    Positions are true 1× meters; vertical exaggeration stays display-only (never baked into
    the mesh). Implemented in `src/mesh.py` (item 16).
 
-Still open (needed by Group 6, not by item 16):
+Resolved (2026-07-30, unblocking Group 6):
 
-4. Is GLB-only sufficient for the first 3D export, or must OBJ and/or terrain GeoTIFF ship in
-   the same epoch? (blocks Group 6)
+4. **First-epoch 3D export formats — RESOLVED: GLB + OBJ.** The primary deliverable is a
+   glTF-binary (`.glb`) written with a pure-stdlib, deterministic writer (no external glTF
+   dependency, so the byte output is testable offline), accompanied by a plain-text OBJ/MTL
+   pair for broad importability (Blender/CAD). Both are emitted alongside a JSON provenance
+   manifest carrying source/raster/geometry/scene hashes and the settings that produced them.
+   Terrain GeoTIFF export is deferred to a later follow-on (it needs the GDAL/rasterio write
+   seam). Implemented in `src/export3d.py` (item 19).
+
+No open decisions remain for this spec.
