@@ -1,6 +1,29 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-26, after roadmap item #10 (final item)._
+_Last updated: 2026-07-30, after roadmap item #12 (Epoch 2, 3DEP discovery/cache)._
+
+## Current state (2026-07-30)
+
+- **Epoch 1 (#1–10):** complete and committed.
+- **Epoch 1.5 waterbodies (W1–W4):** complete and committed
+  (`46a0766`…`fc60c5c`). Note: the roadmap.md restructure that adds Epochs
+  1.5–5 is still uncommitted and does not yet tick W1–W4.
+- **Epoch 2 #11 (elevation settings & provenance contract):** implemented,
+  **uncommitted** (`src/config.py` elevation block, `src/elevation.py`, CLI
+  flags, +19 tests).
+- **Epoch 2 #12 (3DEP DEM discovery & cache):** implemented 2026-07-30,
+  **uncommitted** — `src/dem.py` + `tests/test_dem.py` (9 tests). Deterministic
+  1-degree COG-grid discovery on the `prd-tnm` S3 bucket for `preview`/`state`
+  tiers; `local` (1 m) deferred. Delivery decisions resolved: AWS S3 COGs;
+  normalize-to-NAVD88 (identity for CONUS 3DEP, enforced later in #13).
+- **Blocked next:** #13 (raster normalization, Group 3) can proceed; #16/#17+
+  (Groups 5–6) blocked on two open decisions (mesh/error budget; GLB-vs-OBJ)
+  recorded in the DEM spec's `planning/requirements.md`.
+- Full suite: **217 passing**. Spec artifacts:
+  `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling/`.
+
+---
+
 
 ## Project
 Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS→SVG
