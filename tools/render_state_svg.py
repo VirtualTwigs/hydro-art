@@ -1,16 +1,16 @@
 """Emit a browser-friendly *state* river SVG for ``web/3d.html``.
 
 The state-scale sibling of ``render_county_clip.py``'s SVG output: it clips the
-local NHDPlus HR flowlines to a Census state polygon (reusing
-``render_state_3d.clip_flowlines`` so it shares the exact basin set and Strahler
-``StreamOrde`` join), colors each ``<g>`` layer by HUC4 basin, and encodes stream
-order as the per-path ``stroke-width``. The interactive 3D lab reads that width as
-a proxy for order, so thin headwaters ride high and thick mainstems sink to the
-valley floor — the same color+elevation method as ``render_state_3d.py``.
+local NHDPlus HR flowlines to a Census state polygon (sharing the exact basin set
+and Strahler ``StreamOrde`` / ``QAMA`` joins via :mod:`tools.render_common`),
+colors each ``<g>`` layer by HUC4 basin, and encodes flow as the per-path
+``stroke-width``. The interactive 3D lab reads that width as a proxy for order, so
+thin headwaters ride high and thick mainstems sink to the valley floor — the same
+color+elevation contract as ``render_state_3d.py``.
 
 A whole state at ``--min-order 3`` is hundreds of thousands of paths (too large to
 fetch/parse in a browser), so ``--min-order`` defaults higher here to keep the SVG
-small; raise it further to shrink the file, lower it for more detail.
+small; raise it to shrink the file, lower it for more detail.
 
     python tools/render_state_svg.py --state Washington --min-order 5
 """
@@ -23,22 +23,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from src.coloring import get_palette
-from src.rendering import bounds, flow_widths, render_svg
-from tools.render_state_3d import STATE_HUC4, clip_flowlines, load_state
-
-
-def build_inputs(geoms, basins):
-    """Group flowlines into per-HUC4 ``<g>`` layers with a cycled neon color."""
-    geometries = {i: g for i, g in enumerate(geoms)}
-    watersheds: dict[str, set[int]] = {}
-    for i, code in enumerate(basins):
-        watersheds.setdefault(code, set()).add(i)
-    palette = get_palette("neon")
-    codes = sorted(watersheds)
-    code_color = {c: palette[i % len(palette)] for i, c in enumerate(codes)}
-    segment_colors = {i: code_color[basins[i]] for i in geometries}
-    return geometries, segment_colors, watersheds
+from tools.render_common import (
+    STATE_HUC4,
+    build_inputs,
+    clip_flowlines,
+    flow_scaled_widths,
+    load_state,
+    render_art_svg,
+)
 
 
 def main() -> int:
@@ -66,27 +58,17 @@ def main() -> int:
     if not geoms:
         raise SystemExit("No flowlines fell inside the state boundary.")
 
-    geometries, segment_colors, watersheds = build_inputs(geoms, basins)
-    # Width tracks flow "at that point": log-scaled NHDPlus EROM mean-annual
-    # discharge (QAMA), so each channel widens at every confluence rather than
-    # only at Strahler-order jumps.
-    flow_map = {i: flows[i] for i in geometries}
-    min_x, _, max_x, _ = bounds(geometries.values())
-    units_per_px = (max_x - min_x) / args.width
-    base_units = args.min_px * units_per_px
-    widths = flow_widths(
-        flow_map, base_units, max_scale=args.max_px / args.min_px
+    # Color by HUC4 basin (the web 3D lab pairs basin color with flow-width);
+    # width tracks log-scaled NHDPlus EROM mean-annual discharge (QAMA).
+    geometries, segment_colors, watersheds, _code_color = build_inputs(geoms, basins)
+    widths, base_units, units_per_px, qmax = flow_scaled_widths(
+        geometries, flows, args.width, args.min_px, args.max_px
     )
-    qmax = max(flow_map.values())
     print(f"basins {sorted(watersheds)}; stream orders 1..{max(orders)}; "
           f"flow 0..{qmax:.0f} cfs -> {args.min_px}..{args.max_px}px "
           f"({units_per_px:.2f} m/px)")
 
-    svg = render_svg(
-        geometries, segment_colors, watersheds,
-        line_width=base_units, stroke_widths=widths,
-        glow=True, glow_mode="blur", glow_radius=2.0,
-    )
+    svg = render_art_svg(geometries, segment_colors, watersheds, base_units, widths)
     out = f"output/{args.state.lower()}_display.svg"
     Path(out).write_text(svg)
     print(f"wrote {out} ({len(svg)} bytes, {len(geometries)} paths)")

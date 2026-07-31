@@ -20,101 +20,14 @@ symlinked in).
 from __future__ import annotations
 
 import argparse
-import glob
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import geopandas as gpd
-import numpy as np
-import shapely
-
 from src.coloring import get_palette
+from tools.render_common import STATE_HUC4, clip_flowlines, load_state
 from tools.render_county_3d import build_segments, draw_caption, project, render
-
-EPSG = "EPSG:5070"
-STATES_SHP = "/tmp/states_shp/cb_2023_us_state_500k.shp"
-GDB_ROOT = "datasets/nhdplus_hr"
-
-#: HUC4 basins to scan per state (matches src/datasets.REGION_HUC4, plus 1707
-#: which carries WA's Klickitat-area streams). Only those present locally are read.
-STATE_HUC4 = {
-    "Washington": ("1701", "1702", "1703", "1707", "1708", "1710", "1711"),
-    "Oregon": ("1707", "1708", "1709", "1710", "1712", "1801"),
-}
-
-
-def load_state(name: str):
-    st = gpd.read_file(STATES_SHP)
-    sel = st[st.NAME == name]
-    if sel.empty:
-        raise SystemExit(f"State {name!r} not found in {STATES_SHP}.")
-    return sel.to_crs(EPSG).geometry.iloc[0]
-
-
-def gdb_for(huc4: str) -> list[str]:
-    return sorted(glob.glob(f"{GDB_ROOT}/{huc4}/*.gdb"))
-
-
-def clip_flowlines(boundary, huc4s, min_order: int):
-    """Clip flowlines from the given HUC4 basins to the state polygon.
-
-    Order is joined from ``NHDPlusFlowlineVAA`` and mean-annual discharge
-    (``QAMA``, cfs) from ``NHDPlusEROMMA``; the ``min_order`` filter is applied
-    *before* the (expensive) spatial clip to keep the geometry count manageable.
-    Returns parallel lists ``(geoms, orders, flows, huc4s_of_geom)``.
-    """
-    shapely.prepare(boundary)
-    geoms: list = []
-    orders: list[int] = []
-    flows: list[float] = []
-    basins: list[str] = []
-    for huc4 in huc4s:
-        for gdb in gdb_for(huc4):
-            try:
-                f = gpd.read_file(gdb, layer="NHDFlowline", columns=["NHDPlusID"])
-            except Exception as exc:  # noqa: BLE001
-                print(f"  skip {huc4}: {exc}")
-                continue
-            vaa = gpd.read_file(
-                gdb, layer="NHDPlusFlowlineVAA",
-                columns=["NHDPlusID", "StreamOrde"], read_geometry=False,
-            )
-            order_by_id = dict(zip(vaa["NHDPlusID"], vaa["StreamOrde"]))
-            erom = gpd.read_file(
-                gdb, layer="NHDPlusEROMMA",
-                columns=["NHDPlusID", "QAMA"], read_geometry=False,
-            )
-            flow_by_id = dict(zip(erom["NHDPlusID"], erom["QAMA"]))
-            seg_orders = (
-                f["NHDPlusID"].map(lambda i: int(order_by_id.get(i, 1) or 1)).to_numpy()
-            )
-            seg_flows = (
-                f["NHDPlusID"].map(lambda i: float(flow_by_id.get(i, 0.0) or 0.0)).to_numpy()
-            )
-            if min_order > 1:
-                keep = seg_orders >= min_order
-                f = f[keep]
-                seg_orders = seg_orders[keep]
-                seg_flows = seg_flows[keep]
-            f = f.to_crs(EPSG)
-            arr = np.array(f.geometry.values, dtype=object)
-            covered = shapely.covers(boundary, arr)
-            crossing = shapely.intersects(boundary, arr) & ~covered
-            for gi in np.nonzero(covered)[0]:
-                geoms.append(arr[gi]); orders.append(int(seg_orders[gi]))
-                flows.append(float(seg_flows[gi])); basins.append(huc4)
-            cross_idx = np.nonzero(crossing)[0]
-            if cross_idx.size:
-                trimmed = shapely.intersection(boundary, arr[cross_idx])
-                for local_i, gi in enumerate(cross_idx):
-                    g = trimmed[local_i]
-                    if not g.is_empty:
-                        geoms.append(g); orders.append(int(seg_orders[gi]))
-                        flows.append(float(seg_flows[gi])); basins.append(huc4)
-            print(f"  {huc4}: kept {sum(1 for b in basins if b == huc4)}")
-    return geoms, orders, flows, basins
 
 
 def build_colors(basins):

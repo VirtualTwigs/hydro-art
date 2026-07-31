@@ -187,7 +187,7 @@ def main() -> int:
 
     print("clipping Clark County flowlines ...")
     boundary = bbox_boundary(CLARK_BBOX_4326)
-    geoms, orders, flows = clip_flowlines(boundary, "1708", 1)
+    geoms, orders, flows, _basins = clip_flowlines(boundary, "1708", 1)
     print(f"total kept: {len(geoms)}")
 
     digits = int(args.huc_level[3:])
