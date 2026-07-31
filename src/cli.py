@@ -110,6 +110,33 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Waterbody outline stroke width in SVG user units (positive number).",
     )
+    parser.add_argument(
+        "--elevation",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Request DEM-backed elevation (use --no-elevation to disable).",
+    )
+    parser.add_argument(
+        "--elevation-source",
+        default=None,
+        help="Elevation source: 3dep.",
+    )
+    parser.add_argument(
+        "--elevation-tier",
+        default=None,
+        help="Elevation resolution tier: preview state local.",
+    )
+    parser.add_argument(
+        "--vertical-exaggeration",
+        type=float,
+        default=None,
+        help="Display-only vertical exaggeration multiplier (positive number).",
+    )
+    parser.add_argument(
+        "--cache-policy",
+        default=None,
+        help="Elevation asset cache policy: reuse refresh.",
+    )
     return parser
 
 
@@ -150,6 +177,22 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         waterbodies["stroke_width"] = args.waterbody_stroke_width
     if waterbodies:
         overrides["waterbodies"] = waterbodies
+
+    # Elevation sub-keys are collected under a nested mapping so precedence can
+    # deep-merge them onto YAML/defaults (see :func:`resolve_settings`).
+    elevation: dict[str, Any] = {}
+    if args.elevation is not None:
+        elevation["enabled"] = args.elevation
+    if args.elevation_source is not None:
+        elevation["source"] = args.elevation_source
+    if args.elevation_tier is not None:
+        elevation["tier"] = args.elevation_tier
+    if args.vertical_exaggeration is not None:
+        elevation["vertical_exaggeration"] = args.vertical_exaggeration
+    if args.cache_policy is not None:
+        elevation["cache_policy"] = args.cache_policy
+    if elevation:
+        overrides["elevation"] = elevation
     return overrides
 
 
@@ -187,5 +230,15 @@ def resolve_settings(argv: Sequence[str] | None = None) -> Settings:
         if isinstance(block, dict):
             waterbodies.update(block)
     merged["waterbodies"] = waterbodies
+
+    # `elevation` is likewise a nested block; deep-merge its sub-keys so
+    # YAML < CLI precedence holds per sub-key (e.g. --elevation keeps a YAML
+    # vertical_exaggeration).
+    elevation: dict[str, Any] = dict(DEFAULTS["elevation"])
+    for layer in (yaml_values, overrides):
+        block = layer.get("elevation")
+        if isinstance(block, dict):
+            elevation.update(block)
+    merged["elevation"] = elevation
 
     return build_settings(merged)

@@ -23,6 +23,7 @@ __all__ = [
     "ConfigError",
     "Settings",
     "WaterbodySettings",
+    "ElevationSettings",
     "DEFAULTS",
     "SUPPORTED_REGIONS",
     "SUPPORTED_PROJECTIONS",
@@ -34,6 +35,9 @@ __all__ = [
     "SUPPORTED_GLOW_MODES",
     "SUPPORTED_COASTAL_MODES",
     "SUPPORTED_RENDER_ORDERS",
+    "SUPPORTED_ELEVATION_SOURCES",
+    "SUPPORTED_ELEVATION_TIERS",
+    "SUPPORTED_CACHE_POLICIES",
     "load_yaml",
     "build_settings",
 ]
@@ -93,6 +97,20 @@ SUPPORTED_COASTAL_MODES: tuple[str, ...] = ("conservative", "permissive")
 #: Where the waterbody-outline layer sits relative to the flowline layers.
 SUPPORTED_RENDER_ORDERS: tuple[str, ...] = ("below", "above")
 
+#: Authoritative elevation sources (Item 11 / Epoch 2). USGS 3DEP bare-earth
+#: DEMs are the only source for the first release; the allowlist leaves room
+#: for lidar/other products later without changing downstream code.
+SUPPORTED_ELEVATION_SOURCES: tuple[str, ...] = ("3dep",)
+
+#: Elevation resolution tiers (requirements.md #1). ``preview`` is a coarse,
+#: cheap default; ``state``/``local`` escalate detail explicitly (never a
+#: statewide 1 m default — see the non-functional budget constraint).
+SUPPORTED_ELEVATION_TIERS: tuple[str, ...] = ("preview", "state", "local")
+
+#: Cache reuse policy for elevation assets. ``reuse`` prefers cached tiles;
+#: ``refresh`` re-fetches even when a cached copy exists.
+SUPPORTED_CACHE_POLICIES: tuple[str, ...] = ("reuse", "refresh")
+
 _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 
 #: Built-in defaults, reflecting PRD sections 19 and 25.
@@ -118,6 +136,13 @@ DEFAULTS: dict[str, Any] = {
         "min_coastal_area_m2": 0.0,
         "coastal_mode": "conservative",
         "render_order": "below",
+    },
+    "elevation": {
+        "enabled": False,
+        "source": "3dep",
+        "tier": "preview",
+        "vertical_exaggeration": 1.0,
+        "cache_policy": "reuse",
     },
 }
 
@@ -150,6 +175,34 @@ class WaterbodySettings:
 
 
 @dataclass(frozen=True)
+class ElevationSettings:
+    """Validated settings for the optional elevation stage (Item 11).
+
+    This is the configuration contract only: it selects the source, resolution
+    tier, display exaggeration, and cache behavior for DEM-backed elevation.
+    No pipeline stage reads it yet (acquisition is item 12), so a default build
+    stays fully 2D. Per the vertical-reference decision, source datum/units are
+    *preserved* downstream and never normalized here; vertical exaggeration is a
+    display-only multiplier that never overwrites source-derived Z.
+
+    Attributes:
+        enabled: Whether elevation data is requested (off by default).
+        source: Authoritative DEM source (one of
+            :data:`SUPPORTED_ELEVATION_SOURCES`).
+        tier: Resolution tier (one of :data:`SUPPORTED_ELEVATION_TIERS`).
+        vertical_exaggeration: Display-only Z multiplier; must be > 0.
+        cache_policy: Asset cache behavior (one of
+            :data:`SUPPORTED_CACHE_POLICIES`).
+    """
+
+    enabled: bool
+    source: str
+    tier: str
+    vertical_exaggeration: float
+    cache_policy: str
+
+
+@dataclass(frozen=True)
 class Settings:
     """Validated, immutable configuration for a single pipeline run.
 
@@ -170,6 +223,7 @@ class Settings:
         outputs: Set of output formats to produce (subset of
             :data:`SUPPORTED_OUTPUTS`).
         waterbodies: Validated waterbody-outline settings (Item W3).
+        elevation: Validated elevation settings (Item 11); disabled by default.
     """
 
     regions: tuple[str, ...]
@@ -186,6 +240,7 @@ class Settings:
     png_size: int
     outputs: frozenset[str]
     waterbodies: WaterbodySettings
+    elevation: ElevationSettings
 
 
 def _normalize_region(name: str) -> str:
@@ -312,6 +367,73 @@ def _coerce_waterbodies(value: Any) -> WaterbodySettings:
     )
 
 
+def _coerce_elevation(value: Any) -> ElevationSettings:
+    """Validate the ``elevation`` block into an :class:`ElevationSettings`.
+
+    A partial mapping is tolerated: any sub-key the caller omits falls back to
+    :data:`DEFAULTS`, so ``{"enabled": True}`` keeps every other default. This
+    makes both direct ``build_settings`` calls and merged CLI/YAML input safe.
+
+    Raises:
+        ConfigError: If any provided sub-value is invalid.
+    """
+    defaults = DEFAULTS["elevation"]
+    if value is None:
+        merged = dict(defaults)
+    elif isinstance(value, Mapping):
+        merged = {**defaults, **value}
+    else:
+        raise ConfigError(
+            f"Invalid 'elevation' value: {value!r}. Expected a mapping."
+        )
+
+    enabled = bool(merged.get("enabled", defaults["enabled"]))
+
+    source = str(merged.get("source", defaults["source"])).lower()
+    if source not in SUPPORTED_ELEVATION_SOURCES:
+        valid = ", ".join(SUPPORTED_ELEVATION_SOURCES)
+        raise ConfigError(
+            f"Unsupported elevation.source: {source!r}. Valid: {valid}."
+        )
+
+    tier = str(merged.get("tier", defaults["tier"])).lower()
+    if tier not in SUPPORTED_ELEVATION_TIERS:
+        valid = ", ".join(SUPPORTED_ELEVATION_TIERS)
+        raise ConfigError(
+            f"Unsupported elevation.tier: {tier!r}. Valid: {valid}."
+        )
+
+    try:
+        vertical_exaggeration = float(
+            merged.get("vertical_exaggeration", defaults["vertical_exaggeration"])
+        )
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid elevation.vertical_exaggeration: "
+            f"{merged.get('vertical_exaggeration')!r}. Expected a positive number."
+        )
+    if vertical_exaggeration <= 0:
+        raise ConfigError(
+            "elevation.vertical_exaggeration must be greater than 0, got "
+            f"{vertical_exaggeration}."
+        )
+
+    cache_policy = str(merged.get("cache_policy", defaults["cache_policy"])).lower()
+    if cache_policy not in SUPPORTED_CACHE_POLICIES:
+        valid = ", ".join(SUPPORTED_CACHE_POLICIES)
+        raise ConfigError(
+            f"Unsupported elevation.cache_policy: {cache_policy!r}. Valid: {valid}."
+        )
+
+    return ElevationSettings(
+        enabled=enabled,
+        source=source,
+        tier=tier,
+        vertical_exaggeration=vertical_exaggeration,
+        cache_policy=cache_policy,
+    )
+
+
 def build_settings(values: Mapping[str, Any]) -> Settings:
     """Validate a merged mapping of config values into a :class:`Settings`.
 
@@ -416,6 +538,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         raise ConfigError("At least one output format must be enabled.")
 
     waterbodies = _coerce_waterbodies(values.get("waterbodies", DEFAULTS["waterbodies"]))
+    elevation = _coerce_elevation(values.get("elevation", DEFAULTS["elevation"]))
 
     return Settings(
         regions=regions,
@@ -432,6 +555,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         png_size=png_size,
         outputs=outputs,
         waterbodies=waterbodies,
+        elevation=elevation,
     )
 
 
