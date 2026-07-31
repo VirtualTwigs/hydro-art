@@ -268,7 +268,37 @@ as **error-bounded (max vertical deviation)**.
 
 - New tests: **8 passed**. Full suite: **252 passed** (was 244; +8), no regressions.
 
+## Task Group 5 (scene slice) — roadmap item 17: 3D scene assembly
+
+Implemented 2026-07-30. `src/scene.py` + `tests/test_scene.py` (8). Offline and
+deterministic; pure composition over the item 15/16 value objects (no GDAL,
+shapely, or browser dependency).
+
+- `assemble_scene(*, terrain, rivers, segment_colors, vertical_exaggeration,
+  river_lift, cameras)` → immutable `SceneModel` joining: the `TerrainMesh`;
+  `RiverFeature`s (source `(x, y, z|None)` at 1× meters, referencing a shared
+  material); deduped `Material`s (one per distinct watershed color);
+  `CardinalAnnotation`s (N/S/E/W) + `AxisInfo` derived from terrain bounds;
+  deterministic `CameraPreset`s (top / isometric / south) via `default_cameras`;
+  and a display-only `DisplaySettings`.
+- **Geographic/styling separation:** stored geometry is always true 1× meters
+  with immutable source Z; `render_river_vertices(feature, display)` applies
+  `render_z = source_z·exaggeration + lift` only on demand. Exaggeration never
+  mutates stored positions.
+- No browser/runtime state is embedded; a deterministic `scene_hash` covers
+  geometry + materials + annotations + cameras + display for reproducibility.
+- Tests: terrain/river/material join; material dedup + sharing; source Z
+  preserved while exaggeration stays display-only; nodata vertex preserved;
+  cardinals at bounds edges; camera presets deterministic; `scene_hash` changes
+  with exaggeration while `terrain.geometry_hash` stays stable; default display
+  is identity.
+
+### Verification (item 17)
+
+- New tests: **8 passed**. Full suite: **260 passed** (was 252; +8), no regressions.
+
 ### Deferred
 
-Scene assembly (roadmap item 17) and Group 6 (GLB export/browser handoff) remain
-planning-only; Group 6 is still blocked on the open decision #4 (GLB-vs-OBJ).
+Group 6 (GLB export + provenance manifest, browser preview handoff; roadmap items
+18–19) remains planning-only and is still blocked on the open decision #4
+(GLB-only vs. also OBJ/GeoTIFF).

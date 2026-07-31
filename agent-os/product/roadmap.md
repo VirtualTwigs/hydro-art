@@ -97,7 +97,7 @@ with enough metadata to reproduce and audit every height.
 
 **Phase 4.1 — 3D render model**
 
-17. [ ] 3D scene assembly — Produce a scene containing terrain, Z-attributed rivers, watershed
+17. [x] 3D scene assembly — Produce a scene containing terrain, Z-attributed rivers, watershed
 materials, axis/cardinal annotations, camera presets, and display-only vertical exaggeration.
 Separate geographic data from camera and artistic styling. `L`
 

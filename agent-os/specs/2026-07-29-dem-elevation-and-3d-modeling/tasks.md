@@ -25,9 +25,14 @@ opt-in render-only monotonic repair, `render_z`), TDD-first and offline.
 **Task Group 5, mesh slice (roadmap item 16) implemented 2026-07-30** — adaptive
 error-bounded terrain mesh in `src/mesh.py` (greedy TIN, crack-free, nodata-aware,
 deterministic hashes), TDD-first and offline. Decision #3 (mesh/error budget)
-resolved as error-bounded max-vertical-deviation. The rest of Group 5 (scene
-assembly) is roadmap item 17 (Epoch 4); Group 6 (GLB/export) is still blocked on
-the open decision #4 (GLB-vs-OBJ).
+resolved as error-bounded max-vertical-deviation.
+
+**Task Group 5, scene slice (roadmap item 17) implemented 2026-07-30** — 3D scene
+assembly in `src/scene.py` (`SceneModel` joining terrain, Z-rivers, deduped
+materials, cardinal/axis annotations, camera presets, and display-only
+exaggeration; deterministic `scene_hash`; no browser state), TDD-first and
+offline. Group 5 is now complete. Group 6 (GLB/export) is still blocked on the
+open decision #4 (GLB-vs-OBJ).
 
 ## Proposed implementation groups
 
@@ -110,11 +115,18 @@ Split across roadmap items 14 (terrain sampling service) and 15 (Z attribution &
   true-meter positions, boundary_id, lod, achieved `max_error_m`, source-raster
   + deterministic geometry hashes. `mesh_from_dem` selects a pyramid level.
   `tests/test_mesh.py`, 8 tests on synthetic grids.)
-- [ ] Assemble mesh, rivers, materials, annotations, and camera metadata into a scene model.
-  (Roadmap item 17, Epoch 4.)
-- [ ] Validate 1× physical scale versus display-only exaggeration. (Positions are
-  1× meters in `TerrainMesh`; exaggeration stays display-only via
-  `hydro_z.render_z` — full scene-level validation lands with item 17.)
+- [x] Assemble mesh, rivers, materials, annotations, and camera metadata into a scene model.
+  (Roadmap item 17 `src/scene.py`: `assemble_scene` composes a `TerrainMesh`,
+  Z-attributed `ElevatedLine`s, and watershed `segment_colors` into an immutable
+  `SceneModel` — deduped `Material`s, N/S/E/W `CardinalAnnotation`s + `AxisInfo`
+  from bounds, deterministic top/isometric/south `CameraPreset`s, and a
+  display-only `DisplaySettings`; carries no browser state and a deterministic
+  `scene_hash`. `tests/test_scene.py`, 8 tests.)
+- [x] Validate 1× physical scale versus display-only exaggeration. (`SceneModel`
+  stores terrain + river geometry at true 1× meters with immutable source Z;
+  `render_river_vertices` applies `render_z = source_z·exaggeration + lift` only
+  on demand, and a test asserts terrain positions/geometry_hash are invariant to
+  exaggeration while `scene_hash` reflects the display change.)
 
 ### Task Group 6: GLB/export and browser handoff
 
