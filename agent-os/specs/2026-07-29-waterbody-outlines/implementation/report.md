@@ -245,12 +245,39 @@ validation are deferred (see below), so W4's checkbox is intentionally partial.
   rendered rather than silently dropped.
 - New tests: 5. Full suite: **189 passed**, no regressions.
 
-## Deferred (require environments/decisions I don't have here)
+## Real-region validation (executed 2026-07-30, NAS mounted)
 
-1. **Real-region validation** — run `tools/waterbody_qa.py --state Oregon` /
-   `--state Washington` / a Clark County build on the NAS-mounted datasets and
-   visually confirm no accidental coast closure. The harness is ready; only the
-   real run remains.
+Ran `tools/waterbody_qa.py --state {Oregon,Washington}` against the local
+extracted NHDPlus HR datasets (basins 1701–1712, 161,744 candidate polygons
+each). Both pass every acceptance criterion:
+
+| Metric | Washington | Oregon |
+|--------|-----------:|-------:|
+| Candidates | 161,744 | 161,744 |
+| Selected | 42,304 | 46,844 |
+| Excluded | 119,440 | 114,900 |
+| Lakes / reservoirs | 39,934 / 2,272 | 45,140 / 1,661 |
+| Coastal kept (bay/inlet/coastal) | 98 | 43 |
+| **Coastal fragments dropped** | **99** | **23** |
+| Holes (features) | 2,781 (682) | 2,491 (679) |
+| Multipolygons | 7 | 6 |
+| Duplicate geoms dropped | 9 | 4 |
+| Shared-edge pairs | 162 | 388 |
+| Untraceable selected | 0 | 0 |
+
+**No accidental coast closure**: the conservative policy excluded 99 (WA) / 23
+(OR) coastal clip-boundary fragments while retaining genuine bays/inlets/coastal
+water — the core Epoch-1.5 gate. Holes and multipolygons survive selection;
+duplicates are de-duped; coincident edges are counted/flagged (not silently
+dropped); every selected feature carries a source id.
+
+## Still deferred
+
+1. **Clark County, WA county-level clip** — the harness supports `--county-shp
+   --county Clark --state-fp 53`, but the Census counties shapefile
+   (`cb_2023_us_county_500k.shp`) isn't present locally; drop it in to run.
+   Clark sits in HUC4 1708 (inland Lower Columbia); the statewide WA run above
+   already validates its lakes and the coastal policy.
 2. **Regional presets & detail policy** — exact print/screen threshold and
    stroke/size numbers are art-direction decisions the spec says must be
    approved before coding; deferred pending those values.

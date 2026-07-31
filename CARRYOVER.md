@@ -11,12 +11,15 @@ in-flight Epoch 1.5 (waterbody outlines) work and the uncommitted tree._
   Waiting on an explicit "commit item W2".
 - **W3 (config + CLI + pipeline wiring + no-fill SVG render layers) —
   committed** as `4acbdd4` (W2 as `86189d8`).
-- **W4 (QA & regional presets) — offline slice implemented, NOT committed.**
-  Fixture QA + `stroke-linejoin` fix + `tools/waterbody_qa.py`. Real-region
-  validation and preset numbers deferred (need NAS run / art-direction approval).
+- **W4 (QA & regional presets) — offline slice committed `110de80`;
+  real-data validation done 2026-07-30 (NAS mounted), commit pending.**
+  OR + WA validated via `tools/waterbody_qa.py` (161,744 candidates each; 99/23
+  coastal fragments dropped → no accidental coast closure; holes/multipart
+  preserved; all traceable). Still deferred: Clark County county-clip (needs
+  Census counties shapefile) + preset numbers (art-direction approval).
 - Full suite: **189 passed** (offline, no GDAL/network).
-- Epoch 1.5 gate essentially met; next is **Epoch 2** (elevation) once W4's
-  deferred real-data validation + presets are closed out.
+- Epoch 1.5 gate met (source-traceable outlines, no coast closure, validated on
+  real OR/WA). Next is **Epoch 2** (elevation) once presets are decided.
 
 ## Roadmap position (`agent-os/product/roadmap.md`)
 
@@ -28,7 +31,7 @@ outlines**, four phases W1–W4:
 | W1 | 1.5.1 Source layers & classification | committed `46a0766` |
 | W2 | 1.5.2 Repair, clip & selection | committed `86189d8` |
 | W3 | 1.5.3 Layered rendering & config | committed `4acbdd4` |
-| W4 | 1.5.4 QA & regional presets | offline slice done; **commit pending**; real-data + presets deferred |
+| W4 | 1.5.4 QA & regional presets | offline slice `110de80`; real-data validated (OR/WA), **commit pending**; county-clip + presets deferred |
 
 ## Resolved art-direction decisions (apply across W2/W3)
 

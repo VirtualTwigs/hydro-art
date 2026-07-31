@@ -56,8 +56,14 @@ threshold 0, conservative coast policy. **Task Groups 1–3 (W1–W3) implemente
   IDs (`tools/waterbody_qa.py`): reuses the pipeline's classify + `process_waterbodies`, prints a
   report cross-checking holes/multipart/coastal/duplicate-edge counts + source-id traceability.
   Runs in the full (NAS + GDAL) environment, outside the offline suite.
-- [ ] **Deferred — needs a real (NAS-mounted) run:** execute `tools/waterbody_qa.py` on real
-  Clark County / Oregon / Washington and visually confirm no accidental coast closure.
+- [x] Real-region validation executed 2026-07-30 (NAS mounted): `tools/waterbody_qa.py --state
+  Oregon` and `--state Washington` over 161,744 candidate polygons each. No accidental coast
+  closure — conservative policy dropped 99 (WA) / 23 (OR) coastal clip-boundary fragments while
+  keeping genuine bays/inlets/coastal; holes/multipart preserved; all selected features traceable.
+  Results table in `implementation/report.md`.
+- [ ] **Deferred — Clark County county-level clip** needs the Census counties shapefile
+  (`cb_2023_us_county_500k.shp`); harness supports `--county-shp/--county/--state-fp`. Statewide WA
+  run already covers Clark's lakes + coastal policy.
 - [ ] **Deferred — needs art-direction approval:** establish state/county/print threshold presets
   and a documented SVG-size / rasterization detail policy.
 
