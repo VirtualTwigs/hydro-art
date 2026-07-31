@@ -86,7 +86,7 @@ offer an explicitly opt-in render-only monotonic water-surface repair. `L`
 
 **Phase 3.3 — Terrain representation**
 
-16. [ ] Adaptive terrain mesh — Build deterministic terrain meshes from DEM pyramids with
+16. [x] Adaptive terrain mesh — Build deterministic terrain meshes from DEM pyramids with
 boundary clipping and level-of-detail controls. Rivers use a configurable microlift solely to
 avoid z-fighting; no artificial terrain is used in accurate mode. `XL`
 

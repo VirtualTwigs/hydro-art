@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-30, after roadmap items #14–#15 (Epoch 3, Z-hydrography)._
+_Last updated: 2026-07-30, after roadmap item #16 (Epoch 3, adaptive terrain mesh)._
 
 ## Current state (2026-07-30)
 
@@ -27,10 +27,17 @@ _Last updated: 2026-07-30, after roadmap items #14–#15 (Epoch 3, Z-hydrography
   `src/hydro_z.py` + `tests/test_hydro_z.py` (8): `ElevatedLine`
   (immutable source Z, preserved 2D path), `profile_qa` downstream-inversion
   detection, opt-in render-only `repair_monotonic` + `RepairPolicy`, `render_z`.
-- **Next:** #16 (adaptive terrain mesh, Group 5) and #17+ (Group 6) are **blocked**
-  on two open decisions — mesh/error budget; GLB-vs-OBJ — in the spec's
-  `planning/requirements.md`.
-- Full suite: **244 passing**. Spec artifacts:
+- **Epoch 3 #16 (adaptive terrain mesh):** implemented 2026-07-30,
+  **uncommitted**. `src/mesh.py` + `tests/test_mesh.py` (8): `build_terrain_mesh`
+  = greedy error-bounded TIN (Garland–Heckbert), crack-free fan retriangulation,
+  nodata-footprint dropping, `max_points` cap, true-1×-meter `TerrainMesh` with
+  source-raster + deterministic geometry hashes; `mesh_from_dem` selects a
+  pyramid LOD. Decision #3 (mesh/error budget) resolved: error-bounded
+  max-vertical-deviation.
+- **Next:** #17 (3D scene assembly, Epoch 4) is unblocked and can proceed. Group 6
+  (#19 GLB export/browser handoff) is still **blocked** on the one remaining open
+  decision — GLB-vs-OBJ — in the spec's `planning/requirements.md`.
+- Full suite: **252 passing**. Spec artifacts:
   `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling/`.
 
 ---

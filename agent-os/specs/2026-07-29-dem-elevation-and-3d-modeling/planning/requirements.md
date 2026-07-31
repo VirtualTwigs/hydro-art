@@ -75,8 +75,19 @@ Resolved (2026-07-30):
    each tile's `ElevationProvenance`. Enforcement of an actual datum/units transform for any
    non-NAVD88 source is a raster-normalization concern (item 13), not acquisition.
 
-Still open (needed by later task groups, not by items 11–12):
+Resolved (2026-07-30, unblocking item 16 / Group 5):
 
-3. What mesh/error budget is acceptable for state, county, and GLB export tiers? (blocks Group 5)
+3. **Mesh/error budget — RESOLVED: error-bounded (max vertical deviation).** The terrain
+   mesh is a deterministic greedy TIN (Garland–Heckbert style incremental point insertion)
+   that refines until every DEM sample's vertical deviation from the mesh surface is within a
+   per-tier `error_budget_m` (a configurable meter budget: tighter for county, looser for
+   statewide/GLB). This was chosen over fixed grid decimation and pure triangle-count caps
+   because it keeps a stated, auditable vertical-accuracy guarantee while naturally spending
+   triangles only where terrain is rugged. An optional `max_points` cap bounds output size.
+   Positions are true 1× meters; vertical exaggeration stays display-only (never baked into
+   the mesh). Implemented in `src/mesh.py` (item 16).
+
+Still open (needed by Group 6, not by item 16):
+
 4. Is GLB-only sufficient for the first 3D export, or must OBJ and/or terrain GeoTIFF ship in
    the same epoch? (blocks Group 6)

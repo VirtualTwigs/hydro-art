@@ -20,9 +20,14 @@ TDD-first and offline on synthetic numpy grids.
 **Task Group 4 (roadmap items 14 & 15) implemented 2026-07-30** — terrain
 sampling service (`src/terrain.py`: densification + injected sampler) and river
 Z attribution/QA (`src/hydro_z.py`: `ElevatedLine`, downstream-inversion QA,
-opt-in render-only monotonic repair, `render_z`), TDD-first and offline. Groups
-5–6 remain planning-only and are blocked on the two still-open decisions (mesh
-budget, GLB-vs-OBJ).
+opt-in render-only monotonic repair, `render_z`), TDD-first and offline.
+
+**Task Group 5, mesh slice (roadmap item 16) implemented 2026-07-30** — adaptive
+error-bounded terrain mesh in `src/mesh.py` (greedy TIN, crack-free, nodata-aware,
+deterministic hashes), TDD-first and offline. Decision #3 (mesh/error budget)
+resolved as error-bounded max-vertical-deviation. The rest of Group 5 (scene
+assembly) is roadmap item 17 (Epoch 4); Group 6 (GLB/export) is still blocked on
+the open decision #4 (GLB-vs-OBJ).
 
 ## Proposed implementation groups
 
@@ -97,9 +102,19 @@ Split across roadmap items 14 (terrain sampling service) and 15 (Z attribution &
 
 ### Task Group 5: Terrain mesh and 3D scene
 
-- [ ] Generate deterministic clipped terrain meshes at bounded LODs.
+- [x] Generate deterministic clipped terrain meshes at bounded LODs. (Item 16
+  `src/mesh.py`: `build_terrain_mesh` = greedy error-bounded TIN (Garland–Heckbert
+  incremental insertion) that refines until every DEM sample is within
+  `error_budget_m`; crack-free fan retriangulation with degenerate-fan dropping;
+  nodata-footprint triangles dropped; `max_points` cap; `TerrainMesh` carries
+  true-meter positions, boundary_id, lod, achieved `max_error_m`, source-raster
+  + deterministic geometry hashes. `mesh_from_dem` selects a pyramid level.
+  `tests/test_mesh.py`, 8 tests on synthetic grids.)
 - [ ] Assemble mesh, rivers, materials, annotations, and camera metadata into a scene model.
-- [ ] Validate 1× physical scale versus display-only exaggeration.
+  (Roadmap item 17, Epoch 4.)
+- [ ] Validate 1× physical scale versus display-only exaggeration. (Positions are
+  1× meters in `TerrainMesh`; exaggeration stays display-only via
+  `hydro_z.render_z` — full scene-level validation lands with item 17.)
 
 ### Task Group 6: GLB/export and browser handoff
 

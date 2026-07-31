@@ -239,7 +239,36 @@ default 2D build is unchanged.
   no regressions.
 - `ruff` not installed in the offline venv; not run.
 
+## Task Group 5 (mesh slice) — roadmap item 16: adaptive terrain mesh
+
+Implemented 2026-07-30. `src/mesh.py` + `tests/test_mesh.py` (8). Offline and
+deterministic on synthetic numpy grids. Resolves decision #3 (mesh/error budget)
+as **error-bounded (max vertical deviation)**.
+
+- `build_terrain_mesh(grid, *, error_budget_m, boundary_id, max_points, lod)`:
+  greedy TIN (Garland–Heckbert incremental refinement). Seeds two triangles over
+  the valid grid corners, then repeatedly inserts the DEM sample with the largest
+  vertical deviation from the current surface until every sample is within
+  `error_budget_m` (or `max_points` is reached). Insertion is a **fan
+  retriangulation** of the containing triangle(s) with zero-area fans dropped, so
+  the mesh stays **crack-free** even when a sample lands on a shared edge.
+- Nodata-aware: nodata samples are never candidates/vertices, and any triangle
+  whose footprint contains a nodata sample is dropped.
+- `TerrainMesh` carries **true 1× meter** positions (exaggeration stays
+  display-only), triangle indices, `boundary_id`, `lod`, requested + achieved
+  (`max_error_m`) error, CRS/vertical units, and both a `source_raster_hash` and
+  a deterministic `geometry_hash`.
+- `mesh_from_dem(dem, *, level, ...)` builds from a chosen pyramid level (LOD).
+- Tests: flat plane → 4 corners/2 triangles; true-meter positions (no
+  exaggeration); a central peak forces refinement within budget; looser budget →
+  coarser mesh; deterministic geometry hash; `max_points` cap; nodata triangles
+  dropped; pyramid-level selection.
+
+### Verification (item 16)
+
+- New tests: **8 passed**. Full suite: **252 passed** (was 244; +8), no regressions.
+
 ### Deferred
 
-Groups 5–6 (terrain mesh + 3D scene, GLB export/browser) remain planning-only
-and blocked on the mesh/error-budget and GLB-vs-OBJ decisions.
+Scene assembly (roadmap item 17) and Group 6 (GLB export/browser handoff) remain
+planning-only; Group 6 is still blocked on the open decision #4 (GLB-vs-OBJ).
