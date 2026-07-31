@@ -1,6 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-30, after roadmap item #12 (Epoch 2, 3DEP discovery/cache)._
+_Last updated: 2026-07-30, after roadmap item #13 (Epoch 2, DEM normalization)._
 
 ## Current state (2026-07-30)
 
@@ -16,10 +16,17 @@ _Last updated: 2026-07-30, after roadmap item #12 (Epoch 2, 3DEP discovery/cache
   1-degree COG-grid discovery on the `prd-tnm` S3 bucket for `preview`/`state`
   tiers; `local` (1 m) deferred. Delivery decisions resolved: AWS S3 COGs;
   normalize-to-NAVD88 (identity for CONUS 3DEP, enforced later in #13).
-- **Blocked next:** #13 (raster normalization, Group 3) can proceed; #16/#17+
-  (Groups 5–6) blocked on two open decisions (mesh/error budget; GLB-vs-OBJ)
-  recorded in the DEM spec's `planning/requirements.md`.
-- Full suite: **217 passing**. Spec artifacts:
+- **Epoch 2 #13 (DEM mosaic/clip/pyramid + bilinear sampling):** implemented
+  2026-07-30, **uncommitted** (awaiting an explicit "commit item #13"; #11/#12
+  are committed as `33a60d9`/`d2296aa`). `src/raster.py` +
+  `tests/test_raster.py` (11 tests): numpy
+  `RasterGrid`, `mosaic`/`clip_grid`/`build_pyramid`, `sample_bilinear` +
+  `GridSampler`, and `normalize_dem` orchestrating read→reproject(EPSG:5070)→
+  mosaic→clip→pyramid via injected `RasterReader`/`RasterReprojector` seams.
+- **Next:** #14 (terrain sampling service + flowline densification, Group 4) can
+  proceed — it consumes `GridSampler`. #16/#17+ (Groups 5–6) blocked on two open
+  decisions (mesh/error budget; GLB-vs-OBJ) in the spec's `planning/requirements.md`.
+- Full suite: **228 passing**. Spec artifacts:
   `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling/`.
 
 ---

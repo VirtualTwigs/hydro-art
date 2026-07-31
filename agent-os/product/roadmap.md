@@ -62,7 +62,7 @@ be added without changing downstream code. `XL`
 
 **Phase 2.3 — Raster normalization**
 
-13. [ ] DEM mosaic, clip & pyramid — Mosaic only the needed tiles, clip to the selected
+13. [x] DEM mosaic, clip & pyramid — Mosaic only the needed tiles, clip to the selected
 boundary, reproject to EPSG:5070, preserve source vertical metadata, and generate a
 deterministic multi-resolution raster pyramid for interactive, statewide, and county output.
 `XL`

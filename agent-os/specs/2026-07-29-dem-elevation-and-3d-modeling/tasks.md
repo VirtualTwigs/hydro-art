@@ -10,9 +10,13 @@ default 2D behavior.
 cache over the deterministic 1-degree COG grid on the `prd-tnm` S3 bucket
 (`src/dem.py`), TDD-first, offline. Delivery decisions #1 (AWS S3 COGs) and #2
 (normalize to NAVD88) resolved in `planning/requirements.md`. The 1 m `local`
-tier is deferred (needs project-based discovery). Groups 3–6 remain
-planning-only; Groups 5–6 are blocked on the two still-open decisions (mesh
-budget, GLB-vs-OBJ).
+tier is deferred (needs project-based discovery).
+
+**Task Group 3 (roadmap item 13) implemented 2026-07-30** — DEM raster
+normalization in `src/raster.py` (mosaic/clip/reproject-seam to EPSG:5070,
+deterministic pyramids, bilinear sampling with coverage/nodata diagnostics),
+TDD-first and offline on synthetic numpy grids. Groups 4–6 remain planning-only;
+Groups 5–6 are blocked on the two still-open decisions (mesh budget, GLB-vs-OBJ).
 
 ## Proposed implementation groups
 
@@ -49,12 +53,21 @@ budget, GLB-vs-OBJ).
   (`tests/test_dem.py`, 9 tests: grid math, per-tier URLs, unsupported tier, download,
   cache-hit reuse, refresh re-download, provenance fields, determinism.)
 
-### Task Group 3: Raster normalization and sampling
+### Task Group 3: Raster normalization and sampling — done
 
-- [ ] Implement lazy-loaded mosaic/clip/reproject behavior to EPSG:5070.
-- [ ] Build deterministic preview/state/local raster pyramids.
-- [ ] Implement bilinear sampling with nodata/coverage diagnostics and unit tests using tiny
-  synthetic rasters.
+- [x] Implement lazy-loaded mosaic/clip/reproject behavior to EPSG:5070.
+  (`src/raster.py`: `RasterGrid`/`GridTransform` value objects; pure `mosaic`
+  (aligned tiles, CRS/pixel-size guarded) + `clip_grid` (pixel-snapped window);
+  `normalize_dem` orchestrates read → reproject → mosaic → clip → pyramid via
+  the injected `RasterReader`/`RasterReprojector` GDAL seams, preserving each
+  tile's vertical datum/units verbatim.)
+- [x] Build deterministic preview/state/local raster pyramids. (`build_pyramid`
+  = 2x2 block-mean, nodata-aware, finest-first, bounded by `max_levels`.)
+- [x] Implement bilinear sampling with nodata/coverage diagnostics and unit tests
+  using tiny synthetic rasters. (`sample_bilinear` + `GridSampler`
+  (`ElevationSampler`): interior/edge-clamp interpolation, `covered=False`
+  outside extent, `nodata=True` when any neighbor is nodata — never a silent
+  substitution. `tests/test_raster.py`, 11 tests with hand-computed results.)
 
 ### Task Group 4: Z-enabled hydrography and QA
 

@@ -135,5 +135,63 @@ caching; no raster is opened or reprojected yet (that is item 13), so a default
 
 ### Deferred
 
-The 1 m `local` tier (project/UTM-tiled, needs project-based discovery) and all
-raster I/O (mosaic/clip/reproject/sample) — the latter is item 13 (Group 3).
+The 1 m `local` tier (project/UTM-tiled, needs project-based discovery). Raster
+I/O (mosaic/clip/reproject/sample) is item 13 — see below.
+
+## Task Group 3 — Raster normalization and sampling (roadmap item 13)
+
+Implemented 2026-07-30, TDD-first, fully offline on synthetic numpy grids. Turns
+the cached DEM tiles from item 12 into a single normalized, queryable elevation
+surface. No pipeline stage is wired to it yet (Z-attribution is item 14), so a
+default 2D build is unchanged and never opens a raster.
+
+### Design
+
+- **numpy for the grid, GDAL behind seams.** `src/raster.py` imports numpy
+  directly (consistent with `clipping.py`/`graph.py`); the GDAL-dependent work
+  — reading COG tiles and warping between CRSs — stays behind the injected
+  `RasterReader` / `RasterReprojector` protocols, so the module and tests run
+  with no rasterio/GDAL. Tests use tiny hand-checked grids + fakes.
+- **Horizontal reprojection only; vertical preserved.** `normalize_dem` warps to
+  EPSG:5070 via the reprojector seam and carries each tile's `ElevationProvenance`
+  (vertical CRS/units) through untouched — the resolved NAVD88 decision is
+  identity for CONUS 3DEP, so there is no vertical transform here (that stays a
+  later, explicit step if a non-NAVD88 source is ever added).
+
+### What landed (`src/raster.py`, new)
+
+- `GridTransform` (north-up origin + pixel size) and `RasterGrid`
+  (values/transform/crs/nodata/provenance) with `bounds`/`height`/`width`.
+- `sample_bilinear` + `GridSampler` (an `ElevationSampler`): deterministic
+  bilinear interpolation; `covered=False` outside the extent; `nodata=True`
+  (value `None`) when any of the four neighbors is nodata — never a silent
+  synthetic substitution; edge neighbor indices clamped so within-extent points
+  past the outer pixel centers still interpolate against real cells.
+- `mosaic` (aligned same-CRS tiles → union grid, gaps = nodata, guarded against
+  pixel-size/CRS mismatch), `clip_grid` (outward pixel-snapped window to a
+  bbox), `build_pyramid` (2x2 block-mean, nodata-aware, finest-first, bounded).
+- `normalize_dem`: read → reproject(→EPSG:5070) → mosaic → clip → pyramid,
+  returning `NormalizedDem(base, pyramid, provenance)`.
+
+### Tests
+
+- `tests/test_raster.py` (11): transform bounds; bilinear at a pixel center,
+  four-neighbor midpoint average, out-of-bounds (uncovered), and nodata
+  neighbor; `GridSampler` conformance; two-tile mosaic + mismatch rejection;
+  clip window; deterministic 2x pyramid; and `normalize_dem` end-to-end with
+  fake reader/reprojector (asserts EPSG:5070 output + preserved NAVD88 vertical).
+
+### Verification
+
+- New tests: **11 passed**. Full suite: **228 passed** (was 217; +11), no
+  regressions. Smoke: a 10×10 grid → pyramid shapes `[(10,10),(5,5),(2,2),(1,1)]`,
+  interior sample = 49.5, out-of-bounds `covered=False`, clip to (2,2,5,5) →
+  3×3 at origin (2,5).
+- `ruff` not installed in the offline venv; not run.
+
+### Deferred
+
+The GDAL-backed `RasterReader`/`RasterReprojector` implementations (real COG
+reads + warp) are the production seams, exercised by fakes here and wired when
+running non-offline. Z-attribution onto flowlines using `GridSampler` is item 14
+(Group 4).
