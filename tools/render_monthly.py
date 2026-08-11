@@ -30,13 +30,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import geopandas as gpd
 import numpy as np
+import shapely
 from PIL import Image, ImageDraw, ImageFont
 
 from src.rendering import bounds
 from tools.monthly_flow import MONTH_ABBR, build_monthly_flow
 from tools.render_common import (
+    CLARK_BBOX_4326,
     EPSG,
     assign_subwatersheds,
+    bbox_boundary,
     build_inputs,
     gdb_paths,
     rasterize,
@@ -44,16 +47,25 @@ from tools.render_common import (
 )
 
 FLOOR = 1e-2  # min flow substituted before log (keeps dry headwaters finite)
+DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 
-def load_basin_flowlines(spec, min_order: int):
+def load_basin_flowlines(spec, min_order: int, boundary=None):
     """Load NHD flowlines for ``spec``, keeping ``NHDPlusID`` for the monthly join.
 
-    Returns parallel lists ``(geoms, ids, orders)`` reprojected to EPSG:5070.
+    If ``boundary`` (EPSG:5070) is given, flowlines are clipped to it (covered
+    ones kept whole, crossing ones trimmed). Returns parallel lists
+    ``(geoms, ids, orders)`` reprojected to EPSG:5070.
     """
+    if boundary is not None:
+        shapely.prepare(boundary)
     geoms, ids, orders = [], [], []
     for gdb in gdb_paths(spec):
-        f = gpd.read_file(gdb, layer="NHDFlowline", columns=["NHDPlusID"])
+        try:
+            f = gpd.read_file(gdb, layer="NHDFlowline", columns=["NHDPlusID"])
+        except Exception as exc:  # noqa: BLE001 - skip a partial/corrupt GDB
+            print(f"  skip {Path(gdb).parent.name}: {exc}")
+            continue
         vaa = gpd.read_file(
             gdb, layer="NHDPlusFlowlineVAA",
             columns=["NHDPlusID", "StreamOrde"], read_geometry=False,
@@ -67,10 +79,25 @@ def load_basin_flowlines(spec, min_order: int):
             f = f[keep]
             seg_orders = seg_orders[keep]
         f = f.to_crs(EPSG)
-        for g, i, o in zip(f.geometry.values, f["NHDPlusID"].values, seg_orders):
-            geoms.append(g)
-            ids.append(int(i))
-            orders.append(int(o))
+        seg_ids = f["NHDPlusID"].to_numpy()
+        arr = np.array(f.geometry.values, dtype=object)
+        if boundary is not None:
+            covered = shapely.covers(boundary, arr)
+            crossing = shapely.intersects(boundary, arr) & ~covered
+            for gi in np.nonzero(covered)[0]:
+                geoms.append(arr[gi]); ids.append(int(seg_ids[gi]))
+                orders.append(int(seg_orders[gi]))
+            cross_idx = np.nonzero(crossing)[0]
+            if cross_idx.size:
+                trimmed = shapely.intersection(boundary, arr[cross_idx])
+                for local_i, gi in enumerate(cross_idx):
+                    g = trimmed[local_i]
+                    if not g.is_empty:
+                        geoms.append(g); ids.append(int(seg_ids[gi]))
+                        orders.append(int(seg_orders[gi]))
+        else:
+            for g, i, o in zip(arr, seg_ids, seg_orders):
+                geoms.append(g); ids.append(int(i)); orders.append(int(o))
     return geoms, ids, orders
 
 
@@ -117,33 +144,76 @@ def _label(png_path: str, month: str, subtitle: str) -> Image.Image:
     return im
 
 
+def frame_phase(i: int, n: int) -> tuple[int, int, float, str]:
+    """Map frame ``i`` of ``n`` to a cyclic month interpolation + date label.
+
+    ``phase`` runs [0, 12) over the year; returns the bracketing month indices
+    ``(m0, m1)``, the blend fraction, and a ``"Mon DD"`` label. For ``n == 12``
+    the phase lands on whole months (exact monthly values); ``n == 24`` gives
+    semi-monthly frames, etc.
+    """
+    phase = i * 12.0 / n
+    m0 = int(phase) % 12
+    frac = phase - int(phase)
+    m1 = (m0 + 1) % 12
+    day = int(frac * DAYS[m0]) + 1
+    return m0, m1, frac, f"{MONTH_ABBR[m0]} {day:02d}"
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--huc4", default="1709", help="HUC4 basin spec (e.g. 1709).")
-    ap.add_argument("--min-order", type=int, default=4,
+    ap.add_argument("--clark", action="store_true",
+                    help="Clip to Clark County, WA (bbox) instead of a whole basin.")
+    ap.add_argument("--huc4", default=None, help="HUC4 basin spec (e.g. 1709).")
+    ap.add_argument("--frames", type=int, default=12,
+                    help="Number of frames; 12=monthly, 24=semi-monthly (the "
+                         "monthly curve is linearly interpolated between).")
+    ap.add_argument("--min-order", type=int, default=None,
                     help="Drop streams below this Strahler order.")
-    ap.add_argument("--huc-digits", type=int, default=8,
+    ap.add_argument("--huc-digits", type=int, default=None,
                     help="WBD level for sub-watershed coloring.")
-    ap.add_argument("--width", type=int, default=2400,
-                    help="Raster width in px.")
+    ap.add_argument("--width", type=int, default=2400, help="Raster width in px.")
     ap.add_argument("--min-px", type=float, default=0.8,
                     help="Stroke width for the lowest annual-min flow.")
     ap.add_argument("--max-px", type=float, default=9.0,
                     help="Stroke width for the highest annual-max flow.")
-    ap.add_argument("--ms-per-frame", type=int, default=450)
+    ap.add_argument("--activation", type=float, default=0.5,
+                    help="A reach is drawn in a frame when its flow is at least "
+                         "this fraction of its own annual peak; smaller streams "
+                         "drain out of dry months (0 = always draw all).")
+    ap.add_argument("--persist", type=float, default=0.03,
+                    help="Reaches above this fraction of the region's peak flow "
+                         "stay lit year-round (keeps major rivers from vanishing "
+                         "in summer, so frames never go empty).")
+    ap.add_argument("--ms-per-frame", type=int, default=300)
     args = ap.parse_args()
 
-    print(f"loading flowlines (huc4={args.huc4}, min_order={args.min_order}) ...")
-    geoms, ids, orders = load_basin_flowlines(args.huc4, args.min_order)
+    # Clark County pulls smaller, denser defaults than a whole HUC4 basin.
+    if args.clark:
+        spec = args.huc4 or "1708"  # Lower Columbia basin covers Clark County
+        boundary = bbox_boundary(CLARK_BBOX_4326)
+        min_order = args.min_order if args.min_order is not None else 2
+        huc_digits = args.huc_digits if args.huc_digits is not None else 12
+        tag, region_name = "clark_county", "Clark County, WA"
+    else:
+        spec = args.huc4 or "1709"
+        boundary = None
+        min_order = args.min_order if args.min_order is not None else 4
+        huc_digits = args.huc_digits if args.huc_digits is not None else 8
+        tag, region_name = f"huc4_{spec}", f"HUC4 {spec}"
+
+    print(f"loading flowlines (spec={spec}, min_order={min_order}, "
+          f"clip={'Clark' if boundary is not None else 'none'}) ...")
+    geoms, ids, orders = load_basin_flowlines(spec, min_order, boundary)
     if not geoms:
         raise SystemExit("No flowlines matched; lower --min-order.")
     print(f"  {len(geoms)} paths, orders 1..{max(orders)}")
 
     print("computing monthly flows ...")
-    flow_map = monthly_flow_by_id(args.huc4)
+    flow_map = monthly_flow_by_id(spec)
 
-    print(f"coloring by HUC{args.huc_digits} ...")
-    codes, names = assign_subwatersheds(geoms, args.huc_digits)
+    print(f"coloring by HUC{huc_digits} ...")
+    codes, names = assign_subwatersheds(geoms, huc_digits)
     geometries, segment_colors, watersheds, _ = build_inputs(geoms, codes)
 
     # Per-geometry monthly flow matrix [n, 12], aligned to geometries' indices.
@@ -162,28 +232,45 @@ def main() -> int:
     base_units, top_units = args.min_px * units_per_px, args.max_px * units_per_px
     print(f"  flow scale {math.exp(lo):.2f}..{math.exp(hi):.0f} cfs (fixed across year)")
 
+    # Each reach is "active" in a frame only near its own annual peak; below that
+    # its width is zeroed so SVG paints nothing. Geometries stay in the set every
+    # frame (bounds/framing pinned), only the visible network pulses.
+    annual_max = monthly.max(axis=1)
+    persist_floor = args.persist * math.exp(hi)  # absolute cfs; major rivers stay lit
+
     out_dir = Path("output/monthly")
     out_dir.mkdir(parents=True, exist_ok=True)
-    subtitle = f"HUC4 {args.huc4} - monthly flow (min order {args.min_order})"
+    subtitle = f"{region_name} - flow ({args.frames} frames/yr, min order {min_order})"
     frames: list[Image.Image] = []
-    for m in range(12):
-        month_flow = {idx: monthly[idx, m] for idx in geometries}
-        widths = fixed_widths(month_flow, base_units, top_units, lo, hi)
+    for i in range(args.frames):
+        m0, m1, frac, label = frame_phase(i, args.frames)
+        flow_i = monthly[:, m0] * (1 - frac) + monthly[:, m1] * frac
+        frame_flow = {idx: flow_i[idx] for idx in geometries}
+        widths = fixed_widths(frame_flow, base_units, top_units, lo, hi)
+        active = 0
+        for idx in geometries:
+            q = flow_i[idx]
+            visible = q > 0 and (q >= args.activation * annual_max[idx]
+                                 or q >= persist_floor)
+            if visible:
+                active += 1
+            else:
+                widths[idx] = 0.0  # drained out this frame -> paints nothing
         svg = render_art_svg(geometries, segment_colors, watersheds, base_units, widths)
-        svg_path = out_dir / f"frame_{m + 1:02d}.svg"
-        png_path = out_dir / f"frame_{m + 1:02d}.png"
+        svg_path = out_dir / f"{tag}_{i + 1:02d}.svg"
+        png_path = out_dir / f"{tag}_{i + 1:02d}.png"
         svg_path.write_text(svg)
         rasterize(str(svg_path), str(png_path), args.width, args.max_px)
-        total = sum(month_flow.values())
-        print(f"  {MONTH_ABBR[m]}: sum flow {total:,.0f} cfs")
-        frames.append(_label(str(png_path), MONTH_ABBR[m], subtitle))
+        print(f"  {label}: {active:>6,} streams active, "
+              f"sum flow {sum(frame_flow.values()):,.0f} cfs")
+        frames.append(_label(str(png_path), label, subtitle))
 
-    gif_path = f"output/monthly_flow_{args.huc4}.gif"
+    gif_path = f"output/monthly_flow_{tag}_{args.frames}f.gif"
     frames[0].save(
         gif_path, save_all=True, append_images=frames[1:],
         duration=args.ms_per_frame, loop=0, optimize=True,
     )
-    print(f"\nwrote {gif_path} (12 frames)")
+    print(f"\nwrote {gif_path} ({args.frames} frames)")
     return 0
 
 
