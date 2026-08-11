@@ -40,6 +40,14 @@ WBD_GLOB = "datasets/wbd/**/*.gdb"
 STATE_HUC4: dict[str, tuple[str, ...]] = {
     "Washington": ("1701", "1702", "1703", "1707", "1708", "1710", "1711"),
     "Oregon": ("1707", "1708", "1709", "1710", "1712", "1801"),
+    # California: HU2 region 18 (1801-1810) + region-17 OR/CA border basins
+    # (1710/1712). Mirrors src/datasets.REGION_HUC4; eastern HU2 15/16 desert
+    # fringes omitted (see that file's note).
+    "California": (
+        "1710", "1712",
+        "1801", "1802", "1803", "1804", "1805",
+        "1806", "1807", "1808", "1809", "1810",
+    ),
 }
 
 #: Approximate Clark County, WA extent in lon/lat (WGS84) for the no-download

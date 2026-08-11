@@ -31,8 +31,20 @@ def test_only_required_datasets_are_resolved():
 
 def test_region_resolves_expected_huc4s():
     files = resolve_required_files(_settings("Oregon"))
-    hucs = {f.huc4 for f in files}
+    hucs = {f.huc4 for f in files if f.dataset_id == "nhdplus_hr"}
     assert hucs == set(REGION_HUC4["Oregon"])
+
+
+def test_wbd_resolves_to_deduplicated_hu2():
+    files = resolve_required_files(_settings("Oregon"))
+    wbd = [f for f in files if f.dataset_id == "wbd"]
+    # Oregon's HUC4s span HU2 regions 17 and 18; WBD is distributed per HU2,
+    # so the six HUC4 codes collapse to two archives.
+    assert {f.huc4 for f in wbd} == {"17", "18"}
+    for f in wbd:
+        assert "/WBD/HU2/GDB/" in f.url
+        assert f.url.endswith(f"WBD_{f.huc4}_HU2_GDB.zip")
+        assert f.filename == f"WBD_{f.huc4}_HU2_GDB.zip"
 
 
 def test_shared_huc4_is_deduplicated_across_regions():

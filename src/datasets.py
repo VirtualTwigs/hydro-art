@@ -1,9 +1,10 @@
 """Dataset registry and region -> required-file resolution.
 
-USGS distributes NHDPlus HR, NHD, and the Watershed Boundary Dataset (WBD) as
-per-HUC4 archives. This module declares the supported datasets and the HUC4
-codes covering each region, and resolves the concrete list of archive files a
-given :class:`~src.config.Settings` needs.
+USGS distributes NHDPlus HR and NHD as per-HU4 archives and the Watershed
+Boundary Dataset (WBD) as per-HU2 archives. This module declares the supported
+datasets and the HUC4 codes covering each region, and resolves the concrete
+list of archive files a given :class:`~src.config.Settings` needs (truncating
+each HUC4 to the dataset's own granularity via ``Dataset.code_digits``).
 
 The registry and the region->HUC4 map are the single extension points: adding
 a region or dataset means editing the data here, not the resolution logic.
@@ -40,9 +41,13 @@ class Dataset:
         id: Short stable identifier (used in cache keys and paths).
         name: Human-readable name.
         priority: Lower numbers are higher priority (1 = primary source).
-        url_template: URL with a ``{huc4}`` placeholder for the archive.
+        url_template: URL with a ``{code}`` placeholder for the archive's HUC
+            unit (see ``code_digits``).
         required: Whether this dataset is fetched by default. Fallback and
             optional sources are declared but not required this release.
+        code_digits: Number of leading HUC4 digits identifying this dataset's
+            distribution unit: 4 for per-HU4 archives (NHDPlus HR, NHD), 2 for
+            per-HU2 archives (WBD).
     """
 
     id: str
@@ -50,6 +55,7 @@ class Dataset:
     priority: int
     url_template: str
     required: bool
+    code_digits: int = 4
 
 
 #: Supported datasets in priority order (PRD section 5.2). URLs point at the
@@ -61,7 +67,7 @@ DATASETS: tuple[Dataset, ...] = (
         priority=1,
         url_template=(
             "https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/"
-            "NHDPlusHR/Beta/GDB/NHDPLUS_H_{huc4}_HU4_GDB.zip"
+            "NHDPlusHR/Beta/GDB/NHDPLUS_H_{code}_HU4_GDB.zip"
         ),
         required=True,
     ),
@@ -69,11 +75,13 @@ DATASETS: tuple[Dataset, ...] = (
         id="wbd",
         name="Watershed Boundary Dataset",
         priority=2,
+        # USGS distributes WBD per 2-digit HU2, not per HU4.
         url_template=(
             "https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/"
-            "WBD/HU4/GDB/WBD_{huc4}_HU4_GDB.zip"
+            "WBD/HU2/GDB/WBD_{code}_HU2_GDB.zip"
         ),
         required=True,
+        code_digits=2,
     ),
     Dataset(
         id="nhd",
@@ -81,7 +89,7 @@ DATASETS: tuple[Dataset, ...] = (
         priority=3,
         url_template=(
             "https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/"
-            "NHD/HU4/HighResolution/GDB/NHD_H_{huc4}_HU4_GDB.zip"
+            "NHD/HU4/HighResolution/GDB/NHD_H_{code}_HU4_GDB.zip"
         ),
         required=False,  # fallback for NHDPlus HR
     ),
@@ -109,6 +117,17 @@ DATASETS: tuple[Dataset, ...] = (
 REGION_HUC4: dict[str, tuple[str, ...]] = {
     "Oregon": ("1707", "1708", "1709", "1710", "1712", "1801"),
     "Washington": ("1701", "1702", "1703", "1708", "1710", "1711"),
+    # California: HU2 region 18 is the California hydrologic region (all of
+    # 1801-1810 tag CA in WBD's ``states`` attribute); 1710/1712 are the region-17
+    # OR/CA border basins. Derived from ``tools/derive_state_huc4.py`` against local
+    # WBD. The far-eastern desert fringes in HU2 15 (Lower Colorado) / 16 (Great
+    # Basin) are omitted pending those archives; re-run the deriver with the
+    # national WBD GDB to add them if needed.
+    "California": (
+        "1710", "1712",
+        "1801", "1802", "1803", "1804", "1805",
+        "1806", "1807", "1808", "1809", "1810",
+    ),
 }
 
 
@@ -118,7 +137,8 @@ class FileDescriptor:
 
     Attributes:
         dataset_id: The owning :class:`Dataset` id.
-        huc4: The HUC4 code this archive covers.
+        huc4: The HUC unit code this archive covers, at the dataset's own
+            granularity (HU4 for NHDPlus HR/NHD, HU2 for WBD).
         filename: Basename of the archive (derived from the URL).
         url: Fully resolved download URL.
         expected_sha256: Known checksum, if the registry provides one.
@@ -163,11 +183,12 @@ def resolve_required_files(settings: Settings) -> tuple[FileDescriptor, ...]:
             if not ds.required:
                 continue
             for huc4 in huc4s:
-                url = ds.url_template.format(huc4=huc4)
+                code = huc4[: ds.code_digits]
+                url = ds.url_template.format(code=code)
                 filename = url.rsplit("/", 1)[-1]
                 descriptor = FileDescriptor(
                     dataset_id=ds.id,
-                    huc4=huc4,
+                    huc4=code,
                     filename=filename,
                     url=url,
                 )
