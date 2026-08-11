@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Experimental UX</title>
+<style>
+  :root {
+    --bg: #07080c;
+    --panel: #10121b;
+    --panel-2: #171a26;
+    --line: #232838;
+    --ink: #e6ebf5;
+    --muted: #8891a8;
+    --accent: #00ffff;
+    --accent-dim: #0a8f92;
+    --warn: #ff9c3a;
+    --danger: #ff4d5e;
+    --ok: #00ff9c;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 13px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    grid-template-rows: 100vh;
+  }
+  /* ---------- Sidebar ---------- */
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 16px 16px 40px;
+  }
+  aside h1 {
+    font-size: 15px; letter-spacing: .04em; margin: 4px 0 2px;
+    color: var(--ink);
+  }
+  aside h1 .dot { color: var(--accent); }
+  .sub { color: var(--muted); font-size: 11px; margin-bottom: 16px; }
+  fieldset {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px; margin: 0 0 14px;
+    background: var(--panel-2);
+  }
+  legend {
+    padding: 0 6px; color: var(--accent); font-size: 11px;
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  label.row { display: block; margin: 10px 0 4px; color: var(--muted); font-size: 11px; }
+  select, input[type="color"], input[type="range"], button, input[type="text"] {
+    font: inherit;
+  }
+  select, input[type="text"] {
+    width: 100%; background: #0b0d14; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 8px;
+  }
+  input[type="color"] {
+    width: 100%; height: 34px; background: #0b0d14; border: 1px solid var(--line);
+    border-radius: 7px; padding: 2px;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .val { float: right; color: var(--accent); }
+  .seg { display: flex; gap: 6px; margin-top: 6px; }
+  .seg button {
+    flex: 1; background: #0b0d14; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 7px; padding: 7px 4px; cursor: pointer;
+  }
+  .seg button.active { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; }
+  .swatches i { width: 16px; height: 16px; border-radius: 3px; display: inline-block; }
+  .warn { color: var(--warn); font-size: 11px; margin-top: 6px; min-height: 14px; }
+  .warn.danger { color: var(--danger); }
+  .warn.ok { color: var(--muted); }
+  .btn {
+    width: 100%; background: transparent; color: var(--accent);
+    border: 1px solid var(--accent-dim); border-radius: 7px; padding: 9px; cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn:hover { background: rgba(0,255,255,.08); }
+  .hint { color: var(--muted); font-size: 10.5px; margin-top: 8px; }
+  .tag { display:inline-block; font-size:9px; padding:1px 5px; border-radius:4px; border:1px solid var(--line); color:var(--muted); margin-left:6px; vertical-align:middle;}
+  .tag.new { color: var(--warn); border-color: var(--warn); }
+  .tag.live { color: var(--ok); border-color: var(--accent-dim); }
+  /* ---------- Stage ---------- */
+  main { position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  #stage { flex: 1; display: grid; place-items: center; padding: 20px; overflow: hidden; }
+  #stage svg { max-width: 100%; max-height: 100%; height: 100%; }
+  footer {
+    border-top: 1px solid var(--line); background: var(--panel);
+    max-height: 34vh; overflow: auto; padding: 12px 16px;
+  }
+  footer h2 { font-size: 11px; letter-spacing:.08em; text-transform:uppercase; color: var(--muted); margin: 0 0 8px; }
+  pre {
+    margin: 0; background: #0b0d14; border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px; color: var(--ink); overflow-x: auto;
+    font-size: 12px; white-space: pre;
+  }
+  .k { color: var(--accent); } .s { color: var(--ok); } .c { color: var(--muted); } .n { color: var(--warn); }
+  .badge { position: absolute; top: 14px; right: 16px; color: var(--muted); font-size: 10.5px;
+    background: rgba(0,0,0,.4); border:1px solid var(--line); border-radius: 6px; padding: 4px 8px; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Hydro-Art <span class="dot">◇</span> UX Lab</h1>
+  <div class="sub">Experimental control surface for the SVG river-art pipeline. Preview is live &amp; client-side.</div>
+
+  <fieldset>
+    <legend>Geography</legend>
+    <label class="row">Country</label>
+    <select id="country"><option value="us">United States</option></select>
+    <label class="row">State <span class="tag live">live</span></label>
+    <select id="state">
+      <option value="oregon">Oregon</option>
+      <option value="washington">Washington</option>
+    </select>
+    <label class="row">Clip to <span class="tag new">proposed</span></label>
+    <select id="clip">
+      <option value="state">Whole state</option>
+      <option value="clark" disabled>Clark County (WA only)</option>
+    </select>
+    <div class="hint" id="geoHint">County clip is simulated (crops the preview extent). Real clipping happens in <code>src/clipping.py</code>.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Color</legend>
+    <div class="seg" id="colorMode">
+      <button data-v="watershed" class="active">By watershed</button>
+      <button data-v="single">Single color</button>
+    </div>
+
+    <div id="paletteWrap">
+      <label class="row">Palette</label>
+      <select id="palette">
+        <option value="neon">neon (pipeline default)</option>
+        <option value="aurora">aurora (experimental)</option>
+        <option value="ember">ember (experimental)</option>
+        <option value="ice">ice (experimental)</option>
+      </select>
+      <div class="swatches" id="swatches"></div>
+    </div>
+
+    <div id="singleWrap" hidden>
+      <label class="row">Signal / single color</label>
+      <input type="color" id="singleColor" value="#00e5ff" />
+    </div>
+
+    <label class="row">Background</label>
+    <input type="color" id="bg" value="#05060a" />
+  </fieldset>
+
+  <fieldset>
+    <legend>Line width · by flow <span class="tag new">proposed</span></legend>
+    <div class="seg" id="widthMode">
+      <button data-v="flow" class="active">Scale by flow</button>
+      <button data-v="uniform">Uniform</button>
+    </div>
+
+    <label class="row">Min width (headwaters)<span class="val" id="minVal">0.5px</span></label>
+    <input type="range" id="minW" min="0.1" max="4" step="0.1" value="0.5" />
+
+    <label class="row">Max width (mainstem)<span class="val" id="maxVal">2.0px</span></label>
+    <input type="range" id="maxW" min="0.3" max="10" step="0.1" value="2.0" />
+
+    <label class="row">Flow curve<span class="val" id="gammaVal">√ (0.5)</span></label>
+    <input type="range" id="gamma" min="0.25" max="1.5" step="0.05" value="0.5" />
+
+    <div class="warn ok" id="widthWarn">Calibrated to the reference watershed maps.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Glow <span class="tag live">live</span></legend>
+    <div class="seg" id="glowMode">
+      <button data-v="off" class="active">Off</button>
+      <button data-v="on">On</button>
+    </div>
+    <label class="row">Glow radius<span class="val" id="glowVal">2.5</span></label>
+    <input type="range" id="glow" min="0.5" max="8" step="0.5" value="2.5" />
+  </fieldset>
+
+  <fieldset>
+    <legend>Data source</legend>
+    <button class="btn" id="regen">↻ Regenerate procedural network</button>
+    <button class="btn" id="loadReal">⤓ Load real Oregon SVG</button>
+    <div class="hint">Real load fetches <code>../output/oregon_display.svg</code> — needs a local server (see note below).</div>
+  </fieldset>
+</aside>
+
+<main>
+  <div id="stage"></div>
+  <div class="badge" id="badge">procedural · oregon</div>
+  <footer>
+    <h2>Pipeline mapping — translate these controls back to the Python pipeline</h2>
+    <pre id="mapping"></pre>
+  </footer>
+</main>
+
+<script>
+"use strict";
+
+// ---------- Palettes (neon matches src/coloring.py) ----------
+const PALETTES = {
+  neon:   ["#00ffff","#0a5cff","#4b0082","#9d00ff","#8f00ff","#ff00ff","#ff7a00","#ffd700","#aaff00","#00ffab","#00e0d1","#00ff5f"],
+  aurora: ["#00ff9c","#00e0d1","#38b6ff","#5a7bff","#7a5cff","#00ffab","#2fffd0","#66ffcc","#3fa9ff","#8f7bff","#00d4a0","#41e0ff"],
+  ember:  ["#ff3b00","#ff7a00","#ffb300","#ffd700","#ff5e3a","#ff2d55","#e0004d","#ff9c3a","#ffcf5e","#c41e3a","#ff6f61","#ffae42"],
+  ice:    ["#e6ffff","#a8f0ff","#66d9ff","#38b6ff","#5a7bff","#b3ecff","#7fe3ff","#4fb0ff","#cfefff","#89cfff","#6fd7ff","#9fd8ff"],
+};
+
+// ---------- Deterministic PRNG ----------
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+// ---------- Network model ----------
+// A network is { basins: [ {paths:[{pts:[[x,y]..], flow}]} ], viewBox, unitScale }
+const VB = { w: 1000, h: 1177 };
+const N_BASINS = 6;
+
+function generateNetwork(seed){
+  const rnd = mulberry32(seed);
+  const basins = Array.from({length: N_BASINS}, () => ({ segs: [] }));
+  // Root fan: N trunks rising from bottom, each a recursive branching tree.
+  const rootX = 500, rootY = 1120;
+  const spread = 2.1;               // radians across the whole fan
+  for (let b = 0; b < N_BASINS; b++){
+    const a0 = -Math.PI/2 - spread/2 + spread*(b+0.5)/N_BASINS + (rnd()-0.5)*0.15;
+    grow(basins[b].segs, rootX, rootY, a0, 250, 10, rnd);
+  }
+  // Compute flow bottom-up: each seg.flow = 1 + sum of children flows.
+  // Segs were pushed in creation (pre) order per basin; recompute via child links.
+  let maxFlow = 1;
+  for (const basin of basins){
+    for (let i = basin.segs.length - 1; i >= 0; i--){
+      const s = basin.segs[i];
+      s.flow = 1 + s.children.reduce((acc,c)=>acc + c.flow, 0);
+      if (s.flow > maxFlow) maxFlow = s.flow;
+    }
+  }
+  return { basins, maxFlow, viewBox:{...VB}, unitScale: 1 };
+}
+
+function grow(out, x, y, ang, len, depth, rnd){
+  if (depth <= 0 || len < 6) return null;
+  // one slightly curved segment
+  const midJit = (rnd()-0.5) * len * 0.25;
+  const nx = x + Math.cos(ang) * len;
+  const ny = y + Math.sin(ang) * len;
+  const mx = (x+nx)/2 + Math.cos(ang+Math.PI/2)*midJit;
+  const my = (y+ny)/2 + Math.sin(ang+Math.PI/2)*midJit;
+  const seg = { pts: [[x,y],[mx,my],[nx,ny]], children: [], flow: 1 };
+  out.push(seg);
+  // bifurcate
+  const branches = rnd() < 0.78 ? 2 : (rnd() < 0.7 ? 1 : 3);
+  const spread = 0.35 + rnd()*0.5;
+  for (let k = 0; k < branches; k++){
+    const da = branches === 1 ? (rnd()-0.5)*0.4
+             : (-spread/2 + spread*(k)/(branches-1)) + (rnd()-0.5)*0.2;
+    const child = grow(out, nx, ny, ang + da, len * (0.66 + rnd()*0.12), depth-1, rnd);
+    if (child) seg.children.push(child);
+  }
+  return seg;
+}
+
+// ---------- Parse the real display SVG into the same model ----------
+function parseRealSvg(text){
+  const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+  const svg = doc.querySelector("svg");
+  const vb = svg.getAttribute("viewBox").split(/\s+/).map(Number); // [0 0 w h]
+  const groups = [...doc.querySelectorAll('g[id^="watershed_"]')];
+  const basins = [];
+  let maxFlow = 1;
+  for (const g of groups){
+    const segs = [];
+    for (const p of g.querySelectorAll("path")){
+      const pts = parsePathPts(p.getAttribute("d"));
+      if (pts.length < 2) continue;
+      const flow = polyLen(pts);              // length as a flow proxy
+      if (flow > maxFlow) maxFlow = flow;
+      segs.push({ pts, flow, children: [] });
+    }
+    if (segs.length) basins.push({ segs });
+  }
+  // unitScale: original file rendered at width=1000, so px→user-units factor.
+  return { basins, maxFlow, viewBox:{ w: vb[2], h: vb[3] }, unitScale: vb[2] / 1000 };
+}
+function parsePathPts(d){
+  const pts = []; const re = /([ML])\s*(-?[\d.]+)[ ,](-?[\d.]+)/g; let m;
+  while ((m = re.exec(d))) pts.push([parseFloat(m[2]), parseFloat(m[3])]);
+  return pts;
+}
+function polyLen(pts){ let L=0; for(let i=1;i<pts.length;i++){const dx=pts[i][0]-pts[i-1][0],dy=pts[i][1]-pts[i-1][1];L+=Math.hypot(dx,dy);} return L; }
+
+// ---------- Rendering ----------
+function dOf(pts){ return "M " + pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" L "); }
+
+function buildSvg(net){
+  const { basins, viewBox } = net;
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${viewBox.w} ${viewBox.h}" `
+        + `fill="none" stroke-linecap="round" stroke-linejoin="round">`;
+  s += `<defs><filter id="glow" x="-20%" y="-20%" width="140%" height="140%">`
+     + `<feGaussianBlur id="glowBlur" stdDeviation="0" result="b"/>`
+     + `<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  s += `<rect id="bgRect" x="0" y="0" width="${viewBox.w}" height="${viewBox.h}"/>`;
+  basins.forEach((basin, bi) => {
+    s += `<g class="basin" data-basin="${bi}">`;
+    for (const seg of basin.segs){
+      s += `<path data-flow="${seg.flow.toFixed(3)}" d="${dOf(seg.pts)}"/>`;
+    }
+    s += `</g>`;
+  });
+  s += `</svg>`;
+  return s;
+}
+
+// ---------- State ----------
+let net = null;
+let source = "procedural";
+const el = id => document.getElementById(id);
+const state = {
+  colorMode: "watershed", palette: "neon", single: "#00e5ff",
+  bg: "#05060a", widthMode: "flow", minW: 0.5, maxW: 2.0, gamma: 0.5,
+  glow: false, glowR: 2.5, region: "oregon", clip: "state",
+};
+
+// ---------- Apply styles to the live SVG ----------
+function apply(){
+  const svg = el("stage").querySelector("svg");
+  if (!svg || !net) return;
+  const scale = net.unitScale;                 // px → user units
+  const pal = PALETTES[state.palette];
+
+  svg.querySelector("#bgRect").setAttribute("fill", state.bg);
+  document.body.style.background = state.bg;
+
+  // glow
+  svg.querySelector("#glowBlur").setAttribute("stdDeviation", state.glow ? (state.glowR*scale).toFixed(2) : "0");
+
+  const basins = [...svg.querySelectorAll("g.basin")];
+  basins.forEach((g, bi) => {
+    const stroke = state.colorMode === "single" ? state.single : pal[bi % pal.length];
+    g.setAttribute("stroke", stroke);
+    g.setAttribute("filter", state.glow ? "url(#glow)" : "");
+    for (const p of g.querySelectorAll("path")){
+      let wpx;
+      if (state.widthMode === "uniform"){
+        wpx = state.minW;
+      } else {
+        const f = parseFloat(p.getAttribute("data-flow"));
+        const t = Math.pow(Math.log(f+1)/Math.log(net.maxFlow+1), state.gamma);
+        wpx = state.minW + (state.maxW - state.minW) * t;
+      }
+      p.setAttribute("stroke-width", (wpx*scale).toFixed(3));
+    }
+  });
+  updateWidthWarn();
+  updateMapping();
+}
+
+function updateWidthWarn(){
+  const w = el("widthWarn");
+  if (state.maxW < state.minW){
+    w.className = "warn danger"; w.textContent = "⚠ Max width is below min — mainstems will look thinner than headwaters.";
+  } else if (state.minW < 0.4){
+    w.className = "warn danger"; w.textContent = "⚠ Min < 0.4px: headwater tributaries may vanish when rasterized.";
+  } else if (state.maxW > 5){
+    w.className = "warn"; w.textContent = "⚠ Max > 5px: thick mainstems start to cover neighbouring waterways.";
+  } else {
+    w.className = "warn ok"; w.textContent = "Range looks good — close to the reference watershed maps.";
+  }
+}
+
+// ---------- Pipeline mapping readout ----------
+function updateMapping(){
+  const q = s => `<span class="s">${s}</span>`, k = s => `<span class="k">${s}</span>`,
+        c = s => `<span class="c">${s}</span>`, n = s => `<span class="n">${s}</span>`;
+  const region = state.region === "washington" ? "Washington" : "Oregon";
+  const cli = [
+    ".venv/bin/python build.py",
+    `--region ${region}`,
+    state.colorMode === "watershed" ? `--palette ${state.palette}` : `--single-color ${state.single} ${n("(proposed)")}`,
+    state.glow ? `--glow --glow-radius ${state.glowR}` : "",
+    `--line-width ${state.minW}`,
+  ].filter(Boolean).join(" \\\n  ");
+
+  const yaml =
+`${c("# config.yaml — current UX selections")}
+${k("region")}: [${region}]
+${k("palette")}: ${q(state.colorMode==="watershed"?state.palette:"(disabled — single-color mode)")}
+${k("background")}: ${q('"'+state.bg+'"')}
+${k("glow")}: ${state.glow}
+${k("glow_radius")}: ${state.glowR}
+${k("line_width")}: ${state.minW}       ${c("# base / min stroke")}
+
+${c("# --- proposed extensions (not yet in src/) ---")}
+${n("single_color")}: ${state.colorMode==="single" ? '"'+state.single+'"' : "null"}   ${c("# rendering.py: monochrome mode")}
+${n("width_by_flow")}: ${state.widthMode==="flow"}     ${c("# stream_order_widths → real QA_MA flow")}
+${n("line_width_min")}: ${state.minW}
+${n("line_width_max")}: ${state.maxW}   ${c("# clamp so rivers stay visible / don't merge")}
+${n("flow_gamma")}: ${state.gamma}      ${c("# curve: 0.5≈sqrt spreads small streams")}
+${n("clip")}: ${q(state.clip==="clark" ? "county:Clark,WA" : "region")}   ${c("# clipping.py: sub-region clip")}`;
+
+  el("mapping").innerHTML = yaml;
+}
+
+// ---------- Rebuild network (region / regenerate / real) ----------
+function rebuild(){
+  if (source === "procedural"){
+    const seedKey = state.region + "|" + (state._nudge||0);
+    net = generateNetwork(hash(seedKey));
+    el("badge").textContent = `procedural · ${state.region}`;
+  }
+  el("stage").innerHTML = buildSvg(net);
+  applyClip();
+  apply();
+}
+
+function applyClip(){
+  const svg = el("stage").querySelector("svg");
+  if (!svg || !net) return;
+  if (state.clip === "clark" && state.region === "washington"){
+    // Simulate a county extent: crop to a sub-rectangle of the network.
+    const w = net.viewBox.w, h = net.viewBox.h;
+    svg.setAttribute("viewBox", `${w*0.30} ${h*0.55} ${w*0.34} ${h*0.34}`);
+    el("badge").textContent = `${source} · clark county (sim)`;
+  } else {
+    svg.setAttribute("viewBox", `0 0 ${net.viewBox.w} ${net.viewBox.h}`);
+    el("badge").textContent = `${source} · ${source==="real"?"oregon (real)":state.region}`;
+  }
+}
+
+// ---------- Wire controls ----------
+function seg(id, key, after){
+  el(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...el(id).children].forEach(x => x.classList.toggle("active", x===b));
+    state[key] = b.dataset.v; (after||apply)();
+  });
+}
+seg("colorMode","colorMode",()=>{
+  el("paletteWrap").hidden = state.colorMode==="single";
+  el("singleWrap").hidden  = state.colorMode!=="single";
+  apply();
+});
+seg("widthMode","widthMode");
+el("glowMode").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...el("glowMode").children].forEach(x => x.classList.toggle("active", x===b));
+  state.glow = b.dataset.v === "on";
+  apply();
+});
+
+el("palette").addEventListener("change", e => { state.palette = e.target.value; drawSwatches(); apply(); });
+el("singleColor").addEventListener("input", e => { state.single = e.target.value; apply(); });
+el("bg").addEventListener("input", e => { state.bg = e.target.value; apply(); });
+
+function bindRange(id, key, fmt, valId){
+  el(id).addEventListener("input", e => { state[key] = parseFloat(e.target.value); el(valId).textContent = fmt(state[key]); apply(); });
+}
+bindRange("minW","minW", v=>v.toFixed(1)+"px", "minVal");
+bindRange("maxW","maxW", v=>v.toFixed(1)+"px", "maxVal");
+bindRange("gamma","gamma", v=>(v<0.6?"√ ":v>1.05?"lin+ ":"~ ")+"("+v.toFixed(2)+")", "gammaVal");
+bindRange("glow","glowR", v=>v.toFixed(1), "glowVal");
+
+el("state").addEventListener("change", e => {
+  state.region = e.target.value; source = "procedural";
+  const wa = state.region === "washington";
+  el("clip").querySelector('[value="clark"]').disabled = !wa;
+  if (!wa && state.clip === "clark"){ state.clip = "state"; el("clip").value = "state"; }
+  rebuild();
+});
+el("clip").addEventListener("change", e => { state.clip = e.target.value; applyClip(); apply(); });
+
+el("regen").addEventListener("click", () => { source="procedural"; state._nudge=(state._nudge||0)+1; rebuild(); });
+
+el("loadReal").addEventListener("click", async () => {
+  try {
+    const res = await fetch("../output/oregon_display.svg");
+    if (!res.ok) throw new Error(res.status);
+    net = parseRealSvg(await res.text());
+    source = "real"; state.region = "oregon"; el("state").value = "oregon";
+    state.clip = "state"; el("clip").value = "state";
+    el("stage").innerHTML = buildSvg(net);
+    applyClip(); apply();
+  } catch (err) {
+    alert("Couldn't fetch ../output/oregon_display.svg (" + err + ").\n\n" +
+          "Serve the repo over HTTP first:\n\n    cd " +
+          "hydro-art && .venv/bin/python -m http.server 8000\n\n" +
+          "then open  http://localhost:8000/web/index.html");
+  }
+});
+
+function drawSwatches(){
+  el("swatches").innerHTML = PALETTES[state.palette].map(c=>`<i style="background:${c}"></i>`).join("");
+}
+
+// ---------- Boot ----------
+drawSwatches();
+rebuild();
+</script>
+</body>
+</html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Prototype B — Guided</title>
+<link rel="stylesheet" href="shared/ux.css" />
+<style>
+  body { display: grid; grid-template-columns: 1fr 400px; grid-template-rows: 100vh; }
+  main { position: relative; overflow: hidden; display: grid; place-items: center; padding: 24px; }
+  #stage { width: 100%; height: 100%; }
+  .badge { position: absolute; top: 16px; left: 20px; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .head { padding: 16px 18px 6px; }
+  .body { padding: 4px 18px 12px; overflow-y: auto; flex: 1; }
+  .foot { padding: 12px 18px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+  .panel { }
+  .panel h3 { font-size: 13px; margin: 4px 0 2px; }
+  .panel p.help { color: var(--muted); font-size: 11px; margin: 0 0 14px; }
+  .summary { border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 12px; }
+  .summary .kv { display: flex; justify-content: space-between; padding: 3px 0; font-size: 11px; }
+  .summary .kv b { color: var(--ink); font-weight: 600; }
+  .summary .kv span { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div id="stage" class="stage"></div>
+  <div class="badge" id="badge">Oregon · whole state</div>
+</main>
+
+<aside>
+  <div class="head">
+    <h1 class="brand">Hydro-Art <span class="dot">◇</span> Guided</h1>
+    <div class="sub">Prototype B — a 4-step wizard that walks you from geography to export.</div>
+    <div class="steps" id="steps">
+      <div class="step active"><span class="num">1</span>Geo</div>
+      <div class="step"><span class="num">2</span>Time</div>
+      <div class="step"><span class="num">3</span>Style</div>
+      <div class="step"><span class="num">4</span>Export</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <!-- STEP 1 — GEOGRAPHY -->
+    <div class="panel" data-step="0">
+      <h3>Where?</h3>
+      <p class="help">Pick a state, then render the whole state or drill into a single county.</p>
+      <label class="row">State</label>
+      <select id="state"></select>
+      <label class="row">Scope</label>
+      <div class="seg" id="scope">
+        <button data-v="state" class="active">Whole state</button>
+        <button data-v="county">One county</button>
+      </div>
+      <div id="countyWrap" hidden>
+        <label class="row">County <span class="tag new">proposed</span></label>
+        <select id="county"></select>
+      </div>
+    </div>
+
+    <!-- STEP 2 — TIME -->
+    <div class="panel" data-step="1" hidden>
+      <h3>When?</h3>
+      <p class="help">Annual mean flow, one month, or a range that animates the seasonal swell.</p>
+      <div class="seg" id="timeMode">
+        <button data-v="annual" class="active">Annual</button>
+        <button data-v="single">Single month</button>
+        <button data-v="range">Range</button>
+      </div>
+      <div id="tlWrap" hidden>
+        <label class="row">Timeline <span class="val" id="tlLabel">Jun</span></label>
+        <div class="timeline" id="timeline"></div>
+        <div class="hint" id="tlHint">Click a month. A range renders one frame per month → animated GIF (<code>tools/render_monthly.py</code>).</div>
+      </div>
+    </div>
+
+    <!-- STEP 3 — STYLE -->
+    <div class="panel" data-step="2" hidden>
+      <h3>How should it look?</h3>
+      <p class="help">Color scheme and how channel thickness responds to flow.</p>
+      <label class="row">Color by</label>
+      <div class="seg" id="colorMode">
+        <button data-v="watershed" class="active">Watershed</button>
+        <button data-v="single">Single</button>
+        <button data-v="elevation">Elevation</button>
+      </div>
+      <div id="paletteWrap">
+        <label class="row">Palette</label>
+        <select id="palette">
+          <option value="neon">neon (default)</option>
+          <option value="aurora">aurora</option>
+          <option value="ember">ember</option>
+          <option value="ice">ice</option>
+        </select>
+        <div class="swatches" id="swatches"></div>
+      </div>
+      <div id="singleWrap" hidden>
+        <label class="row">Single color</label>
+        <input type="color" id="singleColor" value="#00e5ff" />
+      </div>
+      <div id="elevHint" class="hint" hidden>Hypsometric tint (white summit → deep-blue sea).</div>
+
+      <label class="row">Line width</label>
+      <div class="seg" id="widthMode">
+        <button data-v="flow" class="active">Scale by flow</button>
+        <button data-v="uniform">Uniform</button>
+      </div>
+      <label class="row">Min width<span class="val" id="minVal">0.5px</span></label>
+      <input type="range" id="minW" min="0.1" max="4" step="0.1" value="0.5" />
+      <label class="row">Max width<span class="val" id="maxVal">2.0px</span></label>
+      <input type="range" id="maxW" min="0.3" max="10" step="0.1" value="2.0" />
+      <label class="row">Glow</label>
+      <div class="seg" id="glowMode">
+        <button data-v="off" class="active">Off</button>
+        <button data-v="on">On</button>
+      </div>
+    </div>
+
+    <!-- STEP 4 — EXPORT -->
+    <div class="panel" data-step="3" hidden>
+      <h3>Export</h3>
+      <p class="help">Review the selections, then generate. This is the command the pipeline would run.</p>
+      <div class="chips" id="fmt">
+        <span class="chip active" data-v="svg">SVG</span>
+        <span class="chip" data-v="png">PNG</span>
+        <span class="chip" data-v="pdf">PDF</span>
+      </div>
+      <div class="summary" id="summary"></div>
+      <label class="row" style="margin-top:14px">build.py command</label>
+      <pre id="cli"></pre>
+    </div>
+  </div>
+
+  <div class="foot">
+    <button class="btn ghost" id="back" disabled>← Back</button>
+    <button class="btn solid grow" id="next">Next →</button>
+  </div>
+</aside>
+
+<script src="shared/hydro-ux.js"></script>
+<script>
+"use strict";
+const H = window.HydroUX, el = id => document.getElementById(id);
+let net = null, step = 0;
+const NSTEPS = 4;
+
+const state = {
+  state: "Oregon", scope: "state", county: null,
+  timeMode: "annual", monthStart: 5, monthEnd: 8, month: 6,
+  colorMode: "watershed", palette: "neon", single: "#00e5ff", bg: "#05060a",
+  widthMode: "flow", minW: 0.5, maxW: 2.0, gamma: 0.5, glow: false, glowR: 2.5,
+  formats: ["svg"],
+};
+
+el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+function fillCounties(){ el("county").innerHTML = H.COUNTIES[state.state].map(c => `<option value="${c}">${c}</option>`).join(""); state.county = H.COUNTIES[state.state][0]; }
+fillCounties();
+function drawSwatches(){ el("swatches").innerHTML = H.PALETTES[state.palette].map(c=>`<i style="background:${c}"></i>`).join(""); }
+
+// Timeline (step 2)
+function buildTimeline(){
+  el("timeline").innerHTML = H.MONTH_ABBR.map((m,i)=>`<div class="mo" data-m="${i}">${m}</div>`).join("");
+  paintTimeline();
+}
+function paintTimeline(){
+  [...el("timeline").children].forEach((c,i)=>{
+    c.classList.remove("in-range","edge");
+    if (state.timeMode === "single" && i === state.monthStart) c.classList.add("edge");
+    if (state.timeMode === "range"){
+      if (i === state.monthStart || i === state.monthEnd) c.classList.add("edge");
+      else if (i > state.monthStart && i < state.monthEnd) c.classList.add("in-range");
+    }
+  });
+  el("tlLabel").textContent = state.timeMode === "range"
+    ? `${H.MONTH_ABBR[state.monthStart]}–${H.MONTH_ABBR[state.monthEnd]}`
+    : H.MONTH_ABBR[state.monthStart];
+}
+el("timeline").addEventListener("click", e => {
+  const c = e.target.closest(".mo"); if (!c) return;
+  const m = +c.dataset.m;
+  if (state.timeMode === "single"){ state.monthStart = m; }
+  else if (state.timeMode === "range"){
+    // second click sets the far edge; nearest edge moves
+    if (Math.abs(m - state.monthStart) <= Math.abs(m - state.monthEnd)) state.monthStart = Math.min(m, state.monthEnd);
+    else state.monthEnd = Math.max(m, state.monthStart);
+  }
+  paintTimeline(); apply();
+});
+
+// Render
+function rebuild(){ net = H.generateNetwork(H.hash(state.state)); el("stage").innerHTML = H.buildSvg(net); applyScope(); apply(); }
+function applyScope(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  if (state.scope === "county"){
+    const w = net.viewBox.w, h = net.viewBox.h;
+    svg.setAttribute("viewBox", `${w*0.30} ${h*0.55} ${w*0.34} ${h*0.34}`);
+    el("badge").textContent = `${state.state} · ${state.county} County (sim)`;
+  } else {
+    svg.setAttribute("viewBox", `0 0 ${net.viewBox.w} ${net.viewBox.h}`);
+    el("badge").textContent = `${state.state} · whole state`;
+  }
+}
+function apply(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  state.month = state.timeMode === "annual" ? 6 : state.monthStart;
+  H.applyStyles(svg, net, state);
+  document.body.style.background = state.bg;
+  updateSummary();
+}
+function updateSummary(){
+  el("summary").innerHTML = [
+    ["Region", state.scope==="county" ? `${state.county} County, ${H.stateAbbr(state.state)}` : `${state.state} (whole state)`],
+    ["Time", H.monthsToken(state)],
+    ["Color", state.colorMode==="watershed" ? `watershed · ${state.palette}` : state.colorMode],
+    ["Width", state.widthMode==="flow" ? `flow ${state.minW}–${state.maxW}px` : `uniform ${state.minW}px`],
+    ["Glow", state.glow ? `on · ${state.glowR}` : "off"],
+    ["Formats", state.formats.join(", ").toUpperCase()],
+  ].map(([k,v])=>`<div class="kv"><span>${k}</span><b>${v}</b></div>`).join("");
+  el("cli").textContent = H.cliMapping(state) + (state.formats.length ? `\n  --output ${state.formats.join(" ")}` : "");
+}
+
+// Segmented helper
+function seg(id, key, after){
+  el(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...el(id).children].forEach(x => x.classList.toggle("active", x===b));
+    state[key] = b.dataset.v; (after||apply)();
+  });
+}
+seg("scope","scope",()=>{ el("countyWrap").hidden = state.scope!=="county"; applyScope(); apply(); });
+seg("timeMode","timeMode",()=>{ el("tlWrap").hidden = state.timeMode==="annual"; if (state.timeMode==="range" && state.monthEnd<=state.monthStart) state.monthEnd = Math.min(11, state.monthStart+3); paintTimeline(); apply(); });
+seg("colorMode","colorMode",()=>{
+  el("paletteWrap").hidden = state.colorMode!=="watershed";
+  el("singleWrap").hidden  = state.colorMode!=="single";
+  el("elevHint").hidden    = state.colorMode!=="elevation";
+  apply();
+});
+seg("widthMode","widthMode");
+el("glowMode").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...el("glowMode").children].forEach(x => x.classList.toggle("active", x===b));
+  state.glow = b.dataset.v === "on"; apply();
+});
+
+el("state").addEventListener("change", e => { state.state = e.target.value; fillCounties(); rebuild(); });
+el("county").addEventListener("change", e => { state.county = e.target.value; applyScope(); apply(); });
+el("palette").addEventListener("change", e => { state.palette = e.target.value; drawSwatches(); apply(); });
+el("singleColor").addEventListener("input", e => { state.single = e.target.value; apply(); });
+el("fmt").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  c.classList.toggle("active");
+  state.formats = [...el("fmt").querySelectorAll(".chip.active")].map(x=>x.dataset.v);
+  updateSummary();
+});
+function bindRange(id, key, fmt, valId){ el(id).addEventListener("input", e => { state[key]=parseFloat(e.target.value); if(valId) el(valId).textContent=fmt(state[key]); apply(); }); }
+bindRange("minW","minW", v=>v.toFixed(1)+"px", "minVal");
+bindRange("maxW","maxW", v=>v.toFixed(1)+"px", "maxVal");
+
+// Stepper navigation
+function showStep(n){
+  step = Math.max(0, Math.min(NSTEPS-1, n));
+  [...document.querySelectorAll(".panel")].forEach(p => p.hidden = (+p.dataset.step !== step));
+  [...el("steps").children].forEach((s,i)=>{ s.classList.toggle("active", i===step); s.classList.toggle("done", i<step); });
+  el("back").disabled = step === 0;
+  el("next").textContent = step === NSTEPS-1 ? "⤓ Generate" : "Next →";
+  if (step === 3) updateSummary();
+}
+el("back").addEventListener("click", () => showStep(step-1));
+el("next").addEventListener("click", () => { if (step === NSTEPS-1){ alert("Prototype: would run\n\n"+el("cli").textContent); } else showStep(step+1); });
+el("steps").addEventListener("click", e => { const i=[...el("steps").children].indexOf(e.target.closest(".step")); if (i>=0) showStep(i); });
+
+// Boot
+drawSwatches(); buildTimeline(); rebuild(); showStep(0);
+</script>
+</body>
+</html>

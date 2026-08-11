@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Prototype A — Studio</title>
+<link rel="stylesheet" href="shared/ux.css" />
+<style>
+  body { display: grid; grid-template-columns: 340px 1fr; grid-template-rows: 100vh; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 16px 16px 40px; }
+  aside .sub { margin-bottom: 16px; }
+  main { position: relative; overflow: hidden; display: flex; flex-direction: column; }
+  #stage { flex: 1; padding: 20px; }
+  footer { border-top: 1px solid var(--line); background: var(--panel); max-height: 34vh; overflow: auto; padding: 12px 16px; }
+  footer h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  .badge { position: absolute; top: 14px; right: 16px; }
+</style>
+</head>
+<body>
+<aside>
+  <h1 class="brand">Hydro-Art <span class="dot">◇</span> Studio</h1>
+  <div class="sub">Prototype A — dense left-rail control panel for power users. Live client-side preview.</div>
+
+  <fieldset>
+    <legend>Preview source</legend>
+    <div class="seg" id="srcMode">
+      <button data-v="procedural" class="active">Procedural</button>
+      <button data-v="loaded">Real SVG…</button>
+    </div>
+    <input type="file" id="svgFile" accept=".svg,image/svg+xml" hidden />
+    <div class="hint" id="srcHint">Deterministic client-side network — previews with no datasets or server. Choose <b>Real SVG…</b> to load an actual pipeline export (<code>output/*.svg</code>); works over <code>file://</code> via a file picker.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Geography</legend>
+    <label class="row">State <span class="tag live">live</span></label>
+    <select id="state"></select>
+    <label class="row">Scope</label>
+    <div class="seg" id="scope">
+      <button data-v="state" class="active">Whole state</button>
+      <button data-v="county">Single county</button>
+    </div>
+    <div id="countyWrap" hidden>
+      <label class="row">County <span class="tag new">proposed</span></label>
+      <select id="county"></select>
+    </div>
+    <label class="row">Group / color by</label>
+    <select id="huc">
+      <option value="HUC4">HUC4 basin (default)</option>
+      <option value="HUC6">HUC6</option>
+      <option value="HUC8">HUC8 sub-basin</option>
+      <option value="HUC10">HUC10</option>
+      <option value="HUC12">HUC12 catchment</option>
+    </select>
+  </fieldset>
+
+  <fieldset>
+    <legend>Time · monthly flow <span class="tag new">proposed</span></legend>
+    <div class="seg" id="timeMode">
+      <button data-v="annual" class="active">Annual mean</button>
+      <button data-v="single">Single month</button>
+      <button data-v="range">Range</button>
+    </div>
+    <div id="monthWrap" hidden>
+      <label class="row">Timeline <span class="val" id="tlLabel">Jun</span></label>
+      <div class="timeline" id="timeline"></div>
+      <div class="hint">Click a month; for a range click both ends. Fixed year-max width scale keeps seasonal swell/retreat visible (matches <code>tools/render_monthly.py</code>). A range renders one frame per month → GIF.</div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Color</legend>
+    <div class="seg" id="colorMode">
+      <button data-v="watershed" class="active">By watershed</button>
+      <button data-v="single">Single</button>
+      <button data-v="elevation">Elevation</button>
+    </div>
+    <div id="paletteWrap">
+      <label class="row">Palette</label>
+      <select id="palette">
+        <option value="neon">neon (pipeline default)</option>
+        <option value="aurora">aurora (experimental)</option>
+        <option value="ember">ember (experimental)</option>
+        <option value="ice">ice (experimental)</option>
+      </select>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div id="singleWrap" hidden>
+      <label class="row">Single color</label>
+      <input type="color" id="singleColor" value="#00e5ff" />
+    </div>
+    <div id="elevWrap" hidden>
+      <div class="hint">Hypsometric tint: white summit → deep-blue sea (matches <code>tools/render_state_mono.py</code>).</div>
+      <div class="swatches" id="hypsoSwatches"></div>
+    </div>
+    <label class="row">Background</label>
+    <input type="color" id="bg" value="#05060a" />
+  </fieldset>
+
+  <fieldset>
+    <legend>Line width</legend>
+    <div class="seg" id="widthMode">
+      <button data-v="flow" class="active">Scale by flow</button>
+      <button data-v="uniform">Uniform</button>
+    </div>
+    <label class="row">Min width (headwaters)<span class="val" id="minVal">0.5px</span></label>
+    <input type="range" id="minW" min="0.1" max="4" step="0.1" value="0.5" />
+    <label class="row">Max width (mainstem)<span class="val" id="maxVal">2.0px</span></label>
+    <input type="range" id="maxW" min="0.3" max="10" step="0.1" value="2.0" />
+    <label class="row">Flow curve<span class="val" id="gammaVal">√ (0.5)</span></label>
+    <input type="range" id="gamma" min="0.25" max="1.5" step="0.05" value="0.5" />
+    <div class="warn ok" id="widthWarn">Calibrated to the reference watershed maps.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Glow <span class="tag live">live</span></legend>
+    <div class="seg" id="glowMode">
+      <button data-v="off" class="active">Off</button>
+      <button data-v="on">On</button>
+    </div>
+    <label class="row">Glow radius<span class="val" id="glowVal">2.5</span></label>
+    <input type="range" id="glow" min="0.5" max="8" step="0.5" value="2.5" />
+  </fieldset>
+
+  <button class="btn" id="regen">↻ Regenerate procedural network</button>
+</aside>
+
+<main>
+  <div id="stage" class="stage"></div>
+  <div class="badge" id="badge">procedural · Oregon</div>
+  <footer>
+    <div class="row-flex" style="margin-bottom:8px">
+      <h2 style="margin:0" class="grow">Output contract — reproducible render from the current selection</h2>
+      <div class="seg" id="contractMode" style="margin:0;max-width:220px">
+        <button data-v="cli" class="active">build.py</button>
+        <button data-v="yaml">config.yaml</button>
+      </div>
+      <button class="btn ghost" id="copyBtn" style="width:auto;margin:0;padding:7px 12px">Copy</button>
+    </div>
+    <pre id="cliOut"></pre>
+    <pre id="yamlOut" hidden></pre>
+  </footer>
+</main>
+
+<script src="shared/hydro-ux.js"></script>
+<script>
+"use strict";
+const H = window.HydroUX, el = id => document.getElementById(id);
+let net = null;
+
+const state = {
+  previewSource: "procedural", loadedName: null,
+  state: "Oregon", scope: "state", county: null, huc: "HUC4",
+  timeMode: "annual", monthStart: 5, monthEnd: 8, month: 6,
+  colorMode: "watershed", palette: "neon", single: "#00e5ff", bg: "#05060a",
+  widthMode: "flow", minW: 0.5, maxW: 2.0, gamma: 0.5, glow: false, glowR: 2.5, _nudge: 0,
+};
+
+// ---- Populate selects ----
+el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+function fillCounties(){ el("county").innerHTML = H.COUNTIES[state.state].map(c => `<option value="${c}">${c}</option>`).join(""); state.county = H.COUNTIES[state.state][0]; }
+fillCounties();
+function drawSwatches(){ el("swatches").innerHTML = H.PALETTES[state.palette].map(c=>`<i style="background:${c}"></i>`).join(""); }
+el("hypsoSwatches").innerHTML = H.HYPSO.map(c=>`<i style="background:${c}"></i>`).join("");
+
+// ---- Month timeline (from Prototype B) ----
+function buildTimeline(){ el("timeline").innerHTML = H.MONTH_ABBR.map((m,i)=>`<div class="mo" data-m="${i}">${m}</div>`).join(""); paintTimeline(); }
+function paintTimeline(){
+  [...el("timeline").children].forEach((c,i)=>{
+    c.classList.remove("in-range","edge");
+    if (state.timeMode === "single" && i === state.monthStart) c.classList.add("edge");
+    if (state.timeMode === "range"){
+      if (i === state.monthStart || i === state.monthEnd) c.classList.add("edge");
+      else if (i > state.monthStart && i < state.monthEnd) c.classList.add("in-range");
+    }
+  });
+  el("tlLabel").textContent = state.timeMode === "range"
+    ? `${H.MONTH_ABBR[state.monthStart]}\u2013${H.MONTH_ABBR[state.monthEnd]}`
+    : H.MONTH_ABBR[state.monthStart];
+}
+el("timeline").addEventListener("click", e => {
+  const c = e.target.closest(".mo"); if (!c) return;
+  const m = +c.dataset.m;
+  if (state.timeMode === "single"){ state.monthStart = m; }
+  else if (state.timeMode === "range"){
+    if (Math.abs(m - state.monthStart) <= Math.abs(m - state.monthEnd)) state.monthStart = Math.min(m, state.monthEnd);
+    else state.monthEnd = Math.max(m, state.monthStart);
+  }
+  paintTimeline(); apply();
+});
+
+// ---- Render ----
+function rebuild(){
+  net = H.generateNetwork(H.hash(state.state + "|" + state._nudge));
+  el("stage").innerHTML = H.buildSvg(net);
+  applyScope();
+  apply();
+}
+function applyScope(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  if (state.scope === "county"){
+    const w = net.viewBox.w, h = net.viewBox.h;
+    svg.setAttribute("viewBox", `${w*0.30} ${h*0.55} ${w*0.34} ${h*0.34}`);
+    el("badge").textContent = `${state.state} · ${state.county} County (sim clip)`;
+  } else {
+    svg.setAttribute("viewBox", `0 0 ${net.viewBox.w} ${net.viewBox.h}`);
+    el("badge").textContent = `${state.state} · whole state`;
+  }
+}
+function apply(){
+  state.month = state.timeMode === "annual" ? 6 : state.monthStart;
+  document.body.style.background = state.bg;
+  updateWidthWarn();
+  renderContract();
+  if (state.previewSource === "loaded") return; // real SVG shown as-is
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  H.applyStyles(svg, net, state);
+}
+
+// ---- Output contract (build.py command + config.yaml, decision 2) ----
+function renderContract(){
+  el("cliOut").textContent = H.cliMapping(state);
+  el("yamlOut").innerHTML  = H.yamlMapping(state);
+}
+function updateWidthWarn(){
+  const w = el("widthWarn");
+  if (state.maxW < state.minW){ w.className="warn danger"; w.textContent="⚠ Max width below min — mainstems look thinner than headwaters."; }
+  else if (state.minW < 0.4){ w.className="warn danger"; w.textContent="⚠ Min < 0.4px: headwater tributaries may vanish when rasterized."; }
+  else if (state.maxW > 5){ w.className="warn"; w.textContent="⚠ Max > 5px: thick mainstems start covering neighbours."; }
+  else { w.className="warn ok"; w.textContent="Range looks good — close to the reference watershed maps."; }
+}
+
+// ---- Segmented control helper ----
+function seg(id, key, after){
+  el(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    [...el(id).children].forEach(x => x.classList.toggle("active", x===b));
+    state[key] = b.dataset.v; (after||apply)();
+  });
+}
+seg("scope","scope",()=>{ el("countyWrap").hidden = state.scope!=="county"; applyScope(); apply(); });
+seg("timeMode","timeMode",()=>{
+  el("monthWrap").hidden = state.timeMode==="annual";
+  if (state.timeMode==="range" && state.monthEnd<=state.monthStart) state.monthEnd = Math.min(11, state.monthStart+3);
+  paintTimeline(); apply();
+});
+seg("colorMode","colorMode",()=>{
+  el("paletteWrap").hidden = state.colorMode!=="watershed";
+  el("singleWrap").hidden  = state.colorMode!=="single";
+  el("elevWrap").hidden    = state.colorMode!=="elevation";
+  apply();
+});
+seg("widthMode","widthMode");
+el("glowMode").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  [...el("glowMode").children].forEach(x => x.classList.toggle("active", x===b));
+  state.glow = b.dataset.v === "on"; apply();
+});
+
+// ---- Preview source (procedural vs real exported SVG, decision 1) ----
+const SRC_HINT = el("srcHint").innerHTML;
+seg("srcMode","previewSource",()=>{
+  if (state.previewSource === "loaded"){ el("svgFile").click(); }
+  else { state.loadedName = null; el("srcHint").innerHTML = SRC_HINT; rebuild(); }
+});
+el("svgFile").addEventListener("change", e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f){ setSrcMode("procedural"); return; }
+  const r = new FileReader();
+  r.onload = () => {
+    state.previewSource = "loaded"; state.loadedName = f.name;
+    el("stage").innerHTML = r.result;      // real pipeline export, shown as-is
+    const svg = el("stage").querySelector("svg");
+    if (svg){ svg.removeAttribute("width"); svg.removeAttribute("height"); }
+    el("badge").textContent = `loaded · ${f.name}`;
+    el("srcHint").innerHTML = `Showing <b>${f.name}</b> as exported. Style controls below describe how to <em>regenerate</em> it via the output contract; they don't restyle a loaded export.`;
+    renderContract();
+  };
+  r.readAsText(f);
+  e.target.value = ""; // allow re-picking the same file
+});
+function setSrcMode(v){
+  state.previewSource = v;
+  [...el("srcMode").children].forEach(b => b.classList.toggle("active", b.dataset.v===v));
+}
+
+// ---- Output-contract toggle + copy ----
+seg("contractMode","_contract",()=>{
+  const cli = state._contract !== "yaml";
+  el("cliOut").hidden = !cli; el("yamlOut").hidden = cli;
+});
+el("copyBtn").addEventListener("click", () => {
+  const text = (state._contract === "yaml" ? el("yamlOut") : el("cliOut")).textContent;
+  navigator.clipboard?.writeText(text);
+  el("copyBtn").textContent = "Copied ✓";
+  setTimeout(()=>{ el("copyBtn").textContent = "Copy"; }, 1200);
+});
+
+// ---- Inputs ----
+el("state").addEventListener("change", e => { state.state = e.target.value; fillCounties(); rebuild(); });
+el("county").addEventListener("change", e => { state.county = e.target.value; applyScope(); apply(); });
+el("huc").addEventListener("change", e => { state.huc = e.target.value; apply(); });
+el("palette").addEventListener("change", e => { state.palette = e.target.value; drawSwatches(); apply(); });
+el("singleColor").addEventListener("input", e => { state.single = e.target.value; apply(); });
+el("bg").addEventListener("input", e => { state.bg = e.target.value; apply(); });
+el("regen").addEventListener("click", () => { state._nudge++; rebuild(); });
+
+function bindRange(id, key, fmt, valId, after){
+  el(id).addEventListener("input", e => { state[key] = parseFloat(e.target.value); if (valId) el(valId).textContent = fmt(state[key]); (after||apply)(); });
+}
+bindRange("minW","minW", v=>v.toFixed(1)+"px", "minVal");
+bindRange("maxW","maxW", v=>v.toFixed(1)+"px", "maxVal");
+bindRange("gamma","gamma", v=>(v<0.6?"√ ":v>1.05?"lin+ ":"~ ")+"("+v.toFixed(2)+")", "gammaVal");
+bindRange("glow","glowR", v=>v.toFixed(1), "glowVal");
+
+// ---- Boot ----
+drawSwatches();
+buildTimeline();
+rebuild();
+</script>
+</body>
+</html>

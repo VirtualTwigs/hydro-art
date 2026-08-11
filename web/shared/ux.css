@@ -1,0 +1,175 @@
+/* ==========================================================================
+   Hydro-Art shared UX stylesheet
+   --------------------------------------------------------------------------
+   Common design tokens + components for the web/ UX prototypes. Loaded with a
+   plain <link> so every mockup keeps openable over file:// (no build, no
+   server). Design tokens are lifted from the original web/index.html neon
+   control-panel so all prototypes read as one product.
+   ========================================================================== */
+
+:root {
+  --bg:        #07080c;
+  --panel:     #10121b;
+  --panel-2:   #171a26;
+  --panel-3:   #0b0d14;
+  --line:      #232838;
+  --ink:       #e6ebf5;
+  --muted:     #8891a8;
+  --accent:    #00ffff;
+  --accent-2:  #9d00ff;
+  --accent-dim:#0a8f92;
+  --warn:      #ff9c3a;
+  --danger:    #ff4d5e;
+  --ok:        #00ff9c;
+  --radius:    10px;
+  --radius-sm: 7px;
+  --shadow:    0 8px 30px rgba(0,0,0,.45);
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px/1.5 var(--mono);
+}
+
+/* ---------- Type / brand ---------- */
+.brand { font-size: 15px; letter-spacing: .04em; margin: 0; color: var(--ink); }
+.brand .dot { color: var(--accent); }
+.sub { color: var(--muted); font-size: 11px; }
+.legend, legend {
+  color: var(--accent); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.eyebrow {
+  color: var(--muted); font-size: 10px; letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* ---------- Form primitives ---------- */
+fieldset {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 12px; margin: 0 0 14px; background: var(--panel-2);
+}
+legend { padding: 0 6px; }
+label.row { display: block; margin: 10px 0 4px; color: var(--muted); font-size: 11px; }
+select, input[type="text"], input[type="number"] {
+  width: 100%; background: var(--panel-3); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 7px 8px;
+  font: inherit;
+}
+select:focus, input:focus { outline: none; border-color: var(--accent-dim); }
+select:disabled { opacity: .45; cursor: not-allowed; }
+input[type="color"] {
+  width: 100%; height: 34px; background: var(--panel-3);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 2px; font: inherit;
+}
+input[type="range"] { width: 100%; accent-color: var(--accent); font: inherit; }
+.val { float: right; color: var(--accent); }
+
+/* ---------- Segmented control ---------- */
+.seg { display: flex; gap: 6px; margin-top: 6px; }
+.seg button {
+  flex: 1; background: var(--panel-3); color: var(--muted);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 7px 4px; cursor: pointer; font: inherit;
+}
+.seg button:hover { color: var(--ink); }
+.seg button.active {
+  color: var(--bg); background: var(--accent);
+  border-color: var(--accent); font-weight: 600;
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  width: 100%; background: transparent; color: var(--accent);
+  border: 1px solid var(--accent-dim); border-radius: var(--radius-sm);
+  padding: 9px; cursor: pointer; margin-top: 4px; font: inherit;
+}
+.btn:hover { background: rgba(0,255,255,.08); }
+.btn.solid { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.btn.solid:hover { background: #4dffff; }
+.btn.ghost { color: var(--muted); border-color: var(--line); }
+.btn.ghost:hover { color: var(--ink); background: rgba(255,255,255,.04); }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+/* ---------- Chips / swatches / tags ---------- */
+.swatches { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 8px; }
+.swatches i { width: 16px; height: 16px; border-radius: 3px; display: inline-block; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip {
+  padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line);
+  background: var(--panel-3); color: var(--muted); cursor: pointer; font-size: 11px;
+}
+.chip:hover { color: var(--ink); }
+.chip.active { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.tag {
+  display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 4px;
+  border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: middle;
+}
+.tag.new  { color: var(--warn); border-color: var(--warn); }
+.tag.live { color: var(--ok);   border-color: var(--accent-dim); }
+
+/* ---------- Notices ---------- */
+.warn { color: var(--warn); font-size: 11px; margin-top: 6px; min-height: 14px; }
+.warn.danger { color: var(--danger); }
+.warn.ok { color: var(--muted); }
+.hint { color: var(--muted); font-size: 10.5px; margin-top: 8px; }
+
+/* ---------- Stage / preview ---------- */
+.stage { display: grid; place-items: center; overflow: hidden; background: var(--bg); }
+.stage svg { max-width: 100%; max-height: 100%; height: 100%; }
+.badge {
+  color: var(--muted); font-size: 10.5px; background: rgba(0,0,0,.4);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px;
+}
+
+/* ---------- Code readout ---------- */
+pre {
+  margin: 0; background: var(--panel-3); border: 1px solid var(--line);
+  border-radius: 8px; padding: 12px; color: var(--ink); overflow-x: auto;
+  font-size: 12px; white-space: pre; font-family: var(--mono);
+}
+.k { color: var(--accent); } .s { color: var(--ok); }
+.c { color: var(--muted); }  .n { color: var(--warn); }
+
+/* ---------- Glass surface (canvas prototype) ---------- */
+.glass {
+  background: rgba(16,18,27,.72);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+
+/* ---------- Month timeline ---------- */
+.timeline { display: flex; gap: 4px; align-items: stretch; }
+.timeline .mo {
+  flex: 1; text-align: center; padding: 6px 2px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel-3); color: var(--muted);
+  cursor: pointer; font-size: 10.5px; user-select: none;
+}
+.timeline .mo:hover { color: var(--ink); }
+.timeline .mo.in-range { border-color: var(--accent-dim); color: var(--ink); background: rgba(0,255,255,.06); }
+.timeline .mo.edge { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
+
+/* ---------- Stepper (wizard prototype) ---------- */
+.steps { display: flex; gap: 0; margin: 0 0 18px; }
+.steps .step {
+  flex: 1; text-align: center; padding: 10px 6px; color: var(--muted);
+  border-bottom: 2px solid var(--line); font-size: 11px; letter-spacing: .04em;
+}
+.steps .step .num {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid var(--line); margin-right: 6px; font-size: 10px;
+}
+.steps .step.active { color: var(--ink); border-bottom-color: var(--accent); }
+.steps .step.active .num { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.steps .step.done { color: var(--ok); border-bottom-color: var(--accent-dim); }
+.steps .step.done .num { color: var(--ok); border-color: var(--accent-dim); }
+
+/* ---------- Utility ---------- */
+.row-flex { display: flex; gap: 10px; align-items: center; }
+.grow { flex: 1; }
+.spacer { flex: 1; }
+[hidden] { display: none !important; }
