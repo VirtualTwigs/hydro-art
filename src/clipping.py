@@ -13,6 +13,8 @@ import warnings
 from dataclasses import dataclass, replace
 from typing import Any, Iterable
 
+import numpy as np
+import shapely
 from shapely.ops import unary_union
 
 from src.loading import Layer
@@ -88,23 +90,54 @@ def clip_layers(
     out_layers: list[Layer] = []
     stats = ClipStats()
 
+    if boundary is not None:
+        # Prepare once so the vectorized predicates below build a spatial index
+        # instead of re-scanning the (huge, multi-part) boundary per geometry.
+        shapely.prepare(boundary)
+
     for layer in layers:
         if boundary is None or is_boundary_layer(layer):
             out_layers.append(layer)
             continue
+
+        geoms = layer.geometries
+        n = len(geoms)
+        if n == 0:
+            out_layers.append(layer)
+            continue
+
+        arr = np.array(geoms, dtype=object)
+        # Fully-inside geometry is kept untouched (covered ⇔ intersection == geom),
+        # so we only pay the costly intersection on the boundary-crossing subset.
+        covered = shapely.covers(boundary, arr)
+        intersects = shapely.intersects(boundary, arr)
+        cross_mask = intersects & ~covered
+        cross_idx = np.nonzero(cross_mask)[0]
+
+        clipped_cross: dict[int, Any] = {}
+        if cross_idx.size:
+            inter = shapely.intersection(boundary, arr[cross_idx])
+            for local_i, gi in enumerate(cross_idx):
+                clipped_cross[int(gi)] = inter[local_i]
+
         kept: list[Any] = []
         dropped = partial = 0
-        for geom in layer.geometries:
-            clipped = clip_geometry(geom, boundary)
-            if clipped is None:
+        for i in range(n):
+            if covered[i]:
+                kept.append(geoms[i])
+            elif cross_mask[i]:
+                clipped = clipped_cross[i]
+                if clipped.is_empty:
+                    dropped += 1
+                else:
+                    partial += 1
+                    kept.append(clipped)
+            else:
                 dropped += 1
-                continue
-            if not clipped.equals(geom):
-                partial += 1
-            kept.append(clipped)
+
         stats = stats.merge(
             ClipStats(
-                total_in=len(layer.geometries),
+                total_in=n,
                 total_out=len(kept),
                 dropped_outside=dropped,
                 clipped_partial=partial,

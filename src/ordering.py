@@ -13,10 +13,14 @@ Computes a per-segment stream order using one of four user-selectable methods:
 * **Custom** — a per-segment weight from a supplied ``weight(edge_data)`` hook
   (the dispatcher's default weight is cumulative upstream length).
 
-Every method processes the directed graph in topological order, so the network
-must be acyclic; a cycle raises :class:`OrderingError`. All functions are pure
-computations over a ``networkx.MultiDiGraph`` and are fully unit-testable with
-hand-built line networks (no GDAL, no real data).
+Every method processes the directed graph in (approximate) topological order.
+Real hydrography occasionally contains small directed cycles (braided channels,
+digitizing artifacts); rather than fail, node ordering is derived from the
+graph's *condensation* — its DAG of strongly-connected components — so cyclic
+graphs still yield a stream order (segments inside a cycle are ordered
+arbitrarily among themselves). All functions are pure computations over a
+``networkx.MultiDiGraph`` and are fully unit-testable with hand-built line
+networks (no GDAL, no real data).
 """
 
 from __future__ import annotations
@@ -41,7 +45,7 @@ WeightFn = Callable[[Mapping[str, Any]], float]
 
 
 class OrderingError(AcquisitionError):
-    """Raised when stream order cannot be computed (unknown method / cycle)."""
+    """Raised when stream order cannot be computed (unknown method)."""
 
 
 def _digraph(graph: HydroGraph | nx.MultiDiGraph) -> nx.MultiDiGraph:
@@ -50,22 +54,36 @@ def _digraph(graph: HydroGraph | nx.MultiDiGraph) -> nx.MultiDiGraph:
 
 
 def _topo_nodes(g: nx.MultiDiGraph) -> list[Any]:
-    """Return nodes in topological order, or raise on a cycle."""
-    try:
+    """Return nodes in a cycle-tolerant topological order.
+
+    Acyclic graphs give a true topological sort. When the graph contains
+    directed cycles, ordering falls back to the condensation (the DAG of
+    strongly-connected components): components are sorted topologically and each
+    component's member nodes are emitted together. Nodes inside a cycle are thus
+    ordered arbitrarily among themselves but still respect the acyclic structure
+    around them, so no cycle ever raises.
+    """
+    if nx.is_directed_acyclic_graph(g):
         return list(nx.topological_sort(g))
-    except nx.NetworkXUnfeasible as exc:
-        raise OrderingError(
-            "Cannot compute stream order: the river graph contains a cycle."
-        ) from exc
+    condensed = nx.condensation(g)
+    nodes: list[Any] = []
+    for component in nx.topological_sort(condensed):
+        nodes.extend(condensed.nodes[component]["members"])
+    return nodes
 
 
 def _incoming_orders(
     g: nx.MultiDiGraph, node: Any, order: dict[int, float]
 ) -> list[float]:
-    """Orders of the segments flowing into ``node`` (already computed)."""
+    """Orders of the segments flowing into ``node`` that are already computed.
+
+    Segments not yet ordered (only possible inside a cycle, where an upstream
+    edge may be visited after its head node) are skipped.
+    """
     return [
         order[data["segment_id"]]
         for _, _, data in g.in_edges(node, data=True)
+        if data["segment_id"] in order
     ]
 
 
@@ -118,7 +136,7 @@ def _cumulative_upstream_length(
     cum: dict[int, float] = {}
     for node in topo:
         incoming_total = sum(
-            cum[data["segment_id"]]
+            cum.get(data["segment_id"], 0.0)
             for _, _, data in g.in_edges(node, data=True)
         )
         for _, _, data in g.out_edges(node, data=True):
@@ -144,10 +162,14 @@ def hack_order(graph: HydroGraph | nx.MultiDiGraph) -> dict[int, int]:
     # ordered, then order its incoming segments relative to the main channel.
     for node in reversed(topo):
         out_edges = list(g.out_edges(node, data=True))
-        if out_edges:
-            parent_order = min(order[d["segment_id"]] for _, _, d in out_edges)
-        else:
-            parent_order = 1  # outlet junction: its main channel is the stem
+        # An outgoing segment may be unordered when it lies inside a cycle;
+        # default it to the stem order so the junction still resolves.
+        downstream = [
+            order[d["segment_id"]]
+            for _, _, d in out_edges
+            if d["segment_id"] in order
+        ]
+        parent_order = min(downstream) if downstream else 1
 
         in_edges = list(g.in_edges(node, data=True))
         if not in_edges:
@@ -194,7 +216,8 @@ def assign_stream_order(
         Mapping of ``segment_id`` to its computed order.
 
     Raises:
-        OrderingError: If ``method`` is unknown or the graph has a cycle.
+        OrderingError: If ``method`` is unknown. Cyclic graphs no longer raise;
+            see :func:`_topo_nodes` for the cycle-tolerant ordering.
     """
     key = str(method).lower()
     if key == "strahler":

@@ -70,10 +70,13 @@ def test_unknown_method_raises():
         assign_stream_order(_CONFLUENCE, "nonsense")
 
 
-def test_cyclic_graph_raises():
+def test_cyclic_graph_is_tolerated():
+    # Real hydrography can contain small directed cycles; ordering must not
+    # raise. Every segment still receives an order via the condensation.
     cyclic = _graph(("x", "y", 0, 1.0), ("y", "x", 1, 1.0))
-    with pytest.raises(OrderingError):
-        assign_stream_order(cyclic, "strahler")
+    order = assign_stream_order(cyclic, "strahler")
+    assert set(order) == {0, 1}
+    assert all(isinstance(v, int) for v in order.values())
 
 
 def test_custom_order_uses_weight_fn():

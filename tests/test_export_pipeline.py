@@ -98,9 +98,12 @@ def test_identical_inputs_produce_byte_identical_svg(tmp_path):
 
 
 def test_default_exporter_degrades_for_nonsvg_without_tool(tmp_path):
-    # No exporter injected -> real FileExporter; rsvg-convert isn't installed,
-    # so pdf is skipped (warning) but svg is still written.
+    # Real FileExporter pointed at a guaranteed-missing converter, so the
+    # graceful-degradation path is exercised regardless of whether rsvg-convert
+    # happens to be installed on the host: pdf is skipped (warning), svg written.
     import warnings
+
+    from src.export import FileExporter
 
     settings = build_settings({"region": ["Oregon"], "output": ["svg", "pdf"]})
     with warnings.catch_warnings():
@@ -112,6 +115,7 @@ def test_default_exporter_degrades_for_nonsvg_without_tool(tmp_path):
             output_dir=tmp_path / "output",
             downloader=FakeZipDownloader(),
             loader=NetworkLoader(),
+            exporter=FileExporter(command="rsvg-convert-missing-for-test"),
         ).run(settings)
 
     paths = context.artifacts["export_paths"]

@@ -26,6 +26,10 @@ from src.config import ConfigError, Settings
 from src.datasets import AcquisitionError
 from src.pipeline import Pipeline
 
+#: Downloaded-archive cache root. Points at the NAS share so the large
+#: hydrography GDB zips are staged and reused off-machine rather than locally.
+NAS_CACHE_DIR = "/Volumes/home/data/incoming"
+
 
 def _render_settings(settings: Settings, console: Console) -> None:
     """Print the resolved settings as a table."""
@@ -63,7 +67,7 @@ def main(argv: Sequence[str] | None = None, pipeline: Pipeline | None = None) ->
 
     _render_settings(settings, console)
     try:
-        (pipeline or Pipeline(console=console)).run(settings)
+        (pipeline or Pipeline(console=console, cache_dir=NAS_CACHE_DIR)).run(settings)
     except AcquisitionError as exc:
         Console(stderr=True).print(f"[bold red]Acquisition error:[/] {exc}")
         return 2
