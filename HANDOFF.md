@@ -1,10 +1,29 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), #25 (monthly-flow option), #26 (web control surface), and #27 (live pipeline integration)._
+_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), #25 (monthly-flow option), #26 (web control surface), #27 (live pipeline integration), and #28 (presets & shareable recipes) — Epoch 6 complete._
 
 ## Current state (2026-08-12)
 
-- **#27 Live pipeline integration — implemented, commit pending.** Wired the
+- **#28 Presets & shareable render recipes — implemented, commit pending.**
+  Added a **recipe** layer to the control surface (spec
+  `agent-os/specs/2026-08-12-presets-and-recipes/`). All logic is pure and lives
+  in `web/shared/hydro-ux.js`: a canonical serializable subset of `state`
+  (`RECIPE_KEYS`, preview-only fields excluded) with `toRecipe`/`sanitizeRecipe`/
+  `encodeRecipe`/`decodeRecipe`/`applyRecipe`, a named `PRESETS` catalog
+  (`or-screen`, `clark-print`, `print-mono`, `screen-glow`) + `presetById`/
+  `applyPreset`, and base64url primitives (`btoa`/`atob` with a Node `Buffer`
+  fallback). `decodeRecipe` sanitizes every field against the same option catalogs
+  the UX uses, so a shared/hand-edited link can never inject invalid state; the
+  round-trip is exact (`decodeRecipe(encodeRecipe(s))` deep-equals `toRecipe(s)`).
+  The module is now Node-loadable (`module.exports`) and round-trip-tested
+  headlessly in `tests/test_recipe_roundtrip.cjs` (11 tests, stdlib `node` only).
+  `web/studio.html` adds a **Presets & sharing** fieldset (buttons + "⧉ Copy share
+  link" → `location.hash`), a `syncControls()` that pushes `state` back onto every
+  DOM control, and a boot `restoreFromHash()`. Closes **Epoch 6**. Deferred: the
+  live `file://` browser smoke (Chrome extension wasn't connected this session);
+  the pure logic and inline-script syntax are verified headlessly. Suite:
+  **361 passing** (unchanged — `src/`/offline suite keep no dependency on `web/`).
+- **#27 Live pipeline integration — committed (`3613ed8`).** Wired the
   control surface to a **local job runner** that runs the real pipeline and
   returns the produced SVG (spec
   `agent-os/specs/2026-08-12-live-pipeline-integration/`). New `src/jobs.py`

@@ -357,13 +357,161 @@
     return req;
   }
 
+  // ---- Render recipes & named presets (roadmap #28) -----------------------
+  // A *recipe* is the canonical, serializable subset of `state` that captures
+  // exactly the reproducible art-direction selections. Preview-only fields
+  // (previewSource/loadedName, the derived `month`, the RNG `_nudge`) are NOT
+  // part of a recipe. All helpers here are pure/deterministic and file://-safe;
+  // studio.html only wires UI to them. Testable headlessly in Node.
+
+  const RECIPE_KEYS = [
+    "state", "scope", "county", "huc", "timeMode", "monthStart", "monthEnd",
+    "colorMode", "palette", "single", "bg", "widthMode", "minW", "maxW",
+    "gamma", "glow", "glowR",
+  ];
+  const DEFAULT_RECIPE = {
+    state: "Oregon", scope: "state", county: null, huc: "HUC4",
+    timeMode: "annual", monthStart: 5, monthEnd: 8,
+    colorMode: "watershed", palette: "neon", single: "#00e5ff", bg: "#05060a",
+    widthMode: "flow", minW: 0.5, maxW: 2.0, gamma: 0.5, glow: false, glowR: 2.5,
+  };
+  const HEX6 = /^#[0-9a-fA-F]{6}$/;
+
+  function _num(v) { const n = Number(v); return Number.isFinite(n) ? n : null; }
+  function _clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
+  function _isStateId(id) { return STATES.some((s) => s.id === id); }
+
+  // Validate one recipe field independently; returns the accepted value or
+  // `undefined` if the input is unusable (caller decides fallback).
+  function _validateKey(key, v) {
+    switch (key) {
+      case "state": return _isStateId(v) ? v : undefined;
+      case "scope": return v === "county" ? "county" : (v === "state" ? "state" : undefined);
+      case "county": return (v === null || (typeof v === "string" && v.length)) ? v : undefined;
+      case "huc": return HUC_LEVELS.includes(v) ? v : undefined;
+      case "timeMode": return ["annual", "single", "range"].includes(v) ? v : undefined;
+      case "monthStart":
+      case "monthEnd": { const n = _num(v); return n === null ? undefined : _clamp(Math.round(n), 0, 11); }
+      case "colorMode": return ["watershed", "single", "elevation"].includes(v) ? v : undefined;
+      case "palette": return Object.prototype.hasOwnProperty.call(PALETTES, v) ? v : undefined;
+      case "single":
+      case "bg": return (typeof v === "string" && HEX6.test(v)) ? v : undefined;
+      case "widthMode": return ["flow", "uniform"].includes(v) ? v : undefined;
+      case "minW": { const n = _num(v); return n === null ? undefined : _clamp(n, 0.05, 10); }
+      case "maxW": { const n = _num(v); return n === null ? undefined : _clamp(n, 0.05, 20); }
+      case "gamma": { const n = _num(v); return n === null ? undefined : _clamp(n, 0.05, 4); }
+      case "glowR": { const n = _num(v); return n === null ? undefined : _clamp(n, 0, 30); }
+      case "glow": return Boolean(v);
+      default: return undefined;
+    }
+  }
+
+  // Reconcile county with scope+state so a recipe is always self-consistent.
+  function _coherceCounty(rec) {
+    if (rec.scope !== "county") { rec.county = null; return rec; }
+    const roster = COUNTIES[rec.state] || [];
+    if (!roster.includes(rec.county)) rec.county = roster[0] || null;
+    return rec;
+  }
+
+  // Full sanitize: every key validated/clamped, missing keys filled from
+  // DEFAULT_RECIPE, cross-field county/scope coherence enforced. Returns a
+  // complete recipe, or null if `obj` is not a usable plain object.
+  function sanitizeRecipe(obj) {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return null;
+    const out = Object.assign({}, DEFAULT_RECIPE);
+    for (const key of RECIPE_KEYS) {
+      if (key === "glow") { out.glow = Boolean(obj.glow); continue; }
+      const v = _validateKey(key, obj[key]);
+      if (v !== undefined) out[key] = v;
+    }
+    return _coherceCounty(out);
+  }
+
+  // Canonical recipe for a live `state` (drops preview-only fields, sanitizes).
+  function toRecipe(state) {
+    if (!state || typeof state !== "object") return null;
+    const picked = {};
+    for (const key of RECIPE_KEYS) picked[key] = state[key];
+    return sanitizeRecipe(picked);
+  }
+
+  // base64url primitives — btoa/atob in the browser, Buffer in Node, so the
+  // round-trip is identical in both and testable headlessly.
+  function _b64encode(str) {
+    if (typeof btoa === "function") return btoa(unescape(encodeURIComponent(str)));
+    return Buffer.from(str, "utf-8").toString("base64");
+  }
+  function _b64decode(b64) {
+    if (typeof atob === "function") return decodeURIComponent(escape(atob(b64)));
+    return Buffer.from(b64, "base64").toString("utf-8");
+  }
+  function b64url(str) {
+    return _b64encode(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function b64urlDecode(s) {
+    let t = String(s).replace(/-/g, "+").replace(/_/g, "/");
+    while (t.length % 4) t += "=";
+    return _b64decode(t);
+  }
+
+  function encodeRecipe(state) { return b64url(JSON.stringify(toRecipe(state))); }
+  function decodeRecipe(str) {
+    try {
+      const obj = JSON.parse(b64urlDecode(str));
+      return sanitizeRecipe(obj);
+    } catch (e) { return null; }
+  }
+
+  // Merge a (possibly partial) recipe onto a live state, validating each key
+  // that is present. Preview-only fields on `state` are preserved. Absent keys
+  // are left untouched (so partial presets only change what they name).
+  function applyRecipe(state, recipe) {
+    const out = Object.assign({}, state);
+    if (recipe && typeof recipe === "object" && !Array.isArray(recipe)) {
+      for (const key of RECIPE_KEYS) {
+        if (!(key in recipe)) continue;
+        const v = _validateKey(key, recipe[key]);
+        if (v !== undefined) out[key] = v;
+      }
+      _coherceCounty(out);
+    }
+    return out;
+  }
+
+  // Named preset catalog. Each `recipe` is a (possibly partial) recipe merged
+  // over the current selection. `kind` is a UX grouping hint.
+  const PRESETS = [
+    { id: "or-screen", label: "Oregon \u00b7 screen", kind: "state",
+      recipe: { state: "Oregon", scope: "state", county: null, colorMode: "watershed",
+                palette: "neon", widthMode: "flow", glow: false } },
+    { id: "clark-print", label: "Clark County \u00b7 print", kind: "county",
+      recipe: { state: "Washington", scope: "county", county: "Clark", colorMode: "watershed",
+                palette: "ice", widthMode: "uniform", glow: false, bg: "#0a0f14" } },
+    { id: "print-mono", label: "Print \u00b7 elevation", kind: "print",
+      recipe: { colorMode: "elevation", bg: "#05060a", widthMode: "flow" } },
+    { id: "screen-glow", label: "Screen \u00b7 neon glow", kind: "screen",
+      recipe: { colorMode: "watershed", palette: "neon", glow: true } },
+  ];
+  function presetById(id) { return PRESETS.find((p) => p.id === id) || null; }
+  function applyPreset(state, id) {
+    const p = presetById(id);
+    return p ? applyRecipe(state, p.recipe) : Object.assign({}, state);
+  }
+
   // ---- Public surface -----------------------------------------------------
-  global.HydroUX = {
+  const HydroUX = {
     STATES, COUNTIES, PALETTES, HYPSO, MONTH_ABBR, HUC_LEVELS,
     mulberry32, hash, generateNetwork, buildSvg, applyStyles,
     seasonalMultiplier, yearMaxFlow,
     cliMapping, yamlMapping, scopeToken, monthsToken, stateAbbr,
     mappingSelfCheck, renderRequest,
+    RECIPE_KEYS, DEFAULT_RECIPE,
+    toRecipe, sanitizeRecipe, encodeRecipe, decodeRecipe, applyRecipe,
+    b64url, b64urlDecode,
+    PRESETS, presetById, applyPreset,
   };
+  global.HydroUX = HydroUX;
+  if (typeof module !== "undefined" && module.exports) module.exports = HydroUX;
 
-})(window);
+})(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this));

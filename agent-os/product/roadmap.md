@@ -167,8 +167,13 @@ selections. `L`
 27. [x] Live pipeline integration — Wire the control surface to a local job runner that executes
 the real pipeline for the selected options and returns the produced SVG/PNG for preview and
 download, keeping determinism and the offline test posture intact. `XL`
-28. [ ] Presets & shareable render recipes — Named state/county/print presets and encodable render
+28. [x] Presets & shareable render recipes — Named state/county/print presets and encodable render
 recipes (URL/JSON) so a look can be saved, shared, and reproduced exactly. `M`
+(`web/shared/hydro-ux.js` gains pure recipe helpers — `toRecipe`/`sanitizeRecipe`/
+`encodeRecipe`/`decodeRecipe`/`applyRecipe`, a `PRESETS` catalog, base64url with a Node
+`Buffer` fallback — round-trip-tested headlessly in `tests/test_recipe_roundtrip.cjs`;
+`web/studio.html` adds a Presets fieldset, "Copy share link", `syncControls()`, and
+`location.hash` restore. Closes Epoch 6.)
 
 Epoch gate: a user can, from one screen, select state → county/whole-state, a month/range/annual,
 coloring, and line thickness, see a faithful live preview, and produce the identical deterministic
