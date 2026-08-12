@@ -162,6 +162,14 @@ with a `within_tolerance` verdict. Spec `agent-os/specs/2026-08-12-accuracy-vali
 tested in `tests/test_accuracy.py` (19 tests). Real-3DEP harness deferred (needs the GIS stack).)
 21. [ ] Regional scale & offline packaging — Expand from Oregon/Washington to additional U.S.
 states, with tile-budget controls, resumable jobs, and portable cache manifests. `XL`
+(Partial — **portable cache manifests** shipped: `src/manifest.py` (pure, offline, numpy/GDAL-free)
+turns `Cache` provenance into a deterministic, portable manifest — `build_manifest`/
+`manifest_for_settings` (region→manifest via `resolve_required_files`), stable sorted JSON with
+cache-relative paths, `verify_manifest` (sha256+size → ok/missing/mismatched), `diff_manifests`
+(added/removed/changed/unchanged). Spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging`;
+tested in `tests/test_manifest.py` (13 tests). **Left:** region expansion beyond OR/WA/CA (needs real
+WBD), tile-budget controls (`TileDiscoverer` seam), resumable jobs (`DownloaderLike`/`Cache`), and a
+`tools/` packaging CLI over a real NAS cache.)
 22. [ ] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 

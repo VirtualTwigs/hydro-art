@@ -1,10 +1,24 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), and Epoch 5 #20 (accuracy validation suite)._
+_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), and the #21 portable-cache-manifests slice (implemented, commit pending)._
 
 ## Current state (2026-08-12)
 
-- **#20 Accuracy validation suite — implemented, commit pending.** New pure module
+- **#21 Regional scale & offline packaging — portable-manifests slice implemented, commit
+  pending.** #21 is `XL` and spans four concerns; per the user's scoping decision this pass
+  delivers only the fully-offline **portable cache manifests**. New pure module
+  `src/manifest.py` (spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging/`) turns
+  a `Cache`'s recorded provenance into a deterministic, portable manifest: `build_manifest` /
+  `manifest_for_settings` (region→manifest via `resolve_required_files`, so OR/WA/CA round-trip
+  through one manifest), stable sorted JSON with **cache-relative** paths (no wall-clock time →
+  byte-identical for equal state), `verify_manifest` (recomputes sha256+size → ok/missing/
+  mismatched, never mutates), and `diff_manifests` (added/removed/changed/unchanged). **numpy-
+  free & GDAL-free** (imports only stdlib + `src.datasets`/`src.config`/`src.cache`; verified no
+  heavy modules pulled in). Not wired into `PIPELINE_STAGES`. Tested in `tests/test_manifest.py`
+  (13 tests). Suite: **393 passing** (+13). **Deferred on #21:** region expansion beyond OR/WA/CA
+  (needs real WBD), tile-budget controls (`TileDiscoverer` seam), resumable jobs
+  (`DownloaderLike`/`Cache`), and a `tools/` packaging CLI over a real NAS cache.
+- **#20 Accuracy validation suite — committed (`43d1635`).** New pure module
   `src/accuracy.py` (spec `agent-os/specs/2026-08-12-accuracy-validation-suite/`),
   the first Epoch 5 item. Compares terrain/river vertices sampled from a DEM fixture
   against known truths and reports CRS/units/nodata-coverage/QA: `error_metrics`
