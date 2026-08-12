@@ -130,6 +130,50 @@ states, with tile-budget controls, resumable jobs, and portable cache manifests.
 22. [ ] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 
+## Epoch 6 — interactive art-direction UX
+
+Turn the ad-hoc `tools/` renderers and the `web/` mockups into one guided control surface: pick a
+state, drill to a county or keep the whole state, choose a single month / month range / annual
+mean, and set coloring and line-thickness — with a live preview and a deterministic, reproducible
+build behind it. The chosen direction is Prototype A (dense left-rail studio,
+`web/proto-a-studio.html`) using Prototype B's click-to-set month timeline for single/range
+selection. Several controls the UX exposes are currently ad-hoc `tools/` recipes or client-side
+simulations; this epoch promotes them to first-class, tested pipeline options so the UX drives the
+real generator, not a mock.
+
+**Phase 6.1 — Art-direction flag parity (pipeline)**
+
+23. [ ] Color & line-width art-direction options — Promote the "proposed" style controls into
+`src/config.py`/`src/cli.py`/`src/rendering.py` as validated options: `color_by`
+(`watershed`|`single`|`elevation`, the last mirroring `tools/render_state_mono.py`'s hypsometric
+tint) and `width_by` (`flow`|`uniform`) with min/max/gamma. Deterministic; defaults keep existing
+builds byte-identical. `M`
+
+**Phase 6.2 — Scope & time as first-class build options**
+
+24. [ ] County scope in the pipeline — Promote `tools/render_county_clip.py`'s county clip into a
+first-class `--county` build option (Census county polygon clip, validated against the selected
+state), so scope selection isn't a separate script. `M`
+25. [ ] Monthly-flow rendering option — Promote `tools/monthly_flow.py` disaggregation + the fixed
+year-max width scale into a first-class `--months` option (single month, month range → one frame
+per month/animation, or annual mean), conserving each reach's annual QAMA. `L`
+
+**Phase 6.3 — Control surface & integration (web)**
+
+26. [ ] Web control surface — Build the Prototype A studio panel (with B's month timeline) on the
+shared `web/shared/ux.css` + `web/shared/hydro-ux.js` foundation: live client-side preview and a
+render-request model that emits a ready-to-run `build.py` command + `config.yaml` matching the
+selections. `L`
+27. [ ] Live pipeline integration — Wire the control surface to a local job runner that executes
+the real pipeline for the selected options and returns the produced SVG/PNG for preview and
+download, keeping determinism and the offline test posture intact. `XL`
+28. [ ] Presets & shareable render recipes — Named state/county/print presets and encodable render
+recipes (URL/JSON) so a look can be saved, shared, and reproduced exactly. `M`
+
+Epoch gate: a user can, from one screen, select state → county/whole-state, a month/range/annual,
+coloring, and line thickness, see a faithful live preview, and produce the identical deterministic
+artifact the CLI would.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
