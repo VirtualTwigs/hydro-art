@@ -18,6 +18,7 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+.theia/
 
 # Node (SVGO)
 node_modules/
