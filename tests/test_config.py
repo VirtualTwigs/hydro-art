@@ -94,3 +94,31 @@ def test_width_max_below_width_min_raises():
 def test_non_positive_width_gamma_raises():
     with pytest.raises(ConfigError, match="width_gamma must be greater than 0"):
         build_settings({**DEFAULTS, "width_gamma": 0})
+
+
+# --- County scope (roadmap #24) ---------------------------------------------
+
+
+def test_county_defaults_to_none():
+    settings = build_settings(DEFAULTS)
+    assert settings.county is None
+
+
+def test_single_region_county_is_accepted_and_stripped():
+    settings = build_settings(
+        {**DEFAULTS, "region": ["Oregon"], "county": "  Multnomah  "}
+    )
+    assert settings.county == "Multnomah"
+    assert settings.regions == ("Oregon",)
+
+
+def test_empty_county_normalizes_to_none():
+    settings = build_settings({**DEFAULTS, "region": ["Oregon"], "county": "   "})
+    assert settings.county is None
+
+
+def test_county_with_multiple_regions_raises():
+    with pytest.raises(ConfigError, match="exactly one state"):
+        build_settings(
+            {**DEFAULTS, "region": ["Oregon", "Washington"], "county": "Clark"}
+        )

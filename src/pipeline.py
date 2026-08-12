@@ -21,6 +21,11 @@ from src.config import ConfigError, Settings
 from src.datasets import resolve_required_files
 from src.clipping import clip_layers, region_boundary
 from src.coloring import assign_colors
+from src.counties import (
+    CensusCountyProvider,
+    CountyBoundaryProvider,
+    county_boundary,
+)
 from src.download import Downloader, UrllibFetcher
 from src.export import Exporter, FileExporter
 from src.geometry import RepairStats, repair_layer
@@ -54,6 +59,8 @@ class RunContext:
         loader: Injected layer loader used by the validate stage.
         optimizer: Injected SVG optimizer used by the optimize_svg stage.
         exporter: Injected exporter used by the export stage.
+        county_provider: Injected county-boundary provider used by the clip
+            stage when ``settings.county`` is set (roadmap #24).
         artifacts: Mutable bag of results passed between stages.
     """
 
@@ -66,6 +73,7 @@ class RunContext:
     loader: LayerLoader
     optimizer: SvgOptimizer
     exporter: Exporter
+    county_provider: CountyBoundaryProvider | None = None
     artifacts: dict[str, Any] = field(default_factory=dict)
 
     def log(self, message: str) -> None:
@@ -170,15 +178,34 @@ def _reproject_stage(ctx: RunContext) -> None:
 
 
 def _clip_stage(ctx: RunContext) -> None:
-    """Clip the projected hydrography to the region boundary (WBD polygons)."""
+    """Clip the projected hydrography to the build's scope boundary.
+
+    Default scope is the region boundary (union of WBD polygons). When
+    ``settings.county`` is set (roadmap #24) the scope narrows to that Census
+    county's polygon, loaded through the injected ``county_provider`` and
+    reprojected to the internal projection. Either way the chosen boundary is
+    stored as ``region_boundary`` so waterbody selection reuses it.
+    """
     layers = ctx.artifacts["projected_layers"]
-    boundary = region_boundary(layers)
+    county = ctx.settings.county
+    if county:
+        provider = ctx.county_provider or CensusCountyProvider()
+        boundary = county_boundary(
+            provider,
+            region=ctx.settings.regions[0],
+            county=county,
+            target_crs=ctx.settings.projection,
+        )
+        scope = f"county {county}, {ctx.settings.regions[0]}"
+    else:
+        boundary = region_boundary(layers)
+        scope = "region"
     clipped, stats = clip_layers(layers, boundary)
     ctx.artifacts["region_boundary"] = boundary
     ctx.artifacts["clipped_layers"] = clipped
     ctx.artifacts["clip_stats"] = stats
     ctx.log(
-        f"[bold]clip_to_region[/bold] {stats.total_in}->{stats.total_out} "
+        f"[bold]clip_to_region[/bold] ({scope}) {stats.total_in}->{stats.total_out} "
         f"(dropped {stats.dropped_outside} outside, "
         f"trimmed {stats.clipped_partial})"
     )
@@ -384,6 +411,9 @@ def _export_stage(ctx: RunContext) -> None:
     """Write the optimized SVG to disk and export the requested formats."""
     svg = ctx.artifacts["optimized_svg"]
     stem = "-".join(region.lower() for region in ctx.settings.regions)
+    if ctx.settings.county:
+        county_slug = "-".join(ctx.settings.county.lower().split())
+        stem = f"{stem}-{county_slug}"
     export_paths: dict[str, Path] = {}
     for fmt in sorted(ctx.settings.outputs):
         dest = ctx.output_dir / f"{stem}.{fmt}"
@@ -451,6 +481,7 @@ class Pipeline:
         loader: LayerLoader | None = None,
         optimizer: SvgOptimizer | None = None,
         exporter: Exporter | None = None,
+        county_provider: CountyBoundaryProvider | None = None,
     ) -> None:
         self._stages = stages
         self._console = console or Console()
@@ -461,6 +492,7 @@ class Pipeline:
         self._loader = loader
         self._optimizer = optimizer
         self._exporter = exporter
+        self._county_provider = county_provider
 
     @property
     def stage_names(self) -> tuple[str, ...]:
@@ -479,6 +511,7 @@ class Pipeline:
             loader=self._loader or PyogrioLayerLoader(),
             optimizer=self._optimizer or SvgoOptimizer(),
             exporter=self._exporter or FileExporter(),
+            county_provider=self._county_provider,
         )
         for stage in self._stages:
             stage.run(context)

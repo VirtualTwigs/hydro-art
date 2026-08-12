@@ -50,6 +50,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="One or more regions to build (e.g. Oregon Washington).",
     )
     parser.add_argument(
+        "--county",
+        default=None,
+        help="Scope the build to a single Census county within the selected "
+        "state (e.g. Clark). Requires exactly one --region.",
+    )
+    parser.add_argument(
         "--palette",
         default=None,
         help="Named color palette (e.g. neon).",
@@ -182,6 +188,8 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
     overrides: dict[str, Any] = {}
     if args.region is not None:
         overrides["region"] = args.region
+    if args.county is not None:
+        overrides["county"] = args.county
     if args.palette is not None:
         overrides["palette"] = args.palette
     if args.color_by is not None:

@@ -129,6 +129,7 @@ _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 #: Built-in defaults, reflecting PRD sections 19 and 25.
 DEFAULTS: dict[str, Any] = {
     "region": ["Oregon", "Washington"],
+    "county": None,
     "projection": "EPSG:5070",
     "stream_order": "all",
     "stream_method": "strahler",
@@ -227,6 +228,9 @@ class Settings:
 
     Attributes:
         regions: Canonical region names to build (e.g. ``("Oregon",)``).
+        county: Optional single Census county name to scope the build to
+            (roadmap #24); ``None`` builds the whole region. Requires exactly
+            one region when set.
         projection: Internal EPSG code used for all geometry operations.
         stream_order: Stream-order render filter (e.g. ``"all"``).
         stream_method: Stream-hierarchy method (strahler/shreve/hack/custom).
@@ -255,6 +259,7 @@ class Settings:
     """
 
     regions: tuple[str, ...]
+    county: str | None
     projection: str
     stream_order: str
     stream_method: str
@@ -486,6 +491,16 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         regions_raw = [regions_raw]
     regions = tuple(dict.fromkeys(_normalize_region(r) for r in regions_raw))
 
+    county_raw = values.get("county", DEFAULTS["county"])
+    county = str(county_raw).strip() if county_raw is not None else None
+    if not county:
+        county = None
+    if county is not None and len(regions) != 1:
+        raise ConfigError(
+            "A county build must target exactly one state; got regions="
+            f"{list(regions)}. Select a single region alongside --county."
+        )
+
     projection = str(values.get("projection", DEFAULTS["projection"]))
     if projection not in SUPPORTED_PROJECTIONS:
         valid = ", ".join(SUPPORTED_PROJECTIONS)
@@ -634,6 +649,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
 
     return Settings(
         regions=regions,
+        county=county,
         projection=projection,
         stream_order=stream_order,
         stream_method=stream_method,

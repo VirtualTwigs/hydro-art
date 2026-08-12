@@ -1,8 +1,27 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-11, after California region rollout, the tools/ renderer batch, pipeline hardening, and the Epoch 6 web-control-surface direction._
+_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction options) and #24 (county scope)._
 
-## Current state (2026-08-11)
+## Current state (2026-08-12)
+
+- **#24 County scope in the pipeline — implemented, commit pending.** New
+  first-class `--county` build option clips hydrography to a single Census county
+  polygon within the selected state (spec
+  `agent-os/specs/2026-08-12-county-scope/`). `src/config.py` adds `county:
+  str|None` (requires exactly one region when set); `src/cli.py` adds `--county`;
+  new `src/counties.py` seam holds `STATE_FIPS` + `state_fips_for_region` +
+  `county_boundary` + an injectable `CountyBoundaryProvider`/`CensusCountyProvider`
+  (lazy geopandas, stays GDAL-free at import). `src/pipeline.py` `_clip_stage`
+  branches on `settings.county` (county polygon vs. WBD region boundary, stored as
+  the `region_boundary` artifact so waterbodies reuse it) and `_export_stage`
+  names the file after the county (e.g. `oregon-hood-river.svg`). Default (no
+  county) is byte-identical. Download is still whole-state then clip (county HUC4
+  download scoping deferred). Suite: **310 passing**.
+- **#23 Color & line-width art-direction options — committed (`5910141`).**
+  `color_by` (watershed/single/elevation) + `width_by` (uniform/flow) with
+  min/max/gamma in `src/config.py`/`cli.py`/`rendering.py`; defaults byte-identical.
+
+## Prior state (2026-08-11)
 
 - **California added end-to-end (`5512675`, `80bfac3`):** third supported
   region. `SUPPORTED_REGIONS` (`src/config.py`), `REGION_HUC4` (`src/datasets.py`),

@@ -80,3 +80,22 @@ def test_unset_art_direction_flags_keep_yaml(tmp_path):
     settings = resolve_settings(["--config", path])
     assert settings.color_by == "single"
     assert settings.width_by == "flow"
+
+
+def test_cli_county_flag(tmp_path):
+    path = _write(tmp_path, "region:\n  - Washington\n")
+    settings = resolve_settings(["--config", path, "--county", "Clark"])
+    assert settings.county == "Clark"
+
+
+def test_unset_county_flag_keeps_yaml(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\ncounty: Multnomah\n")
+    # --county not passed; YAML's county must survive.
+    settings = resolve_settings(["--config", path])
+    assert settings.county == "Multnomah"
+
+
+def test_cli_county_overrides_yaml(tmp_path):
+    path = _write(tmp_path, "region:\n  - Washington\ncounty: King\n")
+    settings = resolve_settings(["--config", path, "--county", "Clark"])
+    assert settings.county == "Clark"

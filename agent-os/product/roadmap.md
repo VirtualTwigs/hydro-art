@@ -151,7 +151,7 @@ builds byte-identical. `M`
 
 **Phase 6.2 — Scope & time as first-class build options**
 
-24. [ ] County scope in the pipeline — Promote `tools/render_county_clip.py`'s county clip into a
+24. [x] County scope in the pipeline — Promote `tools/render_county_clip.py`'s county clip into a
 first-class `--county` build option (Census county polygon clip, validated against the selected
 state), so scope selection isn't a separate script. `M`
 25. [ ] Monthly-flow rendering option — Promote `tools/monthly_flow.py` disaggregation + the fixed
