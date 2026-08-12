@@ -1,10 +1,27 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), and #25 (monthly-flow option)._
+_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), #25 (monthly-flow option), and #26 (web control surface)._
 
 ## Current state (2026-08-12)
 
-- **#25 Monthly-flow rendering option — implemented, commit pending.** Promoted
+- **#26 Web control surface — implemented, commit pending.** Promoted
+  `web/proto-a-studio.html` (via `git mv`) to the canonical `web/studio.html` (spec
+  `agent-os/specs/2026-08-10-web-control-surface/`). Because #23–#25 have shipped,
+  `cliMapping`/`yamlMapping` in `web/shared/hydro-ux.js` were rewritten to emit those
+  as **real `build.py` flags** (`--color-by`/`--single-color`, `--width-by` +
+  `--width-min/max/gamma`, `--county`, `--months`) instead of `(proposed)` markers.
+  Two options are shipped-as-flags but still fail fast in the 2D pipeline and carry an
+  honest caveat note (appended as commented `# notes:` lines below the command, so the
+  paste stays runnable): `color_by=elevation` (needs the DEM subsystem →
+  `tools/render_state_mono.py`) and non-annual `--months` (live frames land in #27 →
+  `tools/render_monthly.py`). Base `line_width`/`background` are YAML-only (no CLI
+  flag). Added source-pointer comments at the `MONTH_ABBR`/`HUC_LEVELS` option blocks
+  and a `mappingSelfCheck(state)` helper (exported on `window.HydroUX`). Verified
+  headless: `node --check` on both scripts pass; `mappingSelfCheck` returns
+  `{ok:true}`; `bash -n` on the shipped-only command passes. Manual live-DOM browser
+  pass still pending (Chrome extension not connected during the attempted automation).
+  Still a **mapping target only** — no live pipeline run (that's #27).
+- **#25 Monthly-flow rendering option — committed (`6c18a0d`).** Promoted
   the disaggregation + fixed year-max width scale into tested `src/` code and
   added a validated `--months` option (spec
   `agent-os/specs/2026-08-12-monthly-flow-option/`, scope: "promote algorithms +

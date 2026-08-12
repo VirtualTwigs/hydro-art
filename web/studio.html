@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Hydro-Art · Prototype A — Studio</title>
+<title>Hydro-Art · Studio — Control Surface</title>
 <link rel="stylesheet" href="shared/ux.css" />
 <style>
   body { display: grid; grid-template-columns: 340px 1fr; grid-template-rows: 100vh; }
@@ -19,7 +19,7 @@
 <body>
 <aside>
   <h1 class="brand">Hydro-Art <span class="dot">◇</span> Studio</h1>
-  <div class="sub">Prototype A — dense left-rail control panel for power users. Live client-side preview.</div>
+  <div class="sub">Control surface — dense left-rail studio. Live client-side preview; emits a reproducible <code>build.py</code> command + <code>config.yaml</code> from the current selection.</div>
 
   <fieldset>
     <legend>Preview source</legend>
@@ -41,7 +41,7 @@
       <button data-v="county">Single county</button>
     </div>
     <div id="countyWrap" hidden>
-      <label class="row">County <span class="tag new">proposed</span></label>
+      <label class="row">County <span class="tag live">live</span></label>
       <select id="county"></select>
     </div>
     <label class="row">Group / color by</label>
@@ -55,7 +55,7 @@
   </fieldset>
 
   <fieldset>
-    <legend>Time · monthly flow <span class="tag new">proposed</span></legend>
+    <legend>Time · monthly flow <span class="tag live">live</span></legend>
     <div class="seg" id="timeMode">
       <button data-v="annual" class="active">Annual mean</button>
       <button data-v="single">Single month</button>

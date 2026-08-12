@@ -136,7 +136,7 @@ Turn the ad-hoc `tools/` renderers and the `web/` mockups into one guided contro
 state, drill to a county or keep the whole state, choose a single month / month range / annual
 mean, and set coloring and line-thickness — with a live preview and a deterministic, reproducible
 build behind it. The chosen direction is Prototype A (dense left-rail studio,
-`web/proto-a-studio.html`) using Prototype B's click-to-set month timeline for single/range
+shipped as `web/studio.html`) using Prototype B's click-to-set month timeline for single/range
 selection. Several controls the UX exposes are currently ad-hoc `tools/` recipes or client-side
 simulations; this epoch promotes them to first-class, tested pipeline options so the UX drives the
 real generator, not a mock.
@@ -160,7 +160,7 @@ per month/animation, or annual mean), conserving each reach's annual QAMA. `L`
 
 **Phase 6.3 — Control surface & integration (web)**
 
-26. [ ] Web control surface — Build the Prototype A studio panel (with B's month timeline) on the
+26. [x] Web control surface — Build the Prototype A studio panel (with B's month timeline) on the
 shared `web/shared/ux.css` + `web/shared/hydro-ux.js` foundation: live client-side preview and a
 render-request model that emits a ready-to-run `build.py` command + `config.yaml` matching the
 selections. `L`

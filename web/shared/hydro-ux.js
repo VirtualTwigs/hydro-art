@@ -64,7 +64,9 @@
   // sea), mirroring tools/render_state_mono.py.
   const HYPSO = ["#ffffff","#dff0ff","#a8d8ff","#66b6ff","#3f8fe6","#2f6bc4","#1f4a9c","#123a7a","#0a2a5c","#06213f"];
 
+  // src/monthly_flow.MONTH_ABBR (and src/config parses these names in --months).
   const MONTH_ABBR = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  // src/config.SUPPORTED_HUC_LEVELS.
   const HUC_LEVELS = ["HUC2","HUC4","HUC6","HUC8","HUC10","HUC12"];
 
   // ---- Deterministic PRNG (so previews are reproducible per seed) ----------
@@ -220,30 +222,48 @@
     return `${MONTH_ABBR[state.monthStart]}\u2013${MONTH_ABBR[state.monthEnd]} (range \u2192 animation)`;
   }
 
-  // Emits a paste-runnable multi-line command: only shipped flags go inside the
-  // `\`-continued command (no inline comments — a `#` before the trailing `\`
-  // would comment out the continuation and break the paste). Options that map to
-  // roadmap #23-#25 are appended as commented-out lines *below* the command so
-  // they stay clearly marked (proposed) without breaking shell parsing.
+  // Emits a paste-runnable multi-line command. Roadmap #23 (color_by/width_by),
+  // #24 (--county), and #25 (--months) have all SHIPPED, so their flags are now
+  // emitted as real `build.py` options (src/cli.py) — no more `(proposed)`
+  // markers. Two options are shipped-but-not-yet-rendered by the *2D* pipeline
+  // and fail fast in build.py, so they carry an honest caveat note (never an
+  // inline comment inside the `\`-continued block, which would break the paste):
+  //   - color_by=elevation → needs the DEM subsystem (use tools/render_state_mono.py)
+  //   - non-annual --months → parses, but live frames land in #27 (tools/render_monthly.py)
   function cliMapping(state){
-    const shipped = [`--region ${state.state}`];
-    const proposed = []; // [flag, note]
+    const cmd = [`--region ${state.state}`];
+    const notes = [];
     if (state.scope === "county" && state.county)
-      proposed.push([`--county "${state.county}"`, "render_county_clip"]);
-    if (state.colorMode === "watershed") shipped.push(`--palette ${state.palette}`);
-    else if (state.colorMode === "single") proposed.push([`--single-color ${state.single}`, ""]);
-    else if (state.colorMode === "elevation") proposed.push([`--color-by elevation`, "render_state_mono"]);
+      cmd.push(`--county "${state.county}"`);
+    if (state.huc && state.huc !== "HUC4")
+      cmd.push(`--huc-level ${state.huc}`);
+    cmd.push(`--color-by ${state.colorMode}`);
+    if (state.colorMode === "watershed"){
+      cmd.push(`--palette ${state.palette}`);
+      if (state.palette !== "neon")
+        notes.push(`palette "${state.palette}" is a UX experiment; the pipeline ships only "neon" today.`);
+    } else if (state.colorMode === "single"){
+      cmd.push(`--single-color ${state.single}`);
+    } else if (state.colorMode === "elevation"){
+      notes.push("color_by=elevation needs the DEM subsystem; the 2D build.py fails fast (use tools/render_state_mono.py).");
+    }
     if (state.widthMode === "flow")
-      proposed.push([`--width-by flow --width-min ${state.minW} --width-max ${state.maxW}`, ""]);
-    else shipped.push(`--line-width ${state.minW}`);
-    if (state.timeMode !== "annual")
-      proposed.push([`--months ${state.timeMode === "single" ? (state.monthStart+1) : (state.monthStart+1)+"-"+(state.monthEnd+1)}`, "monthly_flow"]);
-    if (state.glow) shipped.push(`--glow --glow-radius ${state.glowR}`);
+      cmd.push(`--width-by flow --width-min ${state.minW} --width-max ${state.maxW} --width-gamma ${state.gamma}`);
+    else
+      cmd.push(`--width-by uniform`);
+    if (state.timeMode !== "annual"){
+      const m = state.timeMode === "single" ? (state.monthStart+1)
+              : (state.monthStart+1) + "-" + (state.monthEnd+1);
+      cmd.push(`--months ${m}`);
+      notes.push("non-annual --months parses but the 2D build.py fails fast; live month frames land in #27 (use tools/render_monthly.py).");
+    }
+    if (state.glow) cmd.push(`--glow --glow-radius ${state.glowR}`);
 
-    let out = ".venv/bin/python build.py \\\n  " + shipped.join(" \\\n  ");
-    if (proposed.length){
-      out += "\n  # (proposed) roadmap #23\u2013#25 \u2014 not yet in build.py:";
-      for (const [flag, note] of proposed) out += "\n  #   " + flag + (note ? "   # " + note : "");
+    // background + base line width have no CLI flag (config-only) — see YAML.
+    let out = ".venv/bin/python build.py \\\n  " + cmd.join(" \\\n  ");
+    if (notes.length){
+      out += "\n  # notes:";
+      for (const n of notes) out += "\n  #   " + n;
     }
     return out;
   }
@@ -251,25 +271,61 @@
   function yamlMapping(state){
     const k = s => `<span class="k">${s}</span>`, q = s => `<span class="s">${s}</span>`,
           c = s => `<span class="c">${s}</span>`, nn = s => `<span class="n">${s}</span>`;
-    return (
-`${c("# config.yaml — from current UX selections")}
-${k("region")}: [${state.state}]
-${k("palette")}: ${q(state.colorMode==="watershed" ? state.palette : '"(n/a — '+state.colorMode+' mode)"')}
-${k("background")}: ${q('"'+state.bg+'"')}
-${k("glow")}: ${state.glow}
-${k("glow_radius")}: ${state.glowR}
-${k("line_width")}: ${state.minW}       ${c("# base / min stroke")}
+    const monthsVal = state.timeMode === "annual" ? "annual"
+        : state.timeMode === "single" ? String(state.monthStart+1)
+        : (state.monthStart+1) + "-" + (state.monthEnd+1);
+    const L = [];
+    L.push(c("# config.yaml — from the current studio selection"));
+    L.push(`${k("region")}: [${state.state}]`);
+    if (state.scope === "county" && state.county)
+      L.push(`${k("county")}: ${q('"'+state.county+'"')}`);
+    L.push(`${k("huc_level")}: ${state.huc}`);
+    L.push(`${k("months")}: ${q('"'+monthsVal+'"')}` +
+      (state.timeMode !== "annual" ? `        ${c("# parses; non-annual render lands in #27")}` : ""));
+    L.push("");
+    L.push(`${k("color_by")}: ${q('"'+state.colorMode+'"')}        ${c("# watershed | single | elevation")}`);
+    if (state.colorMode === "watershed")
+      L.push(`${k("palette")}: ${state.palette}` +
+        (state.palette !== "neon" ? `         ${c("# only 'neon' ships today")}` : ""));
+    if (state.colorMode === "single")
+      L.push(`${k("single_color")}: ${q('"'+state.single+'"')}`);
+    if (state.colorMode === "elevation")
+      L.push(c("# elevation tint needs the DEM subsystem (fails fast in 2D build.py)"));
+    L.push(`${k("background")}: ${q('"'+state.bg+'"')}`);
+    L.push("");
+    L.push(`${k("width_by")}: ${q('"'+state.widthMode+'"')}       ${c("# uniform | flow")}`);
+    L.push(`${k("line_width")}: ${nn(state.minW)}        ${c("# base / uniform stroke")}`);
+    if (state.widthMode === "flow"){
+      L.push(`${k("width_min")}: ${nn(state.minW)}`);
+      L.push(`${k("width_max")}: ${nn(state.maxW)}        ${c("# clamp so rivers stay visible")}`);
+      L.push(`${k("width_gamma")}: ${nn(state.gamma)}      ${c("# 0.5≈sqrt spreads small streams")}`);
+    }
+    L.push("");
+    L.push(`${k("glow")}: ${nn(state.glow)}`);
+    if (state.glow) L.push(`${k("glow_radius")}: ${nn(state.glowR)}`);
+    return L.join("\n");
+  }
 
-${c("# --- proposed extensions (not yet in src/) ---")}
-${nn("scope")}: ${q('"'+scopeToken(state)+'"')}          ${c("# clipping.py / render_county_clip.py")}
-${nn("color_by")}: ${q('"'+state.colorMode+'"')}        ${c("# watershed | single | elevation")}
-${nn("single_color")}: ${state.colorMode==="single" ? '"'+state.single+'"' : "null"}
-${nn("width_by")}: ${q('"'+state.widthMode+'"')}
-${nn("line_width_min")}: ${state.minW}
-${nn("line_width_max")}: ${state.maxW}   ${c("# clamp so rivers stay visible")}
-${nn("flow_gamma")}: ${state.gamma}      ${c("# 0.5≈sqrt spreads small streams")}
-${nn("time")}: ${q('"'+monthsToken(state)+'"')}  ${c("# monthly_flow.py disaggregation")}`
-    );
+  // ---- Mapping self-check (determinism + CLI/YAML agreement) ---------------
+  // Pure check that the two renderings of one `state` reference the same core
+  // selections (region, county, months, color/width modes) and are stable. Used
+  // by a headless Node smoke step; returns { ok, issues: [...] }.
+  function mappingSelfCheck(state){
+    const issues = [];
+    const cli = cliMapping(state);
+    // YAML carries HTML spans; strip tags for text matching.
+    const yaml = yamlMapping(state).replace(/<[^>]+>/g, "");
+    const both = (needle, label) => {
+      if (!cli.includes(needle)) issues.push(`CLI missing ${label}: ${needle}`);
+      if (!yaml.includes(needle)) issues.push(`YAML missing ${label}: ${needle}`);
+    };
+    both(state.state, "region");
+    if (state.scope === "county" && state.county) both(state.county, "county");
+    if (state.colorMode !== "watershed") both(state.colorMode, "color_by");
+    // Determinism: identical input yields identical text.
+    if (cli !== cliMapping(state)) issues.push("cliMapping is non-deterministic");
+    if (yamlMapping(state) !== yamlMapping(state)) issues.push("yamlMapping is non-deterministic");
+    return { ok: issues.length === 0, issues };
   }
 
   // ---- Public surface -----------------------------------------------------
@@ -278,6 +334,7 @@ ${nn("time")}: ${q('"'+monthsToken(state)+'"')}  ${c("# monthly_flow.py disaggre
     mulberry32, hash, generateNetwork, buildSvg, applyStyles,
     seasonalMultiplier, yearMaxFlow,
     cliMapping, yamlMapping, scopeToken, monthsToken, stateAbbr,
+    mappingSelfCheck,
   };
 
 })(window);

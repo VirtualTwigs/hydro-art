@@ -3,26 +3,30 @@
 ## Status
 
 Direction chosen (2026-08-10): Prototype A + Prototype B's month timeline. The shared foundation
-(`web/shared/ux.css`, `web/shared/hydro-ux.js`) and three prototypes exist;
-`web/proto-a-studio.html` has already been switched to B's timeline. Three open decisions in
-`planning/requirements.md` (preview fidelity, output-contract shape, proposed-flag surfacing) should
-be resolved before Group 3.
+(`web/shared/ux.css`, `web/shared/hydro-ux.js`) and three prototypes exist; Prototype A was
+switched to B's timeline and then promoted to the canonical `web/studio.html`. All three open
+decisions in `planning/requirements.md` (preview fidelity, output-contract shape, proposed-flag
+surfacing) are resolved (see `implementation/report.md`). Because #23–#25 have since shipped, the
+mapping helpers now emit those as real `build.py` flags (with honest caveats for the two options
+that still fail fast in the 2D pipeline).
 
 ## Task Group 1: Shared foundation hardening
 
-- [ ] Confirm `web/shared/hydro-ux.js` option data matches the pipeline: `STATES` vs
+- [x] Confirm `web/shared/hydro-ux.js` option data matches the pipeline: `STATES` vs
   `src/config.SUPPORTED_REGIONS`, `COUNTIES` rosters, `PALETTES.neon` vs `src/coloring.PALETTES`,
-  `HUC_LEVELS`, `MONTH_ABBR`. Add a short comment pointer at each block to its Python source.
-- [ ] Verify the mapping helpers (`cliMapping`/`yamlMapping`) only emit shipped flags as real and
-  tag everything mapping to roadmap #23–#25 as proposed; add a tiny self-check that both renderings
-  reference the same selections.
-- [ ] Node `--check` the shared JS as a repeatable smoke step (document the command in the spec's
+  `HUC_LEVELS`, `MONTH_ABBR`. Added source-pointer comments at the `MONTH_ABBR`/`HUC_LEVELS` blocks.
+- [x] Verify the mapping helpers (`cliMapping`/`yamlMapping`) emit shipped #23–#25 flags as real
+  (`--color-by`/`--width-by`, `--county`, `--months`), with honest caveat notes only for the two
+  options that still fail fast in the 2D pipeline (`color_by=elevation`, non-annual `--months`);
+  added `mappingSelfCheck(state)` asserting both renderings reference the same selections.
+- [x] Node `--check` the shared JS as a repeatable smoke step (documented in the report's
   verification approach).
 
 ## Task Group 2: Control surface (Prototype A + B timeline)
 
-- [ ] Promote `web/proto-a-studio.html` to the canonical control surface (naming/entry decided with
-  the user); keep it on the shared CSS/JS with no duplicated tokens/engine/option data.
+- [x] Promote `web/proto-a-studio.html` to the canonical control surface `web/studio.html`
+  (name decided with the user); keeps it on the shared CSS/JS with no duplicated
+  tokens/engine/option data.
 - [x] Wire all controls through the single `state` object → `applyStyles()` + mapping (geography,
   scope+county, time via B's timeline, color modes, width modes, glow), each updating the preview
   live.
@@ -42,12 +46,13 @@ be resolved before Group 3.
 ## Task Group 4: Verification & docs
 
 - [x] Headless syntax check (Node `--check`) of the shared JS and the page's inline script — both pass.
-- [~] Manual browser smoke test — **not exercisable in this environment** (no Chrome extension
-  connected). Substituted a headless Node determinism check of the mapping helpers: identical
-  `state` yields identical CLI/YAML text and proposed flags are tagged. Live-DOM acceptance criteria
-  still need a manual browser pass.
-- [ ] Update `web/`-related notes in `CLAUDE.md` (web prototypes → control surface) and `HANDOFF.md`
-  to reflect the chosen direction and shared foundation.
+- [~] Manual browser smoke test — attempted Chrome automation (per user), but
+  `tabs_context_mcp` reported no Chrome extension connected, so live-DOM interaction was not
+  exercisable here. Substituted a headless Node determinism check of the mapping helpers: identical
+  `state` yields identical CLI/YAML text and `mappingSelfCheck` returns `{ok:true}`. Live-DOM
+  acceptance criteria still need a manual browser pass.
+- [x] Update `web/`-related notes in `CLAUDE.md` (web prototypes → control surface) and `HANDOFF.md`
+  to reflect the chosen direction, shared foundation, and `web/studio.html` as canonical.
 
 ## Verification gates
 
