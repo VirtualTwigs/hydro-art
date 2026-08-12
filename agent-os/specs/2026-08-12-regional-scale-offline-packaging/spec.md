@@ -107,7 +107,22 @@ TG2 (verify/diff): verify all-ok; a deleted file → `missing`; a corrupted file
 `mismatched` (both truncated-size and same-size-different-bytes); `is_complete`;
 diff added/removed/changed/unchanged + `is_synced`.
 
+## Phase 2 — Tile-budget controls (added slice)
+
+A second offline slice of #21: cap how many 3DEP DEM COGs one acquisition may
+fetch, failing fast before any download.
+
+- `ElevationSettings.tile_budget: int` (`0` = unlimited; boundary-validated in
+  `_coerce_elevation`, `bool`/non-int/negative rejected).
+- `dem.count_tiles(boundary, tier, discoverer=None) -> int` — pure offline
+  preflight.
+- `dem.acquire_dem(..., max_tiles: int = 0)` — raises `ElevationError` after
+  discovery and before the download loop when the tile count exceeds the budget.
+
 ## Not in scope
 
-Region expansion, tile-budget, resumable jobs, a real-NAS packaging CLI — all
-deferred on roadmap #21 (see requirements.md).
+Region expansion (needs real WBD) and a real-NAS packaging CLI remain deferred on
+roadmap #21. Resumable jobs turned out to be already implemented
+(`Downloader` `.part`+Range resume + `acquire`/`acquire_dem` cache-skip), so no
+new work was needed there. Wiring `tile_budget` into a live DEM entry point is a
+non-offline follow-on (the DEM subsystem is not in `PIPELINE_STAGES`).

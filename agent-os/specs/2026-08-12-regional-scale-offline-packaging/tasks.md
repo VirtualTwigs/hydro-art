@@ -33,3 +33,33 @@
 - [x] Add a roadmap #21 progress note (offline-packaging slice shipped; region
       expansion / tile-budget / resume still open); update `HANDOFF.md` +
       `CLAUDE.md` module map. Report; STOP (commit is a separate explicit step).
+
+## Phase 2 — Tile-budget controls (second #21 slice)
+
+## TG-B1 — `tile_budget` config field
+
+- [x] Write tests first (`tests/test_elevation_config.py`): `tile_budget`
+      defaults to `0` (unlimited); positive int accepted; negative raises
+      `ConfigError`; non-int raises.
+- [x] `src/config.py`: add `tile_budget` to `DEFAULTS["elevation"]` (0) +
+      `ElevationSettings` + `_coerce_elevation` validation (non-negative int;
+      reject bool/non-int).
+- [x] Run ONLY the new tests; green.
+
+## TG-B2 — `count_tiles` + `acquire_dem` budget guard
+
+- [x] Write tests first (`tests/test_dem.py`): `count_tiles` matches discovery
+      count (offline); `acquire_dem(max_tiles>=count)` proceeds;
+      `acquire_dem(max_tiles<count)` raises `ElevationError` **before any fetch**
+      (fake downloader never called); `max_tiles=0` unlimited.
+- [x] `src/dem.py`: pure `count_tiles(boundary, tier, discoverer=None)`; add
+      `max_tiles: int = 0` to `acquire_dem`, raising `ElevationError` after
+      discovery and before the download loop when the count exceeds the budget.
+- [x] Run ONLY the new tests; green.
+
+## TG-B3 — Verify + docs
+
+- [x] Full Python suite (regression check); note resumable-jobs already built
+      (`Downloader` `.part`+Range resume + cache-skip).
+- [x] Extend `implementation/report.md`, this `tasks.md`, `spec.md`; roadmap #21
+      note; `HANDOFF.md` + `CLAUDE.md`. Report; STOP.

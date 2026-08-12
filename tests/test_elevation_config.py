@@ -55,6 +55,26 @@ def test_non_positive_vertical_exaggeration_raises():
         build_settings({**DEFAULTS, "elevation": {"vertical_exaggeration": 0}})
 
 
+def test_tile_budget_defaults_to_unlimited():
+    # 0 means "no cap" (mirrors the area-threshold convention).
+    assert build_settings(DEFAULTS).elevation.tile_budget == 0
+
+
+def test_positive_tile_budget_accepted():
+    settings = build_settings({**DEFAULTS, "elevation": {"tile_budget": 12}})
+    assert settings.elevation.tile_budget == 12
+
+
+def test_negative_tile_budget_raises():
+    with pytest.raises(ConfigError, match="tile_budget"):
+        build_settings({**DEFAULTS, "elevation": {"tile_budget": -1}})
+
+
+def test_non_integer_tile_budget_raises():
+    with pytest.raises(ConfigError, match="tile_budget"):
+        build_settings({**DEFAULTS, "elevation": {"tile_budget": "many"}})
+
+
 def test_yaml_elevation_override(tmp_path):
     path = _write(
         tmp_path, "elevation:\n  enabled: true\n  tier: state\n"

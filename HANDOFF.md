@@ -15,9 +15,16 @@ _Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkee
   mismatched, never mutates), and `diff_manifests` (added/removed/changed/unchanged). **numpy-
   free & GDAL-free** (imports only stdlib + `src.datasets`/`src.config`/`src.cache`; verified no
   heavy modules pulled in). Not wired into `PIPELINE_STAGES`. Tested in `tests/test_manifest.py`
-  (13 tests). Suite: **393 passing** (+13). **Deferred on #21:** region expansion beyond OR/WA/CA
-  (needs real WBD), tile-budget controls (`TileDiscoverer` seam), resumable jobs
-  (`DownloaderLike`/`Cache`), and a `tools/` packaging CLI over a real NAS cache.
+  (13 tests). A second slice added **tile-budget controls**: `ElevationSettings.tile_budget`
+  (0 = unlimited, boundary-validated in `_coerce_elevation`) + `src/dem.py` `count_tiles` (pure
+  offline preflight) + an `acquire_dem(max_tiles=…)` guard that raises `ElevationError` **before any
+  COG download** when a region's tile count exceeds the budget (+4 config, +4 dem tests). Also
+  confirmed **resumable jobs** are essentially already built — `src/download.py` `Downloader` streams
+  to `.part`, resumes via HTTP `Range`, verifies, atomically moves; `acquire`/`acquire_dem` skip
+  cached files — so an interrupted acquisition resumes on re-run. Suite: **401 passing** (+21 across
+  both slices). **Deferred on #21:** region expansion beyond OR/WA/CA (needs real WBD), wiring
+  `tile_budget` into a live DEM entry point, and `tools/` packaging/preflight CLIs over a real NAS
+  cache.
 - **#20 Accuracy validation suite — committed (`43d1635`).** New pure module
   `src/accuracy.py` (spec `agent-os/specs/2026-08-12-accuracy-validation-suite/`),
   the first Epoch 5 item. Compares terrain/river vertices sampled from a DEM fixture

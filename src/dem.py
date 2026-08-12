@@ -55,6 +55,7 @@ __all__ = [
     "cell_name",
     "ThreeDEPDiscoverer",
     "dem_descriptor",
+    "count_tiles",
     "acquire_dem",
 ]
 
@@ -198,6 +199,23 @@ class ThreeDEPDiscoverer:
         )
 
 
+def count_tiles(
+    boundary: Any,
+    tier: str,
+    discoverer: ThreeDEPDiscoverer | None = None,
+) -> int:
+    """Count the DEM tiles a region will need, without downloading anything.
+
+    A pure, offline preflight for the tile budget (roadmap #21): callers (and the
+    UX) can estimate acquisition size up front and decide whether to proceed.
+
+    Raises:
+        ElevationError: If ``tier`` is unsupported (via the discoverer).
+    """
+    discoverer = discoverer or ThreeDEPDiscoverer()
+    return len(discoverer.discover_tiles(boundary, tier))
+
+
 def dem_descriptor(tile: TileRef, product_key: str) -> FileDescriptor:
     """Bridge a :class:`~src.elevation.TileRef` to a cache descriptor.
 
@@ -233,6 +251,7 @@ def acquire_dem(
     downloader: DownloaderLike,
     discoverer: ThreeDEPDiscoverer | None = None,
     refresh: bool = False,
+    max_tiles: int = 0,
     log: Callable[[str], None] = _noop,
     clock: Callable[[], str] = lambda: date.today().isoformat(),
 ) -> list[DemAsset]:
@@ -245,14 +264,27 @@ def acquire_dem(
     product/URL, retrieval date, horizontal + vertical CRS/units, cell size, and
     lineage.
 
+    ``max_tiles`` is the tile budget (roadmap #21): ``0`` means unlimited, while a
+    positive cap makes acquisition **fail fast before any download** when the
+    region's discovered tile count exceeds it (feed it
+    ``settings.elevation.tile_budget``).
+
     Returns the assets in the discoverer's deterministic order.
 
     Raises:
-        ElevationError: If ``tier`` is unsupported (via the discoverer).
+        ElevationError: If ``tier`` is unsupported (via the discoverer) or the
+            discovered tile count exceeds ``max_tiles``.
     """
     discoverer = discoverer or ThreeDEPDiscoverer()
     product = TIER_PRODUCTS[tier] if tier in TIER_PRODUCTS else None
     tiles = discoverer.discover_tiles(boundary, tier)
+    if max_tiles and len(tiles) > max_tiles:
+        raise ElevationError(
+            f"DEM acquisition needs {len(tiles)} tiles for tier {tier!r}, "
+            f"exceeding the tile budget of {max_tiles}. Raise "
+            "elevation.tile_budget, narrow the boundary, or choose a coarser "
+            "tier (0 = unlimited)."
+        )
     # If a custom discoverer produced tiles for a tier not in the registry we
     # still need a product label/key; fall back to the tile's own resolution.
     acquired_at = clock()

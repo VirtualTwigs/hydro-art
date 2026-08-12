@@ -72,13 +72,40 @@ bytes and truncated); `diff_manifests` added/removed/changed/unchanged +
   repo conventions (`from __future__ import annotations`, frozen dataclasses,
   docstrings, 88-col).
 
+## Phase 2 — Tile-budget controls (second #21 slice)
+
+A second offline slice of #21 landed after the manifests: a **tile budget** that
+caps how many 3DEP DEM COGs a single acquisition may fetch, failing fast before
+any download.
+
+- `src/config.py`: `ElevationSettings.tile_budget` (added to `DEFAULTS` as `0`;
+  boundary-validated in `_coerce_elevation` — non-negative int, `bool` and
+  non-int rejected with `ConfigError`). `0` = unlimited, mirroring the
+  `min_*_area_m2: 0.0` "keep everything" convention.
+- `src/dem.py`: pure `count_tiles(boundary, tier, discoverer=None)` preflight
+  (offline estimate, no download) + a `max_tiles: int = 0` parameter on
+  `acquire_dem` that raises `ElevationError` **after discovery, before the
+  download loop** when the region's tile count exceeds the budget. Feed it
+  `settings.elevation.tile_budget`.
+- Tests: `tests/test_elevation_config.py` (+4: default/positive/negative/non-int)
+  and `tests/test_dem.py` (+4: `count_tiles` matches discovery; within-budget
+  proceeds; over-budget raises before any fetch — fake downloader asserted
+  never called; `max_tiles=0` unlimited). Full suite: **401 passed**.
+
+**Resumable jobs — already built.** Investigation showed #21's "resumable jobs"
+concern is essentially already implemented: `src/download.py`'s `Downloader`
+streams to a `.part` temp file, resumes via an HTTP `Range` request, verifies,
+and atomically moves into place; and `acquire`/`acquire_dem` skip already-cached
+files. Re-running an interrupted acquisition therefore resumes naturally. No new
+work was needed here beyond noting it.
+
 ## Not done / follow-ups (remain open on roadmap #21)
 
 - **Region expansion** beyond OR/WA/CA — needs real WBD to derive HUC4 coverage
   for more states (`tools/derive_state_huc4.py` against the national WBD GDB).
-- **Tile-budget controls** — cap 3DEP DEM tiles per run behind the
-  `TileDiscoverer` seam.
-- **Resumable jobs** — resume partial acquisition behind `DownloaderLike`/`Cache`.
+- **Wiring the tile budget end-to-end** — `acquire_dem` accepts `max_tiles`, but
+  nothing calls it with `settings.elevation.tile_budget` yet (the DEM subsystem
+  isn't in `PIPELINE_STAGES`); the wiring lands when a real DEM entry point does.
 - A thin `tools/` packaging CLI (`build_manifest` → `write_manifest` over a real
-  NAS cache; `verify_manifest` on a transferred copy) — the offline engine ships
-  here; the CLI wrapper is a non-offline follow-on.
+  NAS cache; `verify_manifest` on a transferred copy; `count_tiles` preflight) —
+  the offline engines ship here; the CLI wrappers are non-offline follow-ons.

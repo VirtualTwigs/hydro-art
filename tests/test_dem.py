@@ -19,6 +19,7 @@ from src.dem import (
     DemAsset,
     ThreeDEPDiscoverer,
     acquire_dem,
+    count_tiles,
     geographic_cells,
 )
 from src.elevation import ElevationError, TileRef
@@ -132,6 +133,56 @@ def test_acquire_dem_refresh_forces_redownload(tmp_path: Path) -> None:
         refresh=True,
     )
     assert len(downloader.calls) == 2
+
+
+def test_count_tiles_matches_discovery(tmp_path: Path) -> None:
+    # bbox spanning two lon x two lat cells -> 4 tiles, computed offline.
+    boundary = _FakeBoundary((-123.5, 44.2, -122.5, 45.1))
+    assert count_tiles(boundary, "preview") == 4
+    assert count_tiles(boundary, "preview") == len(
+        ThreeDEPDiscoverer().discover_tiles(boundary, "preview")
+    )
+
+
+def test_acquire_dem_within_budget_proceeds(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    assets = acquire_dem(
+        boundary=(-123.8, 44.2, -123.2, 44.8),  # single tile
+        tier="preview",
+        cache=cache,
+        downloader=downloader,
+        max_tiles=1,
+    )
+    assert len(assets) == 1 and len(downloader.calls) == 1
+
+
+def test_acquire_dem_over_budget_raises_before_any_fetch(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    with pytest.raises(ElevationError, match="tile budget"):
+        acquire_dem(
+            boundary=(-123.5, 44.2, -122.5, 45.1),  # 4 tiles
+            tier="preview",
+            cache=cache,
+            downloader=downloader,
+            max_tiles=2,
+        )
+    # Fail fast: nothing was downloaded.
+    assert downloader.calls == []
+
+
+def test_acquire_dem_zero_budget_is_unlimited(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    assets = acquire_dem(
+        boundary=(-123.5, 44.2, -122.5, 45.1),  # 4 tiles
+        tier="preview",
+        cache=cache,
+        downloader=downloader,
+        max_tiles=0,  # unlimited
+    )
+    assert len(assets) == 4 and len(downloader.calls) == 4
 
 
 def test_acquire_dem_is_deterministic(tmp_path: Path) -> None:

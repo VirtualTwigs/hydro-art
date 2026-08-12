@@ -164,6 +164,7 @@ DEFAULTS: dict[str, Any] = {
         "tier": "preview",
         "vertical_exaggeration": 1.0,
         "cache_policy": "reuse",
+        "tile_budget": 0,
     },
 }
 
@@ -214,6 +215,10 @@ class ElevationSettings:
         vertical_exaggeration: Display-only Z multiplier; must be > 0.
         cache_policy: Asset cache behavior (one of
             :data:`SUPPORTED_CACHE_POLICIES`).
+        tile_budget: Maximum number of DEM tiles a single acquisition may fetch
+            (roadmap #21). ``0`` means unlimited; a positive cap makes DEM
+            acquisition fail fast before downloading when a region's tile count
+            exceeds it.
     """
 
     enabled: bool
@@ -221,6 +226,7 @@ class ElevationSettings:
     tier: str
     vertical_exaggeration: float
     cache_policy: str
+    tile_budget: int
 
 
 @dataclass(frozen=True)
@@ -537,12 +543,31 @@ def _coerce_elevation(value: Any) -> ElevationSettings:
             f"Unsupported elevation.cache_policy: {cache_policy!r}. Valid: {valid}."
         )
 
+    raw_budget = merged.get("tile_budget", defaults["tile_budget"])
+    if isinstance(raw_budget, bool):
+        raise ConfigError(
+            f"Invalid elevation.tile_budget: {raw_budget!r}. "
+            "Expected a non-negative integer (0 = unlimited)."
+        )
+    try:
+        tile_budget = int(raw_budget)
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid elevation.tile_budget: {raw_budget!r}. "
+            "Expected a non-negative integer (0 = unlimited)."
+        )
+    if tile_budget < 0:
+        raise ConfigError(
+            f"elevation.tile_budget must be >= 0 (0 = unlimited), got {tile_budget}."
+        )
+
     return ElevationSettings(
         enabled=enabled,
         source=source,
         tier=tier,
         vertical_exaggeration=vertical_exaggeration,
         cache_policy=cache_policy,
+        tile_budget=tile_budget,
     )
 
 

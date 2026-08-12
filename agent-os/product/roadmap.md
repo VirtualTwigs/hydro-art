@@ -167,9 +167,13 @@ turns `Cache` provenance into a deterministic, portable manifest — `build_mani
 `manifest_for_settings` (region→manifest via `resolve_required_files`), stable sorted JSON with
 cache-relative paths, `verify_manifest` (sha256+size → ok/missing/mismatched), `diff_manifests`
 (added/removed/changed/unchanged). Spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging`;
-tested in `tests/test_manifest.py` (13 tests). **Left:** region expansion beyond OR/WA/CA (needs real
-WBD), tile-budget controls (`TileDiscoverer` seam), resumable jobs (`DownloaderLike`/`Cache`), and a
-`tools/` packaging CLI over a real NAS cache.)
+tested in `tests/test_manifest.py` (13 tests). Also **tile-budget controls**: `ElevationSettings.tile_budget`
+(0 = unlimited, boundary-validated) + `src/dem.py` `count_tiles` (pure offline preflight) + an
+`acquire_dem(max_tiles=…)` guard that fails fast before any COG download when a region's tile count
+exceeds the budget (tests in `tests/test_elevation_config.py` + `tests/test_dem.py`). **Resumable jobs**
+found already-built (`Downloader` `.part`+HTTP-Range resume + `acquire`/`acquire_dem` cache-skip).
+**Left:** region expansion beyond OR/WA/CA (needs real WBD), wiring `tile_budget` into a live DEM entry
+point, and `tools/` packaging/preflight CLIs over a real NAS cache.)
 22. [ ] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 
