@@ -1,8 +1,45 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-07-30, after roadmap item #18 (Epoch 4, progressive 3D preview) — final spec item._
+_Last updated: 2026-08-11, after California region rollout, the tools/ renderer batch, pipeline hardening, and the Epoch 6 web-control-surface direction._
 
-## Current state (2026-07-30)
+## Current state (2026-08-11)
+
+- **California added end-to-end (`5512675`, `80bfac3`):** third supported
+  region. `SUPPORTED_REGIONS` (`src/config.py`), `REGION_HUC4` (`src/datasets.py`),
+  `STATE_HUC4` (`tools/render_common.py`), and `HydroUX.STATES`/`COUNTIES`
+  (`web/shared/hydro-ux.js`) all carry CA. HUC4s derived authoritatively from the
+  WBD `states` attribute (region 18 all-CA + region 17's 1710/1712); HU2 15/16
+  desert fringes omitted pending those archives.
+- **`tools/derive_state_huc4.py` (`5512675`):** new helper deriving a state's
+  HUC4 basins by intersecting its Census polygon with WBD `WBDHU4` — the repeatable
+  way to add the next state. Supports `--wbd-hu4`, `--all`, `--min-overlap-frac`.
+- **Renderer/tools batch (`6e9dcce`, `884770f`, `d9d1f01`, `84d0717`):** monthly-flow
+  disaggregation (`tools/monthly_flow.py`), the 12-frame/year-in-motion renderers
+  (`render_monthly.py`, `render_infographic.py`, `render_infographic_year.py`),
+  hypsometric mono (`render_state_mono.py`), layered rasterizer (`rasterize_layered.py`),
+  all unified on the shared `render_common.py` art recipe.
+- **Pipeline hardening (`9079141`):** vectorized `clip_to_region`
+  (`shapely.prepare`/`covers`/`intersects` — inside geoms skip intersection),
+  cycle-tolerant stream ordering (`nx.condensation` fallback, no longer raises on
+  cycles), and `NAS_CACHE_DIR` staging in `build.py`.
+- **Web control surface (Epoch 6, `ae6d56e`, `15a970a`, `0678890`, `6e347c9`):**
+  shared `web/shared/` foundation (`ux.css` + `hydro-ux.js`) + three prototypes
+  (`proto-a/b/c`); chosen direction is Prototype A studio + Prototype B month
+  timeline (spec `agent-os/specs/2026-08-10-web-control-surface/`). CLI/YAML output
+  contract emits shipped flags in the command with `(proposed)` #23–#25 flags as
+  comments. Roadmap **Epoch 6 (#23–#28)** now formalized in `roadmap.md`. Still a
+  **mapping target only** — no live pipeline run (that's #27).
+- **3D Lab upgrade (`10b0624`):** `web/3d.html` gains NOAA-style solar-position
+  terrain lighting (real reading date/time), a filled sun-shaded terrain mesh,
+  Terrain/Hydrography/Terrain-only layer toggles, and 4K–12K print PNG export.
+- **`.theia/` gitignored (`6db2c7d`).** Working tree clean.
+- Full suite: **276 passing**. All of #23–#28 are still **spec/mapping only** —
+  the pipeline itself is unchanged behind the new UX; promoting the proposed flags
+  (#23–#25) and wiring live runs (#27) is the next implementation work.
+
+---
+
+## Prior state (2026-07-30) — DEM/3D spec complete
 
 - **Epoch 1 (#1–10):** complete and committed.
 - **Epoch 1.5 waterbodies (W1–W4):** complete and committed
@@ -39,16 +76,16 @@ _Last updated: 2026-07-30, after roadmap item #18 (Epoch 4, progressive 3D previ
   `CardinalAnnotation`s + `AxisInfo`, deterministic top/iso/south `CameraPreset`s,
   display-only `DisplaySettings`; `render_river_vertices` applies exaggeration+lift
   on demand; deterministic `scene_hash`; no browser state. Task Group 5 complete.
-- **Epoch 4 #19 (reproducible 3D export):** implemented 2026-07-30,
-  **uncommitted**. `src/export3d.py` + `tests/test_export3d.py` (8):
+- **Epoch 4 #19 (reproducible 3D export):** committed. `src/export3d.py` +
+  `tests/test_export3d.py` (8):
   `scene_to_glb` (pure-stdlib deterministic binary glTF), `scene_to_obj`
   (OBJ/MTL), `build_manifest` (source/raster/geometry/scene hashes + settings),
   `export_scene` (writes .glb/.obj/.mtl/.manifest.json via injected writer, with
   per-asset SHA-256). Geometry exported at true 1× m; exaggeration recorded, not
   baked. **Decision #4 resolved: GLB + OBJ** (GeoTIFF deferred). Built before #18
   per the spec's Phase F→G dependency. No open spec decisions remain.
-- **Epoch 4 #18 (progressive 3D preview):** implemented 2026-07-30,
-  **uncommitted**. `src/preview.py` + `tests/test_preview.py` (8):
+- **Epoch 4 #18 (progressive 3D preview):** committed (`6b0df6a`).
+  `src/preview.py` + `tests/test_preview.py` (8):
   `build_preview_asset` → deterministic coarse-`interaction` + fine-`commit`
   heightfield tiles (row-major z, nodata → `null`), bounds/z-range from the
   commit grid, per-LOD `cell_size_m`, optional Z-rivers as `[x,y,z]` meter
