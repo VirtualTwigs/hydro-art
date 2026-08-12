@@ -157,3 +157,86 @@ from non-unit keyframe ups; invalid inputs (`<2` keyframes, `steps_per_segment=0
 Web delivery / serving the animation, easing curves beyond linear (ease-in/out,
 Catmull-Rom smoothing), and true quaternion camera orientation — a single linear
 interpolation with normalized-lerp up is the first cut.
+
+---
+
+# Spec — Web delivery (roadmap #22, experience-mode slice)
+
+## Summary
+
+Add `src/delivery.py`: a pure, deterministic, offline serializer that packages the
+two experience-mode products — the hillshade `RasterGrid` (slice 1) and a camera
+path of `CameraPose`s (slice 2) — into one stable, browser-loadable **experience
+document** (dict → deterministic JSON). Add `web/experience.html`, a
+self-contained `file://`-safe viewer that consumes it. Mirrors how `src/preview.py`
+→ `web/3d.html` already delivers DEM tiles. No new dependencies; not in
+`PIPELINE_STAGES`; `src/` stays browser-free.
+
+## Public API (`src/delivery.py`)
+
+```
+DeliveryError(ValueError)     # empty grid / empty camera path
+
+hillshade_layer(grid: RasterGrid) -> dict
+    # {width, height, cell_size_m, bounds{min_x,min_y,max_x,max_y},
+    #  value_range{min,max}, shade:[float|None]}   (row-major, nodata → None)
+
+camera_track(poses: Sequence[CameraPose]) -> list[dict]
+    # [{position:[x,y,z], target:[x,y,z], up:[x,y,z], fov_deg:float}, ...]
+
+experience_document(*, hillshade_grid: RasterGrid,
+                    camera_poses: Sequence[CameraPose],
+                    crs: str | None = None,
+                    generator: str = GENERATOR) -> dict
+    # {generator, crs, hillshade:{…}, camera:{frame_count, track:[…]}}
+
+experience_json(doc: Mapping) -> str    # json.dumps(sort_keys, compact)
+```
+
+## Behavior
+
+- **Hillshade layer**: row-major floats in `[0, 255]`; a cell equal to
+  `grid.nodata` serializes to `None` (JSON `null`) — shade is never invented.
+  `bounds` from `grid.bounds`; `cell_size_m` from `transform.pixel_width`;
+  `value_range` computed over valid cells only (`{min, max}`, both `None` if the
+  layer is entirely nodata).
+- **Camera track**: each `CameraPose` → lists for `position`/`target`/`up` (up is
+  already unit-length) plus `fov_deg`.
+- **Document**: `crs` defaults to `hillshade_grid.crs`; `frame_count == len(track)`.
+- **Determinism**: `experience_json` uses `sort_keys=True` + compact separators, so
+  equal inputs ⇒ byte-identical JSON; it round-trips through `json.loads`.
+- **Validation** (raises `DeliveryError`): an empty hillshade grid (zero cells) and
+  an empty camera path.
+
+## Browser viewer (`web/experience.html`)
+
+Self-contained, no build step, `file://`-safe. A file picker loads an experience
+document; the hillshade `shade` grid is painted to a `<canvas>` as grayscale
+(nodata → transparent) and the camera `track` is played as a position/frame
+read-out. Consumes the same JSON `experience_json` emits — `src/` never imports
+`web/`. Verified headlessly (`node --check` on the inline script); live browser
+paint is a mockup, not part of the offline suite.
+
+## Guardrails
+
+- `src/delivery.py` imports only stdlib (`json`) + `src.raster` (`RasterGrid`) +
+  `src.camera` (`CameraPose`); numpy only via the grid it reads. Pure,
+  deterministic, offline; not in `PIPELINE_STAGES`; no browser state.
+- `from __future__ import annotations`; docstrings; 88-col.
+
+## Tests (`tests/test_delivery.py`)
+
+TG-W1: `hillshade_layer` over a real `hillshade()` grid (shape, row-major length,
+`[0,255]`, bounds, cell size, valid-only `value_range`, propagated-nodata → `None`);
+`camera_track` shape/length/vector-lists.
+
+TG-W2: `experience_document` structure + `frame_count`; `experience_json`
+round-trips to an equal structure with nodata as JSON `null`; byte-identical
+determinism; empty grid and empty camera path each raise `DeliveryError`.
+
+## Not in scope (web-delivery slice)
+
+A live `/api/experience` server route that renders + returns a document over a real
+DEM (needs GDAL/NAS); interactive 3D playback of the camera path in the browser
+(the viewer is a 2D hillshade canvas + camera read-out); PNG/video export of the
+animation.

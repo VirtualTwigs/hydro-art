@@ -55,11 +55,23 @@ and needs no new dependencies (numpy only).
 - Frozen/immutable inputs; no global state; a single pure function.
 - Reuses `RasterGrid`/`GridTransform` unchanged; no edits to other modules.
 
-## Out of scope (deferred, tracked on roadmap #22)
+## Follow-on slices (same roadmap item #22, later passes)
 
-- Animation / camera paths (interpolated `CameraPreset` motion over the scene).
-- Web delivery of the print/experience output.
+- **Animation / camera paths** — shipped in the second slice (`src/camera.py`,
+  committed `d22a0d1`): interpolated `CameraPreset` motion into `CameraPose`
+  samples.
+- **Web delivery** — shipped in the third slice (`src/delivery.py` + a
+  `web/experience.html` viewer): a pure, deterministic serializer that packages
+  the hillshade `RasterGrid` and a camera path into one stable, browser-loadable
+  "experience document," so the print/experience output can be delivered to the
+  browser without compromising reproducibility.
+
+## Out of scope (still deferred, tracked on roadmap #22)
+
 - Blending hillshade under the river SVG / a `tools/` print renderer — the
   shaded-relief engine ships here; compositing it into a final print is a
   non-offline follow-on (needs real DEM + the rasterizer).
 - Multidirectional/soft hillshade; a single Lambertian light is the first cut.
+- A live server route that renders + returns an experience document on demand
+  (the reproducible serialization format ships; wiring it behind an `/api/...`
+  route over a real DEM is a non-offline follow-on).

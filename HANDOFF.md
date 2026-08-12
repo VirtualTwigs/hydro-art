@@ -1,12 +1,30 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (committed `a0674c4`) plus the #22 animation/camera-paths
-slice (implemented, commit pending)._
+_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (committed `a0674c4`), the #22 animation/camera-paths
+slice (committed `d22a0d1`), plus the #22 web-delivery slice (implemented, commit pending) — which
+completes roadmap #22._
 
 ## Current state (2026-08-12)
 
-- **#22 Print/experience modes — camera-paths slice implemented, commit pending (hillshade slice
-  committed `a0674c4`).** #22 is `XL` and spans three concerns; two offline slices have now shipped.
+- **#22 Print/experience modes — web-delivery slice implemented, commit pending; completes #22
+  (hillshade `a0674c4`, camera paths `d22a0d1`).** #22 is `XL` and spans three concerns; all three
+  offline slices have now shipped. **(3) Web delivery** (commit pending): new pure module
+  `src/delivery.py` (same spec `agent-os/specs/2026-08-12-print-experience-modes/`) packages the two
+  prior products — a hillshade `RasterGrid` + a camera path of `CameraPose`s — into one stable,
+  browser-loadable **experience document**: `hillshade_layer(grid)` (row-major `shade`, nodata→`None`,
+  `bounds`/`cell_size_m`/valid-only `value_range`), `camera_track(poses)`
+  (`[{position,target,up,fov_deg}]`), `experience_document(*, hillshade_grid, camera_poses, crs=None)`
+  → `{generator, crs, hillshade, camera:{frame_count, track}}`, and `experience_json` (deterministic
+  `sort_keys`). `DeliveryError` on empty grid / empty path. Mirrors `src/preview.py`'s conventions;
+  imports only `json` + `src.raster`/`src.camera`; not in `PIPELINE_STAGES`; `src/` never imports
+  `web/`. New self-contained `web/experience.html` viewer loads a document, paints the hillshade to a
+  `<canvas>` (grayscale, nodata transparent), and plays/scrubs the camera track. Tested in
+  `tests/test_delivery.py` (7 tests); viewer script `node --check`-clean and a real document parses
+  browser-side. Suite: **423 passing** (+7). **Deferred (not gating #22):** hillshade↔river-SVG
+  compositing in a `tools/` print renderer, a live `/api/experience` server route over a real DEM, and
+  richer camera motion (easing/quaternion). — Prior slices below.
+
+- **#22 slices 1-2 (context).** #22 spans three concerns; the first two offline slices shipped.
   **(1) Terrain-aware 2D hillshade** (committed `a0674c4`): `src/hillshade.py` `hillshade(grid, *,
   azimuth_deg=315, altitude_deg=45, z_factor=1.0, nodata=-1.0)` computes Lambertian shaded relief
   (0-255) from a `RasterGrid` via Horn's 3×3 `dz/dx`/`dz/dy` + the ESRI/GDAL illumination model;

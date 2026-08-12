@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hydro-Art · Experience Viewer</title>
+  <style>
+    :root { --bg:#05070d; --panel:#111522; --line:#283146; --ink:#edf3ff; --muted:#8e9ab2; --cyan:#39e9ff; --lime:#9cff57; }
+    * { box-sizing:border-box } html,body { height:100%; margin:0 } body { background:var(--bg); color:var(--ink); font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; display:grid; grid-template-columns:330px 1fr }
+    aside { z-index:2; overflow:auto; padding:18px; background:var(--panel); border-right:1px solid var(--line) }
+    h1 { margin:0 0 4px; font-size:16px; letter-spacing:.04em } .intro,.hint { color:var(--muted); font-size:11px } .intro { margin-bottom:18px }
+    fieldset { margin:0 0 13px; padding:11px; border:1px solid var(--line); border-radius:9px } legend { padding:0 5px; color:var(--cyan); font-size:11px; letter-spacing:.08em; text-transform:uppercase }
+    label { display:block; margin:9px 0 3px; color:var(--muted); font-size:11px } output { float:right; color:var(--cyan) }
+    input[type=range] { width:100%; accent-color:var(--cyan) }
+    button { color:var(--ink); background:#0a0e18; border:1px solid var(--line); border-radius:6px; padding:7px 8px; cursor:pointer; font:inherit } button:hover,button.active { border-color:var(--cyan); color:var(--cyan) } button:disabled { opacity:.4; cursor:default }
+    .row { display:flex; gap:6px } .row button { flex:1 }
+    dl { margin:0; display:grid; grid-template-columns:auto 1fr; gap:2px 10px } dt { color:var(--muted) } dd { margin:0; color:var(--lime); text-align:right }
+    .callout { margin-top:8px; padding:8px; border-left:2px solid var(--lime); color:var(--muted); background:#0a0e18; font-size:11px }
+    main { min-width:0; position:relative } canvas#relief { width:100%; height:100%; display:block; image-rendering:pixelated; background:#05070d }
+    #hud { position:absolute; top:16px; right:16px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; background:rgba(5,7,13,.8); color:var(--muted); font-size:11px; pointer-events:none }
+    #hud b { color:var(--lime); font-weight:600 }
+    #empty { position:absolute; inset:0; display:grid; place-items:center; color:var(--muted); pointer-events:none; font-size:12px }
+    @media(max-width:720px) { body { grid-template-columns:1fr; grid-template-rows:auto 65vh } aside { border-right:0; border-bottom:1px solid var(--line) } }
+  </style>
+</head>
+<body>
+  <aside>
+    <h1>Hydro-Art · Experience</h1>
+    <div class="intro">Loads an <b>experience document</b> emitted by <code>src/delivery.py</code> (<code>experience_json</code>): a hillshade shaded-relief grid plus a camera path. Paints the relief and plays the camera track.</div>
+
+    <fieldset><legend>Document</legend>
+      <div class="row"><button id="openFile">Open experience JSON…</button></div>
+      <input id="filePicker" type="file" accept=".json,application/json" hidden>
+      <div class="hint" id="source">No document loaded.</div>
+    </fieldset>
+
+    <fieldset><legend>Camera track</legend>
+      <div class="row"><button id="play" disabled>▶ Play</button><button id="pause" disabled>❚❚ Pause</button></div>
+      <label>Frame <output id="frameOut">–</output></label>
+      <input id="scrub" type="range" min="0" max="0" value="0" disabled>
+      <dl>
+        <dt>position</dt><dd id="pos">–</dd>
+        <dt>target</dt><dd id="tgt">–</dd>
+        <dt>fov</dt><dd id="fov">–</dd>
+      </dl>
+    </fieldset>
+
+    <fieldset><legend>Hillshade</legend>
+      <dl>
+        <dt>size</dt><dd id="size">–</dd>
+        <dt>cell</dt><dd id="cell">–</dd>
+        <dt>shade range</dt><dd id="range">–</dd>
+        <dt>crs</dt><dd id="crs">–</dd>
+      </dl>
+      <div class="callout">Nodata cells are drawn transparent — the viewer never invents shade.</div>
+    </fieldset>
+  </aside>
+
+  <main>
+    <canvas id="relief"></canvas>
+    <div id="hud">frame <b id="hudFrame">–</b> / <b id="hudTotal">–</b></div>
+    <div id="empty">Open an experience JSON to begin.</div>
+  </main>
+
+  <script>
+  "use strict";
+  (function () {
+    const $ = (id) => document.getElementById(id);
+    const relief = $("relief");
+    const ctx = relief.getContext("2d");
+    let doc = null;      // the loaded experience document
+    let frame = 0;       // current camera-track index
+    let timer = null;    // playback interval
+
+    function fmtVec(v) {
+      return "(" + v.map((c) => c.toFixed(1)).join(", ") + ")";
+    }
+
+    // Paint the hillshade grid to an offscreen bitmap, then blit it scaled.
+    function paintRelief(h) {
+      const w = h.width, ht = h.height;
+      relief.width = w;
+      relief.height = ht;
+      const img = ctx.createImageData(w, ht);
+      const shade = h.shade;
+      for (let i = 0; i < shade.length; i++) {
+        const s = shade[i];
+        const o = i * 4;
+        if (s === null || s === undefined) {
+          img.data[o] = img.data[o + 1] = img.data[o + 2] = 0;
+          img.data[o + 3] = 0; // nodata → transparent
+        } else {
+          const g = Math.max(0, Math.min(255, Math.round(s)));
+          img.data[o] = img.data[o + 1] = img.data[o + 2] = g;
+          img.data[o + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    function showFrame(i) {
+      const track = doc.camera.track;
+      frame = Math.max(0, Math.min(track.length - 1, i));
+      const p = track[frame];
+      $("pos").textContent = fmtVec(p.position);
+      $("tgt").textContent = fmtVec(p.target);
+      $("fov").textContent = p.fov_deg.toFixed(1) + "°";
+      $("frameOut").textContent = frame;
+      $("scrub").value = String(frame);
+      $("hudFrame").textContent = frame;
+    }
+
+    function stop() {
+      if (timer !== null) { clearInterval(timer); timer = null; }
+    }
+
+    function play() {
+      if (!doc) return;
+      stop();
+      timer = setInterval(() => {
+        showFrame((frame + 1) % doc.camera.track.length);
+      }, 1000 / 12);
+    }
+
+    function loadDoc(d) {
+      doc = d;
+      const h = d.hillshade;
+      paintRelief(h);
+      $("size").textContent = h.width + " × " + h.height;
+      $("cell").textContent = h.cell_size_m + " m";
+      const vr = h.value_range;
+      $("range").textContent =
+        vr.min === null ? "—" : vr.min.toFixed(1) + " – " + vr.max.toFixed(1);
+      $("crs").textContent = d.crs;
+      const n = d.camera.frame_count;
+      $("scrub").max = String(n - 1);
+      $("scrub").disabled = false;
+      $("play").disabled = $("pause").disabled = false;
+      $("hudTotal").textContent = n - 1;
+      $("empty").style.display = "none";
+      showFrame(0);
+    }
+
+    $("openFile").addEventListener("click", () => $("filePicker").click());
+    $("filePicker").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          $("source").textContent =
+            file.name + " · " + (parsed.generator || "experience document");
+          loadDoc(parsed);
+        } catch (err) {
+          $("source").textContent = "Could not parse: " + err.message;
+        }
+      };
+      reader.readAsText(file);
+    });
+    $("play").addEventListener("click", play);
+    $("pause").addEventListener("click", stop);
+    $("scrub").addEventListener("input", (e) => {
+      stop();
+      showFrame(parseInt(e.target.value, 10));
+    });
+
+    // Exposed for headless/self tests.
+    window.HydroExperience = { loadDoc, showFrame, paintRelief };
+  })();
+  </script>
+</body>
+</html>

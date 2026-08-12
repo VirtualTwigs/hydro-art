@@ -174,21 +174,25 @@ exceeds the budget (tests in `tests/test_elevation_config.py` + `tests/test_dem.
 found already-built (`Downloader` `.part`+HTTP-Range resume + `acquire`/`acquire_dem` cache-skip).
 **Left:** region expansion beyond OR/WA/CA (needs real WBD), wiring `tile_budget` into a live DEM entry
 point, and `tools/` packaging/preflight CLIs over a real NAS cache.)
-22. [ ] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
+22. [x] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
-(Partial — **terrain-aware 2D hillshade** shipped: `src/hillshade.py` (pure, offline, numpy over
-`RasterGrid`) computes Lambertian shaded relief (0-255) via Horn's 3×3 gradients + a configurable
-sun (azimuth/altitude) and shading-only `z_factor`; edge-replicated borders keep shape, nodata is
-never invented (a cell or its 8-neighborhood touching nodata → sentinel), boundary-validated
-(`HillshadeError`), deterministic. Not in `PIPELINE_STAGES`. Spec
-`agent-os/specs/2026-08-12-print-experience-modes`; tested in `tests/test_hillshade.py` (8 tests).
-A second slice shipped **animation/camera paths**: `src/camera.py` (pure, offline, `math` + `src.scene`
-only) interpolates `CameraPreset` keyframes into a tuple of `CameraPose` samples — lerp
-position/target/fov + normalized-lerp up; open paths end exactly on the last keyframe, looping paths
-are seamless; boundary-validated (`CameraPathError`), deterministic, not in `PIPELINE_STAGES`; tested
-in `tests/test_camera.py` (7 tests). **Left:** web delivery (serving the hillshade image + camera-path
-animation), compositing the hillshade under the river SVG in a `tools/` print renderer, and richer
-camera motion (easing/quaternion) beyond the linear first cut.)
+(All three concerns shipped across three offline slices. **(1) Terrain-aware 2D hillshade**:
+`src/hillshade.py` (pure, offline, numpy over `RasterGrid`) computes Lambertian shaded relief (0-255)
+via Horn's 3×3 gradients + a configurable sun (azimuth/altitude) and shading-only `z_factor`;
+edge-replicated borders keep shape, nodata is never invented (a cell or its 8-neighborhood touching
+nodata → sentinel), boundary-validated (`HillshadeError`), deterministic; `tests/test_hillshade.py`
+(8 tests). **(2) Animation/camera paths**: `src/camera.py` (`math` + `src.scene` only) interpolates
+`CameraPreset` keyframes into a tuple of `CameraPose` samples — lerp position/target/fov +
+normalized-lerp up; open paths end exactly on the last keyframe, looping paths are seamless;
+`CameraPathError` validation; `tests/test_camera.py` (7 tests). **(3) Web delivery**: `src/delivery.py`
+(`json` + `src.raster` + `src.camera`) packages the hillshade grid + a camera path into one stable,
+`sort_keys` JSON **experience document** (`hillshade_layer`/`camera_track`/`experience_document`/
+`experience_json`, `DeliveryError` on empty inputs, nodata→`null`), consumed by a self-contained
+`web/experience.html` viewer (canvas relief + camera-track playback); `tests/test_delivery.py`
+(7 tests). All pure/deterministic/offline, not in `PIPELINE_STAGES`. Spec
+`agent-os/specs/2026-08-12-print-experience-modes`. **Deferred (not gating #22):** compositing the
+hillshade under the river SVG in a `tools/` print renderer, a live `/api/experience` server route over
+a real DEM, and richer camera motion (easing/quaternion) beyond the linear first cut.)
 
 ## Epoch 6 — interactive art-direction UX
 

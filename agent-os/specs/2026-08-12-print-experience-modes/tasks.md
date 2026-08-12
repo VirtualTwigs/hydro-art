@@ -67,3 +67,44 @@
 - [x] Update the roadmap #22 progress note, `HANDOFF.md`, and the `CLAUDE.md`
       module map (camera-path slice shipped; web delivery + compositing still open).
       Report; STOP (commit is a separate explicit step).
+
+---
+
+# Tasks — Web delivery (roadmap #22, experience-mode slice)
+
+## TG-W1 — Experience serializers (hillshade layer + camera track)
+
+- [x] Write tests first (`tests/test_delivery.py`): `hillshade_layer(grid)` over a
+      real `hillshade()` output has matching `width`/`height`, a row-major `shade`
+      list of length `w*h` with values in `[0, 255]`, `bounds` equal to
+      `grid.bounds`, `cell_size_m` = pixel width, and a `value_range` computed over
+      valid cells only; a propagated-nodata cell serializes to `None`. `camera_track`
+      serializes `CameraPose`es to `[{position,target,up,fov_deg}]` with list vectors
+      and correct length.
+- [x] `src/delivery.py`: `hillshade_layer` + `camera_track` — pure, numpy +
+      `src.raster`/`src.camera` only; row-major nodata→`None`; not in
+      `PIPELINE_STAGES`.
+- [x] Run ONLY the new tests; green.
+
+## TG-W2 — Experience document + deterministic JSON + validation
+
+- [x] Write tests first: `experience_document(hillshade_grid=…, camera_poses=…)`
+      carries `generator`/`crs`/`hillshade`/`camera` and a `frame_count`;
+      `experience_json` round-trips through `json.loads` to an equal structure with
+      nodata surfaced as JSON `null`; determinism (two calls byte-identical); empty
+      grid and empty camera poses each raise `DeliveryError`.
+- [x] `src/delivery.py`: `DeliveryError(ValueError)`; `experience_document` +
+      `experience_json` (stable `sort_keys`); boundary validation.
+- [x] Run ONLY the new tests; green.
+
+## TG-W3 — Browser viewer + verify + docs
+
+- [x] Add `web/experience.html`: a self-contained, `file://`-safe viewer that loads
+      an experience document (file picker), paints the hillshade grid to a `<canvas>`
+      (grayscale, nodata transparent), and plays the camera track as a position
+      read-out. Verified headlessly (`node --check` on the inline script; a real
+      `experience_json` document parses browser-side).
+- [x] Confirm the full Python suite passes (regression check): **423 passed**.
+- [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`.
+- [x] Update the roadmap #22 note (mark #22 complete — all three concerns shipped),
+      `HANDOFF.md`, and the `CLAUDE.md` module map. Report; STOP.

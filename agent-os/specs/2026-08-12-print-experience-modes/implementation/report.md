@@ -116,12 +116,67 @@ up from non-unit keyframe ups; the four validation raises.
 - `tests/test_camera.py`: **7 passed**.
 - Full suite: **416 passed** (was 409), no regressions.
 
+---
+
+# Implementation report — Web delivery (roadmap #22 slice)
+
+## What shipped
+
+`src/delivery.py` — a pure, deterministic, offline serializer that packages the
+two prior experience-mode products (the hillshade `RasterGrid` and a camera path
+of `CameraPose`s) into one stable, browser-loadable **experience document** — plus
+`web/experience.html`, a self-contained `file://`-safe viewer. This is the third
+and final slice of the `XL` roadmap #22; all three concerns (hillshade, camera
+paths, web delivery) have now shipped.
+
+## Public API (`src/delivery.py`)
+
+- `DeliveryError(ValueError)` — empty grid / empty camera path.
+- `hillshade_layer(grid) -> dict` — row-major `shade` (nodata → `None`), `width`/
+  `height`, `bounds`, `cell_size_m`, valid-only `value_range`.
+- `camera_track(poses) -> list[dict]` — `[{position,target,up,fov_deg}]`.
+- `experience_document(*, hillshade_grid, camera_poses, crs=None,
+  generator=GENERATOR) -> dict` — `{generator, crs, hillshade, camera:{frame_count,
+  track}}`; `crs` defaults to the grid's CRS.
+- `experience_json(doc) -> str` — deterministic `json.dumps(sort_keys=True)`.
+
+## Design
+
+- **Mirrors `src/preview.py`**: same row-major, nodata→`null`, stable-`sort_keys`
+  JSON conventions that already feed `web/3d.html`, so delivery is idiomatic to the
+  subsystem. `src/delivery.py` imports only `json` + `src.raster` + `src.camera`
+  (numpy only via the grid it reads); no browser state; not in `PIPELINE_STAGES`.
+- **Never invents shade**: a hillshade cell equal to `grid.nodata` serializes to
+  `None` and is excluded from `value_range`; the viewer paints those transparent.
+- **`web/experience.html`**: loads a document via a file picker, paints the
+  hillshade grid to a `<canvas>` (grayscale, nodata transparent), and plays/scrubs
+  the camera track as a position/target/fov read-out. `src/` never imports `web/`.
+
+## Tests (`tests/test_delivery.py`, 7 tests)
+
+`hillshade_layer` over a real `hillshade()` grid (shape, row-major length,
+`[0,255]`, bounds, cell size, valid-only `value_range`, propagated-nodata → `None`
+where the 3×3 void dilation reaches); `camera_track` shape/length/vector-lists;
+`experience_document` structure + `frame_count`; `experience_json` round-trips
+through `json.loads` with nodata as JSON `null`; byte-identical determinism; empty
+grid and empty camera path each raise `DeliveryError`.
+
+## Verification
+
+- `tests/test_delivery.py`: **7 passed**. Full suite: **423 passed** (was 416), no
+  regressions.
+- `web/experience.html`: inline script `node --check` clean; a real
+  `experience_json` document (8×6 hillshade with a propagated void + a 24-frame
+  looped camera path) parses browser-side (48 cells = w·h, 9 nulls, all shade in
+  `[0,255]∪null`).
+
 ## Not done / follow-ups (remain open on roadmap #22)
 
-- **Web delivery** — serving/exporting the print/experience output (both the
-  hillshade image and the camera-path animation).
 - **Compositing** the hillshade under the river SVG + a `tools/` print renderer
   over a real normalized DEM — the shaded-relief engine ships; blending it into a
   final print is a non-offline follow-on.
+- A live `/api/experience` server route that renders + returns a document over a
+  real DEM (needs GDAL/NAS); interactive 3D playback in the browser (the viewer is
+  a 2D hillshade canvas + camera read-out); PNG/video export of the animation.
 - Multidirectional/soft hillshade; and richer camera motion (easing curves,
   Catmull-Rom smoothing, quaternion orientation) beyond the linear first cut.
