@@ -1,10 +1,28 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), #25 (monthly-flow option), #26 (web control surface), #27 (live pipeline integration), and #28 (presets & shareable recipes) — Epoch 6 complete._
+_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), and Epoch 5 #20 (accuracy validation suite)._
 
 ## Current state (2026-08-12)
 
-- **#28 Presets & shareable render recipes — implemented, commit pending.**
+- **#20 Accuracy validation suite — implemented, commit pending.** New pure module
+  `src/accuracy.py` (spec `agent-os/specs/2026-08-12-accuracy-validation-suite/`),
+  the first Epoch 5 item. Compares terrain/river vertices sampled from a DEM fixture
+  against known truths and reports CRS/units/nodata-coverage/QA: `error_metrics`
+  (max/mean abs error, RMSE, residuals; nodata/uncovered points are **skipped**, never
+  zero-filled), `coverage_report`, `crs_report` (verbatim from `ElevationProvenance`),
+  `qa_rollup` (river-profile inversions, structural over `ProfileQA` so no numpy import),
+  and `AccuracyReport` + `validate_against_sampler` over the injected `ElevationSampler`
+  seam with a `within_tolerance` verdict (inversions reported, not gating). **numpy-free
+  & GDAL-free** (imports only stdlib + `src.elevation`; verified no heavy modules pulled
+  in). Not wired into `PIPELINE_STAGES`. Tested in `tests/test_accuracy.py` (19 tests).
+  Real-3DEP harness deferred (needs the GIS stack/NAS). Suite: **380 passing** (+19).
+- **Roadmap bookkeeping (committed `c254d47`).** An audit found four items fully
+  implemented but never ticked: **W1/W2/W3** (waterbody taxonomy/selection/rendering) and
+  **#11** (elevation settings + provenance) — all marked `[x]` with evidence notes;
+  Epoch 2 is now complete. **W4** stays `[ ]`: OR/WA real-region QA passed, but the Clark
+  County run (Census shapefile not mounted) and print/screen preset **values**
+  (art-direction) remain.
+- **#28 Presets & shareable render recipes — committed (`b80296d`).**
   Added a **recipe** layer to the control surface (spec
   `agent-os/specs/2026-08-12-presets-and-recipes/`). All logic is pure and lives
   in `web/shared/hydro-ux.js`: a canonical serializable subset of `state`

@@ -150,9 +150,16 @@ asset whose geography and elevation source are documented.
 
 ## Epoch 5 — quality, scale, and productization
 
-20. [ ] Accuracy validation suite — Compare sampled terrain/river vertices against known DEM
+20. [x] Accuracy validation suite — Compare sampled terrain/river vertices against known DEM
 fixtures; report horizontal/vertical CRS, units, nodata coverage, and downstream QA results.
 `L`
+(`src/accuracy.py` (pure, offline, numpy-free): `error_metrics` (max/mean abs error + RMSE +
+residuals, nodata/uncovered points skipped — never zero-filled), `coverage_report`
+(covered/nodata/uncovered + fraction), `crs_report` (CRS/units/resolution verbatim from
+`ElevationProvenance`), `qa_rollup` (river-profile inversion QA, structural over `ProfileQA`),
+and `AccuracyReport` + `validate_against_sampler` over the injected `ElevationSampler` seam
+with a `within_tolerance` verdict. Spec `agent-os/specs/2026-08-12-accuracy-validation-suite`;
+tested in `tests/test_accuracy.py` (19 tests). Real-3DEP harness deferred (needs the GIS stack).)
 21. [ ] Regional scale & offline packaging — Expand from Oregon/Washington to additional U.S.
 states, with tile-budget controls, resumable jobs, and portable cache manifests. `XL`
 22. [ ] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
