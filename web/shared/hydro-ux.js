@@ -328,13 +328,42 @@
     return { ok: issues.length === 0, issues };
   }
 
+  // ---- Live-run request payload (roadmap #27) ------------------------------
+  // Pure function turning the UX `state` into the structured JSON body the local
+  // job runner accepts (POST /api/render). These are real `src/config` keys — the
+  // server rebuilds Settings through build_settings, so the emitted CLI string is
+  // never shell-executed. Mirrors cliMapping's selections exactly.
+  function renderRequest(state){
+    const months = state.timeMode === "annual" ? "annual"
+        : state.timeMode === "single" ? String(state.monthStart+1)
+        : (state.monthStart+1) + "-" + (state.monthEnd+1);
+    const req = {
+      region: state.state,
+      huc_level: state.huc,
+      months: months,
+      color_by: state.colorMode,
+      width_by: state.widthMode,
+      background: state.bg,
+      line_width: state.minW,
+      glow: !!state.glow,
+    };
+    if (state.scope === "county" && state.county) req.county = state.county;
+    if (state.colorMode === "watershed") req.palette = state.palette;
+    if (state.colorMode === "single") req.single_color = state.single;
+    if (state.widthMode === "flow"){
+      req.width_min = state.minW; req.width_max = state.maxW; req.width_gamma = state.gamma;
+    }
+    if (state.glow) req.glow_radius = state.glowR;
+    return req;
+  }
+
   // ---- Public surface -----------------------------------------------------
   global.HydroUX = {
     STATES, COUNTIES, PALETTES, HYPSO, MONTH_ABBR, HUC_LEVELS,
     mulberry32, hash, generateNetwork, buildSvg, applyStyles,
     seasonalMultiplier, yearMaxFlow,
     cliMapping, yamlMapping, scopeToken, monthsToken, stateAbbr,
-    mappingSelfCheck,
+    mappingSelfCheck, renderRequest,
   };
 
 })(window);

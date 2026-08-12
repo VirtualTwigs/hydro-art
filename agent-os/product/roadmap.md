@@ -164,7 +164,7 @@ per month/animation, or annual mean), conserving each reach's annual QAMA. `L`
 shared `web/shared/ux.css` + `web/shared/hydro-ux.js` foundation: live client-side preview and a
 render-request model that emits a ready-to-run `build.py` command + `config.yaml` matching the
 selections. `L`
-27. [ ] Live pipeline integration — Wire the control surface to a local job runner that executes
+27. [x] Live pipeline integration — Wire the control surface to a local job runner that executes
 the real pipeline for the selected options and returns the produced SVG/PNG for preview and
 download, keeping determinism and the offline test posture intact. `XL`
 28. [ ] Presets & shareable render recipes — Named state/county/print presets and encodable render

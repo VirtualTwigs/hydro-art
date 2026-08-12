@@ -136,9 +136,11 @@
         <button data-v="yaml">config.yaml</button>
       </div>
       <button class="btn ghost" id="copyBtn" style="width:auto;margin:0;padding:7px 12px">Copy</button>
+      <button class="btn" id="runBtn" style="width:auto;margin:0;padding:7px 12px">▶ Run pipeline</button>
     </div>
     <pre id="cliOut"></pre>
     <pre id="yamlOut" hidden></pre>
+    <div class="warn" id="runStatus" hidden></div>
   </footer>
 </main>
 
@@ -294,6 +296,57 @@ el("copyBtn").addEventListener("click", () => {
   navigator.clipboard?.writeText(text);
   el("copyBtn").textContent = "Copied ✓";
   setTimeout(()=>{ el("copyBtn").textContent = "Copy"; }, 1200);
+});
+
+// ---- Live pipeline run (roadmap #27) ----
+// Only works when the page is served by serve.py (localhost). Over file:// the
+// surface is mapping-only, so the button is disabled with a hint.
+const SERVED = location.protocol !== "file:";
+function setRunStatus(cls, msg){
+  const s = el("runStatus"); s.hidden = false; s.className = "warn " + cls; s.textContent = msg;
+}
+if (!SERVED){
+  el("runBtn").disabled = true;
+  el("runBtn").title = "Run the surface via `python serve.py` to execute the real pipeline.";
+}
+async function pollJob(id){
+  for(;;){
+    await new Promise(r => setTimeout(r, 1000));
+    const res = await fetch(`/api/jobs/${id}`);
+    if (!res.ok){ setRunStatus("danger", `⚠ Job ${id} not found.`); return; }
+    const job = await res.json();
+    if (job.state === "succeeded"){
+      const svg = await (await fetch(`/api/jobs/${id}/artifact?fmt=svg`)).text();
+      el("stage").innerHTML = svg;
+      const node = el("stage").querySelector("svg");
+      if (node){ node.removeAttribute("width"); node.removeAttribute("height"); }
+      el("badge").textContent = `pipeline · ${state.state}`;
+      const blob = new Blob([svg], {type:"image/svg+xml"});
+      const url = URL.createObjectURL(blob);
+      setRunStatus("ok", `✓ Rendered. sha256 ${(job.sha256||"").slice(0,12)} — `);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${state.state.toLowerCase()}.svg`; a.textContent = "download SVG";
+      el("runStatus").appendChild(a);
+      return;
+    }
+    if (job.state === "failed"){ setRunStatus("danger", `⚠ ${job.error}`); return; }
+    setRunStatus("", `Running pipeline… (${job.state})`);
+  }
+}
+el("runBtn").addEventListener("click", async () => {
+  if (!SERVED) return;
+  setRunStatus("", "Submitting…");
+  try {
+    const res = await fetch("/api/render", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(H.renderRequest(state)),
+    });
+    const data = await res.json();
+    if (!res.ok){ setRunStatus("danger", `⚠ ${data.error || "Bad request."}`); return; }
+    pollJob(data.job);
+  } catch (err) {
+    setRunStatus("danger", `⚠ ${err.message}`);
+  }
 });
 
 // ---- Inputs ----

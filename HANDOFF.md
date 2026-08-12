@@ -1,10 +1,30 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), #25 (monthly-flow option), and #26 (web control surface)._
+_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), #25 (monthly-flow option), #26 (web control surface), and #27 (live pipeline integration)._
 
 ## Current state (2026-08-12)
 
-- **#26 Web control surface — implemented, commit pending.** Promoted
+- **#27 Live pipeline integration — implemented, commit pending.** Wired the
+  control surface to a **local job runner** that runs the real pipeline and
+  returns the produced SVG (spec
+  `agent-os/specs/2026-08-12-live-pipeline-integration/`). New `src/jobs.py`
+  (stdlib + `src.config` only, GDAL-free): `settings_from_payload` whitelists the
+  DEFAULTS keys and validates via `build_settings`; `JobRunner` validates at
+  `submit` (→ 400) then runs an **injected**, duck-typed pipeline off-thread
+  (default 1-worker `ThreadPoolExecutor`; tests inject an inline executor),
+  tracking `pending→running→succeeded|failed` and capturing
+  `export_paths`/`svg_sha256`. New `src/server.py` (stdlib `http.server`): pure
+  `handle_request` dispatcher (`POST /api/render`, `GET /api/jobs/<id>`,
+  `GET …/artifact?fmt=`, static `web/` with a path-traversal guard) + a thin
+  `serve()`. New top-level `serve.py` builds the real
+  `Pipeline(cache_dir=NAS_CACHE_DIR)` and serves localhost. `web/shared/hydro-ux.js`
+  adds a pure `renderRequest(state)` payload builder; `web/studio.html` gains a
+  "Run pipeline" button (enabled only when served, disabled over `file://`) that
+  POSTs → polls → shows the SVG + download. `color_by=elevation` and non-annual
+  `--months` surface as a **failed job** with the honest fail-fast message.
+  Deferred: the browser + real-dataset smoke needs the GIS stack/NAS. Suite:
+  **361 passing** (+8 `test_jobs.py`, +8 `test_server.py`).
+- **#26 Web control surface — committed (`0f2c7eb`).** Promoted
   `web/proto-a-studio.html` (via `git mv`) to the canonical `web/studio.html` (spec
   `agent-os/specs/2026-08-10-web-control-surface/`). Because #23–#25 have shipped,
   `cliMapping`/`yamlMapping` in `web/shared/hydro-ux.js` were rewritten to emit those
