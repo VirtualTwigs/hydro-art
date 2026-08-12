@@ -182,8 +182,13 @@ sun (azimuth/altitude) and shading-only `z_factor`; edge-replicated borders keep
 never invented (a cell or its 8-neighborhood touching nodata → sentinel), boundary-validated
 (`HillshadeError`), deterministic. Not in `PIPELINE_STAGES`. Spec
 `agent-os/specs/2026-08-12-print-experience-modes`; tested in `tests/test_hillshade.py` (8 tests).
-**Left:** animation/camera paths (interpolated `CameraPreset` motion over `src/scene.py`), web
-delivery, and compositing the hillshade under the river SVG in a `tools/` print renderer.)
+A second slice shipped **animation/camera paths**: `src/camera.py` (pure, offline, `math` + `src.scene`
+only) interpolates `CameraPreset` keyframes into a tuple of `CameraPose` samples — lerp
+position/target/fov + normalized-lerp up; open paths end exactly on the last keyframe, looping paths
+are seamless; boundary-validated (`CameraPathError`), deterministic, not in `PIPELINE_STAGES`; tested
+in `tests/test_camera.py` (7 tests). **Left:** web delivery (serving the hillshade image + camera-path
+animation), compositing the hillshade under the river SVG in a `tools/` print renderer, and richer
+camera motion (easing/quaternion) beyond the linear first cut.)
 
 ## Epoch 6 — interactive art-direction UX
 

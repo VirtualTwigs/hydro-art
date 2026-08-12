@@ -76,7 +76,84 @@ its 8 neighbors as the output sentinel while far cells stay valid; source with n
 nodata yields no sentinel; invalid `altitude_deg` (0 and 91), `azimuth_deg` (360),
 and `z_factor` (0) each raise `HillshadeError`.
 
-## Not in scope
+## Not in scope (hillshade slice)
 
-Camera paths, web delivery, hillshade↔SVG compositing, and a print `tools/`
-renderer — deferred on roadmap #22 (see requirements.md).
+Web delivery, hillshade↔SVG compositing, and a print `tools/` renderer — deferred
+on roadmap #22 (see requirements.md). Camera paths are addressed in the follow-on
+slice below.
+
+---
+
+# Spec — Animation camera paths (roadmap #22, experience-mode slice)
+
+## Summary
+
+Add `src/camera.py`: pure, deterministic, offline interpolation of
+`src.scene.CameraPreset` keyframes into smooth camera motion — a tuple of
+`CameraPose` samples for an animation/experience mode. No new dependencies
+(`math` + `src.scene` only); not in `PIPELINE_STAGES`; no browser state (a later
+web-delivery pass consumes the poses).
+
+## Public API (`src/camera.py`)
+
+```
+CameraPathError(ValueError)      # bad t / keyframes / up vector
+
+@dataclass(frozen=True)
+class CameraPose:                # a name-less, single interpolated viewpoint
+    position: Vec3
+    target: Vec3
+    up: Vec3                     # always unit-length
+    fov_deg: float
+
+interpolate_camera(a: CameraPreset, b: CameraPreset, t: float) -> CameraPose
+
+camera_path(
+    keyframes: Sequence[CameraPreset],
+    *,
+    steps_per_segment: int,
+    loop: bool = False,
+) -> tuple[CameraPose, ...]
+```
+
+## Algorithm
+
+- **Interpolation** (`t ∈ [0, 1]`): `position`, `target`, and `fov_deg` are
+  linearly interpolated (`a + (b-a)·t`); the up vector is **normalized-lerped**
+  (normalize both endpoints, lerp, renormalize) so it stays unit-length. `t=0`
+  reproduces `a` (with a normalized up), `t=1` reproduces `b`.
+- **Path sampling**: each consecutive keyframe pair is a *segment* sampled at
+  `steps_per_segment` parameters `i / steps_per_segment` for `i` in
+  `[0, steps_per_segment)` — segment start included, end excluded, so shared
+  keyframes are never duplicated at joins.
+- **Open** (`loop=False`): visit `keyframes[0] … keyframes[-1]` and append a
+  closing pose on the final keyframe ⇒ length `(n-1)·steps_per_segment + 1`,
+  ending exactly on the last keyframe.
+- **Loop** (`loop=True`): add a wrap segment `keyframes[-1] → keyframes[0]` and
+  omit the closing pose ⇒ seamless cycle of length `n·steps_per_segment`.
+
+## Determinism & guardrails
+
+- Pure function; identical inputs ⇒ identical output tuple (`==`).
+- Validation (raises `CameraPathError`): `len(keyframes) >= 2`,
+  `steps_per_segment >= 1`, `0 <= t <= 1`, non-zero up vectors.
+- Imports only `math` + `src.scene` (`CameraPreset`). Offline; no browser/runtime
+  state; not in `PIPELINE_STAGES`.
+- `from __future__ import annotations`; docstrings; 88-col.
+
+## Tests (`tests/test_camera.py`)
+
+TG-C1 (interpolate + open path): endpoints reproduce the keyframe poses; midpoint
+is the component-wise average; an open path hits the first/last keyframes with
+length `(n-1)·steps + 1`; determinism.
+
+TG-C2 (loop/validation/up): a loop is seamless (`n·steps`, no duplicated closing
+keyframe, last sample on the way back to start); every pose's up is unit-length
+from non-unit keyframe ups; invalid inputs (`<2` keyframes, `steps_per_segment=0`,
+`t ∉ [0,1]`, zero-length up) each raise `CameraPathError`.
+
+## Not in scope (camera slice)
+
+Web delivery / serving the animation, easing curves beyond linear (ease-in/out,
+Catmull-Rom smoothing), and true quaternion camera orientation — a single linear
+interpolation with normalized-lerp up is the first cut.

@@ -1,21 +1,31 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (implemented, commit pending)._
+_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (committed `a0674c4`) plus the #22 animation/camera-paths
+slice (implemented, commit pending)._
 
 ## Current state (2026-08-12)
 
-- **#22 Print/experience modes — 2D hillshade slice implemented, commit pending.** #22 is `XL`
-  and spans three concerns; per the user's scoping this pass delivers only the flagship, fully-
-  offline **terrain-aware 2D hillshade**. New pure module `src/hillshade.py` (spec
-  `agent-os/specs/2026-08-12-print-experience-modes/`): `hillshade(grid, *, azimuth_deg=315,
-  altitude_deg=45, z_factor=1.0, nodata=-1.0)` computes Lambertian shaded relief (0-255) from a
-  `RasterGrid` via Horn's 3×3 `dz/dx`/`dz/dy` + the ESRI/GDAL illumination model; edge-replicated
-  borders keep the input shape, nodata is **never invented** (a cell or its 8-neighborhood touching
-  nodata → output sentinel), `z_factor` is shading-only (never alters source Z), boundary-validated
-  (`HillshadeError`), deterministic. numpy + `src.raster`/`src.elevation` only; not in
-  `PIPELINE_STAGES`. Tested in `tests/test_hillshade.py` (8 tests). Suite: **409 passing** (+8).
-  **Deferred on #22:** animation/camera paths (interpolated `CameraPreset` motion over `src/scene.py`),
-  web delivery, and compositing hillshade under the river SVG in a `tools/` print renderer.
+- **#22 Print/experience modes — camera-paths slice implemented, commit pending (hillshade slice
+  committed `a0674c4`).** #22 is `XL` and spans three concerns; two offline slices have now shipped.
+  **(1) Terrain-aware 2D hillshade** (committed `a0674c4`): `src/hillshade.py` `hillshade(grid, *,
+  azimuth_deg=315, altitude_deg=45, z_factor=1.0, nodata=-1.0)` computes Lambertian shaded relief
+  (0-255) from a `RasterGrid` via Horn's 3×3 `dz/dx`/`dz/dy` + the ESRI/GDAL illumination model;
+  edge-replicated borders keep the input shape, nodata is **never invented** (a cell or its
+  8-neighborhood touching nodata → output sentinel), `z_factor` is shading-only, boundary-validated
+  (`HillshadeError`), deterministic (numpy + `src.raster`/`src.elevation` only). Tested in
+  `tests/test_hillshade.py` (8 tests). **(2) Animation/camera paths** (commit pending): new pure module
+  `src/camera.py` (same spec `agent-os/specs/2026-08-12-print-experience-modes/`) interpolates
+  `scene.CameraPreset` keyframes into a tuple of `CameraPose` samples — `interpolate_camera(a, b, t)`
+  lerps position/target/fov + normalized-lerps the up vector; `camera_path(keyframes, *,
+  steps_per_segment, loop=False)` samples each segment start-inclusive/end-exclusive so shared
+  keyframes never duplicate — **open** paths append a closing pose ending exactly on the last keyframe
+  (`(n-1)·steps + 1`), **looping** paths add a `last→first` wrap for a seamless cycle (`n·steps`).
+  Up vectors are always unit-length; `CameraPathError` guards `<2` keyframes / `steps_per_segment<1`
+  / `t∉[0,1]` / zero-length up. `math` + `src.scene` only, offline/deterministic, not in
+  `PIPELINE_STAGES`. Tested in `tests/test_camera.py` (7 tests). Suite: **416 passing** (+7).
+  **Deferred on #22:** web delivery (serving the hillshade image + camera-path animation), compositing
+  hillshade under the river SVG in a `tools/` print renderer, and richer camera motion (easing /
+  quaternion) beyond the linear first cut.
 - **#21 Regional scale & offline packaging — two offline slices committed (`f5997d8`, `0825475`).** #21 is `XL` and spans four concerns; per the user's scoping decision this pass
   delivers only the fully-offline **portable cache manifests**. New pure module
   `src/manifest.py` (spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging/`) turns

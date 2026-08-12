@@ -63,12 +63,65 @@ shade; a no-nodata source yields no sentinel; invalid altitude (0, 91) / azimuth
 - `ruff` not installed in this `.venv`, so lint was not run here; code follows the
   repo conventions (`from __future__ import annotations`, docstrings, 88-col).
 
+---
+
+# Implementation report — Animation camera paths (roadmap #22 slice)
+
+## What shipped
+
+`src/camera.py` — pure, deterministic, offline interpolation of
+`src.scene.CameraPreset` keyframes into smooth camera motion, the
+"animation / camera paths" (experience-mode) slice of the `XL` roadmap #22. Web
+delivery and compositing remain deferred.
+
+## Public API (`src/camera.py`)
+
+- `CameraPathError(ValueError)` — invalid `t` / keyframes / up vector.
+- `CameraPose` — a frozen, name-less viewpoint (`position`, `target`, unit `up`,
+  `fov_deg`); one sampled frame of motion (vs. a named `CameraPreset`).
+- `interpolate_camera(a, b, t) -> CameraPose` — lerp position/target/fov,
+  normalized-lerp up; `t=0`→a, `t=1`→b.
+- `camera_path(keyframes, *, steps_per_segment, loop=False) -> tuple[CameraPose,
+  ...]` — open path ends exactly on the last keyframe (`(n-1)·steps + 1` poses);
+  looping path is a seamless cycle (`n·steps` poses).
+
+## Design
+
+- **Segment sampling** includes each segment's start and excludes its end, so
+  keyframes shared between segments are never duplicated at joins. The open path
+  appends one closing pose on the final keyframe; the loop adds a wrap segment
+  (`last → first`) and omits the closing pose for a seamless cycle.
+- **Up-normalization**: up vectors are normalized before and after the lerp
+  (`_nlerp_up`) so every emitted pose has a unit up even from non-unit keyframe
+  ups; a zero-length up raises `CameraPathError`.
+- **Linear first cut**: position/target/fov use plain lerp — no easing or
+  quaternion orientation yet (called out in the spec's not-in-scope).
+
+## Guardrails honored
+
+- **Offline & deterministic**: imports only `math` + `src.scene` (`CameraPreset`);
+  pure functions; identical inputs ⇒ identical tuple. No browser/runtime state;
+  **not** in `PIPELINE_STAGES`.
+- Boundary validation raises `CameraPathError` for `<2` keyframes,
+  `steps_per_segment < 1`, `t ∉ [0,1]`, and zero-length up vectors.
+
+## Tests (`tests/test_camera.py`, 7 tests)
+
+Interpolation endpoints/midpoint; open path hits first/last keyframes at the right
+length; determinism; seamless loop (no duplicated closing keyframe); unit-length
+up from non-unit keyframe ups; the four validation raises.
+
+## Verification
+
+- `tests/test_camera.py`: **7 passed**.
+- Full suite: **416 passed** (was 409), no regressions.
+
 ## Not done / follow-ups (remain open on roadmap #22)
 
-- **Animation / camera paths** — interpolated `CameraPreset` motion over the 3D
-  scene (`src/scene.py` already has `default_cameras`/`CameraPreset`).
-- **Web delivery** — serving/exporting the print/experience output.
+- **Web delivery** — serving/exporting the print/experience output (both the
+  hillshade image and the camera-path animation).
 - **Compositing** the hillshade under the river SVG + a `tools/` print renderer
-  over a real normalized DEM — the shaded-relief engine ships here; blending it
-  into a final print is a non-offline follow-on.
-- Multidirectional/soft hillshade (a single Lambertian light is the first cut).
+  over a real normalized DEM — the shaded-relief engine ships; blending it into a
+  final print is a non-offline follow-on.
+- Multidirectional/soft hillshade; and richer camera motion (easing curves,
+  Catmull-Rom smoothing, quaternion orientation) beyond the linear first cut.
