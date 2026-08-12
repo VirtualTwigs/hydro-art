@@ -10,7 +10,7 @@
     aside { z-index:2; overflow:auto; padding:18px; background:var(--panel); border-right:1px solid var(--line) }
     h1 { margin:0 0 4px; font-size:16px; letter-spacing:.04em } .intro,.hint { color:var(--muted); font-size:11px } .intro { margin-bottom:18px }
     fieldset { margin:0 0 13px; padding:11px; border:1px solid var(--line); border-radius:9px } legend { padding:0 5px; color:var(--cyan); font-size:11px; letter-spacing:.08em; text-transform:uppercase }
-    label { display:block; margin:9px 0 3px; color:var(--muted); font-size:11px } output { float:right; color:var(--cyan) } input[type=range] { width:100%; accent-color:var(--cyan) }
+    label { display:block; margin:9px 0 3px; color:var(--muted); font-size:11px } output { float:right; color:var(--cyan) } input[type=range] { width:100%; accent-color:var(--cyan) } input[type=date],input[type=time],select { width:100%; margin-top:3px; padding:6px 7px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:#0a0e18; font:inherit; color-scheme:dark }
     button { color:var(--ink); background:#0a0e18; border:1px solid var(--line); border-radius:6px; padding:7px 8px; cursor:pointer; font:inherit } button:hover,button.active { border-color:var(--cyan); color:var(--cyan) } .row { display:flex; gap:6px } .row button { flex:1 }
     .callout { margin-top:8px; padding:8px; border-left:2px solid var(--lime); color:var(--muted); background:#0a0e18; font-size:11px }
     main { min-width:0; position:relative } canvas { width:100%; height:100%; display:block; cursor:grab; touch-action:none } canvas:active { cursor:grabbing }
@@ -24,7 +24,7 @@
 <body>
   <aside>
     <h1>Hydro-Art · 3D Lab</h1>
-    <div class="intro">A spatial preview of the project’s real hydrography SVGs. Drag the model to orbit; use the controls to test a future 3D export direction.</div>
+    <div class="intro">An interactive Oregon / Washington terrain and hydrography preview. Drag to orbit, scroll to zoom, and set the water-reading time to light the landscape as the sun would.</div>
 
     <fieldset><legend>Example dataset</legend>
       <div class="row"><button id="load" class="active">Oregon rivers</button><button id="loadWA">Washington</button><button id="loadClark">Clark County, WA</button></div>
@@ -39,6 +39,20 @@
       <label>Roll <output id="rollOut"></output></label><input id="roll" type="range" min="-45" max="45" value="0">
       <label>Zoom <output id="zoomOut"></output></label><input id="zoom" type="range" min="0.35" max="2.4" step="0.01" value="1">
       <div class="row"><button id="spin">Auto rotate: off</button><button id="center">Center model</button><button id="top">Top-down</button></div>
+    </fieldset>
+
+    <fieldset><legend>Map layers</legend>
+      <div class="row"><button id="terrainToggle" class="active">Terrain: on</button><button id="hydroToggle" class="active">Hydrography: on</button></div>
+      <button id="terrainOnly">Terrain only</button>
+      <div class="hint" id="layerNote">Terrain is rendered beneath the river network. Load a DEM preview to use measured elevation.</div>
+    </fieldset>
+
+    <fieldset><legend>Sunlight · water reading</legend>
+      <label>Reading date <input id="sunDate" type="date" value="2026-07-31"></label>
+      <label>Local reading time <input id="sunTime" type="time" value="13:00"></label>
+      <label>Terrain contrast <output id="sunStrengthOut"></output></label><input id="sunStrength" type="range" min="0" max="1.5" step="0.05" value="0.85">
+      <div class="row"><button id="nowSun">Use current time</button><button id="middaySun">Best mountain contrast</button></div>
+      <div class="callout" id="sunReadout">Calculating sun position…</div>
     </fieldset>
 
     <fieldset><legend>Preset views</legend>
@@ -60,8 +74,13 @@
 
     <fieldset><legend>Model style</legend>
       <label>Terrain mesh <output id="meshOut"></output></label><input id="mesh" type="range" min="8" max="44" step="1" value="26">
-      <label>River intensity <output id="riverOut"></output></label><input id="river" type="range" min="0.15" max="1" step="0.05" value="0.85">
+      <label>River intensity <output id="riverOut"></output></label><input id="river" type="range" min="0.15" max="1" step="0.05" value="0.65">
       <label>Perspective <output id="perspOut"></output></label><input id="persp" type="range" min="0" max="1" step="0.05" value="0.6">
+    </fieldset>
+    <fieldset><legend>Print render</legend>
+      <label>Longest edge <select id="printSize"><option value="4096">4,096 px · proof</option><option value="8192" selected>8,192 px · print</option><option value="12000">12,000 px · large print</option></select></label>
+      <div class="row"><button id="detailPreview">Print-detail preview: off</button><button id="exportPng">Export print PNG</button></div>
+      <div class="hint" id="printStatus">The small preview is optimized for interaction. Enable print-detail preview to inspect the denser terrain shading before export.</div>
     </fieldset>
     <div class="hint">When opening this page directly from Finder, choose <code>output/oregon_display.svg</code> with “Open local SVG.” Or run <code>.venv/bin/python -m http.server 8000</code> and open <code>/web/3d.html</code> to load it automatically.</div>
   </aside>
@@ -69,10 +88,10 @@
 <script>
 "use strict";
 const $=id=>document.getElementById(id), canvas=$("view"), preview=$("preview"); let ctx=canvas.getContext("2d"), activeWidth=canvas.width, activeHeight=canvas.height, activeOffset=[0,0], lowDetail=false;
-const state={yaw:0,pitch:0,roll:0,zoom:1,amp:.14,freq:2.1,exag:1.3,lift:.035,mesh:26,river:.85,persp:.6,spin:false,elevMode:"order"};
-const DATASETS={oregon:{url:"../output/oregon_display.svg",label:"Oregon",realisticAmp:.012,note:"Oregon’s ~3.4 km maximum relief relative to its ~600 km width."},washington:{url:"../output/washington_display.svg",label:"Washington",realisticAmp:.0074,note:"Washington’s ~4.4 km maximum relief (Mount Rainier) relative to its ~590 km width."},clark:{url:"../output/clark_county.svg",label:"Clark County, WA",realisticAmp:.026,note:"Clark County’s approximate 1.3 km relief relative to its ~50 km width."}};let activeDataset="oregon", rivers=[], bounds=null, widthRange=[1,1], dragging=false, last=null, raf=0, centerOffset=[0,0];
-const controls=["yaw","pitch","roll","zoom","amp","freq","exag","lift","mesh","river","persp"];
-function sync(commit=true){ for(const k of controls){ $(k).value=state[k]; $(k+"Out").textContent=k==="yaw"||k==="pitch"||k==="roll"?Math.round(state[k])+"°":k==="zoom"?state[k].toFixed(2)+"×":k==="amp"?state[k].toFixed(2)+" units":k==="freq"?state[k].toFixed(1)+"×":k==="exag"?state[k].toFixed(1)+"×":k==="lift"?state[k].toFixed(3):state[k]; } commit?request():drawPreview(); }
+const state={yaw:0,pitch:0,roll:0,zoom:1,amp:.14,freq:2.1,exag:1.3,lift:.035,mesh:26,river:.65,persp:.6,sunStrength:.85,terrain:true,hydro:true,detailPreview:false,spin:false,elevMode:"field"};
+const DATASETS={oregon:{url:"../output/oregon_display.svg",label:"Oregon",realisticAmp:.012,note:"Oregon’s ~3.4 km maximum relief relative to its ~600 km width.",lat:43.9,lon:-120.6,tz:-7},washington:{url:"../output/washington_display.svg",label:"Washington",realisticAmp:.0074,note:"Washington’s ~4.4 km maximum relief (Mount Rainier) relative to its ~590 km width.",lat:47.4,lon:-120.7,tz:-7},clark:{url:"../output/clark_county.svg",label:"Clark County, WA",realisticAmp:.026,note:"Clark County’s approximate 1.3 km relief relative to its ~50 km width.",lat:45.78,lon:-122.48,tz:-7}};let activeDataset="oregon", rivers=[], bounds=null, widthRange=[1,1], dragging=false, last=null, raf=0, centerOffset=[0,0];
+const controls=["yaw","pitch","roll","zoom","amp","freq","exag","lift","mesh","river","persp","sunStrength"];
+function sync(commit=true){ for(const k of controls){ $(k).value=state[k]; $(k+"Out").textContent=k==="yaw"||k==="pitch"||k==="roll"?Math.round(state[k])+"°":k==="zoom"?state[k].toFixed(2)+"×":k==="amp"?state[k].toFixed(2)+" units":k==="freq"?state[k].toFixed(1)+"×":k==="exag"?state[k].toFixed(1)+"×":k==="lift"?state[k].toFixed(3):k==="sunStrength"?state[k].toFixed(2):state[k]; } updateSun(); commit?request():drawPreview(); }
 controls.forEach(k=>{const input=$(k);input.addEventListener("input",e=>{state[k]=+e.target.value;sync(false)});input.addEventListener("change",()=>sync(true));});
 function parseSvg(text){
   const xml=new DOMParser().parseFromString(text,"image/svg+xml"), svg=xml.querySelector("svg"), vb=svg.getAttribute("viewBox").trim().split(/[ ,]+/).map(Number);
@@ -111,31 +130,105 @@ function elevationAt(x,y){ // x/y are normalized to -1..1; a replaceable seam fo
   const f=state.freq, ridge=.54*Math.sin((x*.9+y*.42)*Math.PI*f)+.28*Math.cos((x-y*.7)*Math.PI*f*1.4)+.18*Math.sin(y*Math.PI*f*2.2);
   return ridge*state.amp*state.exag;
 }
+// Compact NOAA-style solar-position calculation. Inputs are local civil time at
+// the map's representative coordinate; output is a terrain-space vector where
+// X=east, Y=north and Z=up. This keeps lighting tied to the reading timestamp,
+// instead of to the camera angle.
+function solarTerms(date,time="12:00"){
+  const [year,month,day]=date.split("-").map(Number), [hour,minute]=time.split(":").map(Number);
+  // Oregon and Washington observe US Pacific daylight-saving time. The date,
+  // rather than the viewer's browser zone, selects PDT (UTC−7) or PST (UTC−8).
+  const marchSecondSunday=8+(7-new Date(Date.UTC(year,2,8)).getUTCDay())%7;
+  const novemberFirstSunday=1+(7-new Date(Date.UTC(year,10,1)).getUTCDay())%7;
+  const pacificOffset=(month>3&&month<11)||(month===3&&day>=marchSecondSunday)||(month===11&&day<novemberFirstSunday)?-7:-8;
+  const utc=Date.UTC(year,month-1,day,hour-pacificOffset,minute), n=(utc-Date.UTC(year,0,0))/86400000;
+  const gamma=2*Math.PI/365*(n-1+(hour-12)/24);
+  const eq=229.18*(.000075+.001868*Math.cos(gamma)-.032077*Math.sin(gamma)-.014615*Math.cos(2*gamma)-.040849*Math.sin(2*gamma));
+  const dec=.006918-.399912*Math.cos(gamma)+.070257*Math.sin(gamma)-.006758*Math.cos(2*gamma)+.000907*Math.sin(2*gamma)-.002697*Math.cos(3*gamma)+.00148*Math.sin(3*gamma);
+  return {year,month,day,hour,minute,pacificOffset,eq,dec};
+}
+function sunPosition(){
+  const d=DATASETS[activeDataset], date=$("sunDate").value||"2026-07-31", time=$("sunTime").value||"12:00", t=solarTerms(date,time);
+  const {hour,minute,pacificOffset,eq,dec}=t;
+  const minutes=hour*60+minute, solarMinutes=minutes+eq+4*d.lon-60*pacificOffset, ha=(solarMinutes/4-180)*Math.PI/180, lat=d.lat*Math.PI/180;
+  const altitude=Math.asin(Math.sin(lat)*Math.sin(dec)+Math.cos(lat)*Math.cos(dec)*Math.cos(ha));
+  const azimuth=Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(lat)-Math.tan(dec)*Math.cos(lat))+Math.PI;
+  return {altitude,azimuth,vector:[Math.sin(azimuth)*Math.cos(altitude),Math.cos(azimuth)*Math.cos(altitude),Math.sin(altitude)]};
+}
+function updateSun(){
+  const sun=sunPosition(), alt=sun.altitude*180/Math.PI, azi=((sun.azimuth*180/Math.PI)+360)%360;
+  const compass=azi<22.5||azi>=337.5?"N":azi<67.5?"NE":azi<112.5?"E":azi<157.5?"SE":azi<202.5?"S":azi<247.5?"SW":azi<292.5?"W":"NW";
+  $("sunReadout").textContent=alt>0?`Sun ${Math.round(alt)}° above the horizon · ${compass} (${Math.round(azi)}°) · ${DATASETS[activeDataset].label} local time. Best mountain contrast targets 28°.`:`Sun ${Math.round(-alt)}° below the horizon · terrain is shown with low ambient light.`;
+}
+function setBestMountainContrast(){
+  const date=$("sunDate").value||"2026-07-31", d=DATASETS[activeDataset], t=solarTerms(date), lat=d.lat*Math.PI/180;
+  const maxAltitude=Math.asin(Math.sin(lat)*Math.sin(t.dec)+Math.cos(lat)*Math.cos(t.dec));
+  // A 28° altitude makes terrain facets and long mountain shadows legible.
+  // In winter, retain the true seasonal ceiling and back off it slightly.
+  const target=Math.max(6*Math.PI/180,Math.min(28*Math.PI/180,maxAltitude-3*Math.PI/180));
+  const cosHour=Math.max(-1,Math.min(1,(Math.sin(target)-Math.sin(lat)*Math.sin(t.dec))/(Math.cos(lat)*Math.cos(t.dec))));
+  const hourAngle=Math.acos(cosHour)*180/Math.PI; // afternoon, for stable southwest-facing light.
+  const solarMinutes=4*(hourAngle+180), localMinutes=Math.round(solarMinutes-t.eq-4*d.lon+60*t.pacificOffset);
+  const normalized=(localMinutes%1440+1440)%1440;
+  $("sunTime").value=String(Math.floor(normalized/60)).padStart(2,"0")+":"+String(normalized%60).padStart(2,"0");
+  sync();
+}
 // Elevation derived from the hydrography itself: flow-scaled stroke width is a
 // proxy for USGS Strahler order, so thin headwaters ride high and thick mainstems
 // sink to the valley floor (matches tools/render_county_3d.py). t: 0=thinnest..1=thickest.
 function orderT(width){ const [a,b]=widthRange; return b>a?(width-a)/(b-a):0; }
 function riverHeight(width){ return (1-orderT(width))*state.amp*state.exag*3; }
-function coreWidth(width){ return 0.8+2.4*orderT(width); }
+// Print-inspired hydrographic ink: tributaries stay hairline-fine and only
+// the largest mainstems gain a restrained hierarchy bump.
+function coreWidth(width){ return 0.42+1.05*Math.pow(orderT(width),.72); }
 // Aspect-true normalization (single maxDim scale) so the model keeps the map's shape.
 function point(x,y,lift=0,h=null){ const nx=((x-bounds.x)-bounds.w/2)/(bounds.maxDim/2), ny=-(((y-bounds.y)-bounds.h/2)/(bounds.maxDim/2)), z=(state.elevMode==="order"&&h!=null?h:elevationAt(nx,ny))+lift; return [nx,ny,z]; }
 function rotate(p){ const a=state.yaw*Math.PI/180,b=state.pitch*Math.PI/180,c=state.roll*Math.PI/180; let [x,y,z]=p; let q=x*Math.cos(a)-z*Math.sin(a); z=x*Math.sin(a)+z*Math.cos(a); x=q; q=y*Math.cos(b)-z*Math.sin(b); z=y*Math.sin(b)+z*Math.cos(b); y=q; q=x*Math.cos(c)-y*Math.sin(c); y=x*Math.sin(c)+y*Math.cos(c); return [q,y,z]; }
 function project(p){ let [x,y,z]=rotate(p), d=3.5, perspective=1/(1+state.persp*(z+1)/d); const scale=Math.min(activeWidth,activeHeight)*.38*state.zoom; return [activeWidth/2+x*scale*perspective+activeOffset[0],activeHeight/2-y*scale*perspective+activeOffset[1],z]; }
 function request(){ if(!raf)raf=requestAnimationFrame(draw); }
 function line(points, color, width, alpha=1){ if(points.length<2)return; ctx.beginPath(); points.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.strokeStyle=color;ctx.lineWidth=width;ctx.globalAlpha=alpha;ctx.stroke(); }
-function drawMesh(){ const n=lowDetail?Math.min(9,state.mesh):state.mesh; const lines=[]; for(let i=0;i<=n;i++){let a=[],b=[];for(let j=0;j<=n;j++){let x=-1+2*i/n,y=-1+2*j/n;a.push(project([x,y,elevationAt(x,y)]));b.push(project([y,x,elevationAt(y,x)]));}lines.push(a,b)} lines.sort((a,b)=>Math.min(...a.map(p=>p[2]))-Math.min(...b.map(p=>p[2]))); for(const l of lines)line(l,"#4d6f92",.65,.32); }
+function terrainShade(x,y){
+  const e=.018, h=elevationAt(x,y), dx=(elevationAt(x+e,y)-elevationAt(x-e,y))/(2*e), dy=(elevationAt(x,y+e)-elevationAt(x,y-e))/(2*e);
+  const normal=[-dx,-dy,1], len=Math.hypot(...normal), sun=sunPosition().vector;
+  const diffuse=Math.max(0,(normal[0]*sun[0]+normal[1]*sun[1]+normal[2]*sun[2])/len);
+  const ambient=.10, light=ambient+state.sunStrength*diffuse;
+  const height=Math.max(0,Math.min(1,(h/(Math.max(.001,state.amp*state.exag))+1)/2));
+  const r=Math.round(8+18*light+8*height), g=Math.round(21+52*light+22*height), b=Math.round(35+78*light+42*height);
+  return `rgb(${r},${g},${b})`;
+}
+function triangle(a,b,c,fill){ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineTo(c[0],c[1]);ctx.closePath();ctx.fillStyle=fill;ctx.globalAlpha=1;ctx.fill();}
+function drawMesh(printMode=false){
+  const n=printMode?Math.min(180,Math.max(96,state.mesh*4)):lowDetail?Math.min(12,state.mesh):state.mesh, cells=[];
+  for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){const x=-1+2*ix/n,y=-1+2*iy/n,xx=x+2/n,yy=y+2/n;const p=[project([x,y,elevationAt(x,y)]),project([xx,y,elevationAt(xx,y)]),project([xx,yy,elevationAt(xx,yy)]),project([x,yy,elevationAt(x,yy)])];cells.push({p,x:(x+xx)/2,y:(y+yy)/2,z:p.reduce((s,v)=>s+v[2],0)/4});}
+  cells.sort((a,b)=>a.z-b.z); for(const c of cells){const fill=terrainShade(c.x,c.y);triangle(c.p[0],c.p[1],c.p[2],fill);triangle(c.p[0],c.p[2],c.p[3],fill);}
+  ctx.globalAlpha=.18;for(const c of cells){line([c.p[0],c.p[1],c.p[2],c.p[3],c.p[0]],"#82b8d2",.35,.18);}
+}
 function drawAxes(){ const origin=project([0,0,0]), axes=[[[.38,0,0],"X","#ff6680"],[[0,.38,0],"Y","#9cff57"],[[0,0,.38],"Z","#39e9ff"]]; ctx.font="11px ui-monospace,monospace";ctx.textAlign="center";ctx.textBaseline="middle";for(const [v,label,color] of axes){const end=project(v);line([origin,end],color,1.4,.95);ctx.fillStyle=color;ctx.globalAlpha=1;ctx.fillText(label,end[0],end[1]-10);} }
 function drawCardinals(){ const dirs=[[[0,.88,0],"N"],[[0,-.88,0],"S"],[[.88,0,0],"E"],[[-.88,0,0],"W"]];ctx.font="bold 12px ui-monospace,monospace";ctx.textAlign="center";ctx.textBaseline="middle";for(const [v,label] of dirs){const p=project(v);ctx.globalAlpha=.95;ctx.strokeStyle="#05070d";ctx.lineWidth=4;ctx.strokeText(label,p[0],p[1]);ctx.fillStyle="#e8f2ff";ctx.fillText(label,p[0],p[1]);} }
-function size(target){const r=target.getBoundingClientRect(),w=Math.max(1,Math.floor(r.width)),h=Math.max(1,Math.floor(r.height));if(target.width!==w||target.height!==h){target.width=w;target.height=h;}}
+function size(target){const r=target.getBoundingClientRect(),w=Math.max(1,Math.floor(r.width||target.width)),h=Math.max(1,Math.floor(r.height||target.height));if(target.width!==w||target.height!==h){target.width=w;target.height=h;}}
 function centerModel(){ if(!rivers.length)return; size(canvas);ctx=canvas.getContext("2d");activeWidth=canvas.width;activeHeight=canvas.height;activeOffset=centerOffset; const pts=rivers.flatMap(r=>r.pts.map(([x,y])=>project(point(x,y,state.lift,riverHeight(r.width))))); const minX=Math.min(...pts.map(p=>p[0])),maxX=Math.max(...pts.map(p=>p[0])),minY=Math.min(...pts.map(p=>p[1])),maxY=Math.max(...pts.map(p=>p[1])); centerOffset[0]+=activeWidth/2-(minX+maxX)/2;centerOffset[1]+=activeHeight/2-(minY+maxY)/2;request(); }
-function render(target,previewMode=false){size(target);ctx=target.getContext("2d");activeWidth=target.width;activeHeight=target.height;activeOffset=previewMode?[0,0]:centerOffset;lowDetail=previewMode;ctx.fillStyle="#05070d";ctx.fillRect(0,0,activeWidth,activeHeight);if(!bounds)return;if(state.elevMode!=="order")drawMesh();drawAxes();const bigState=activeDataset==="washington"||activeDataset==="oregon",step=previewMode?(activeDataset==="clark"?80:bigState?120:18):(activeDataset==="clark"?4:bigState?8:1),lifted=state.lift,shaped=rivers.filter((_,i)=>i%step===0).map(r=>({pts:r.pts.map(([x,y])=>project(point(x,y,lifted,riverHeight(r.width)))),color:r.color,width:r.width}));shaped.sort((a,b)=>Math.max(...a.pts.map(p=>p[2]))-Math.max(...b.pts.map(p=>p[2])));ctx.lineCap="round";ctx.lineJoin="round";for(const r of shaped){const w=coreWidth(r.width)*(previewMode?.7:1);line(r.pts,r.color,w*2.6,state.river*.28);line(r.pts,r.color,w,state.river)}drawCardinals();}
-function drawPreview(){render(preview,true);}
+function render(target,previewMode=false,printMode=false){size(target);ctx=target.getContext("2d");activeWidth=target.width;activeHeight=target.height;activeOffset=previewMode?[0,0]:centerOffset;lowDetail=previewMode&&!printMode;ctx.fillStyle="#05070d";ctx.fillRect(0,0,activeWidth,activeHeight);if(!bounds)return;if(state.terrain)drawMesh(printMode);if(!printMode)drawAxes();if(state.hydro){const bigState=activeDataset==="washington"||activeDataset==="oregon",step=printMode?1:previewMode?(activeDataset==="clark"?80:bigState?120:18):(activeDataset==="clark"?4:bigState?8:1),strokeScale=printMode?Math.max(1,Math.min(activeWidth,activeHeight)/Math.min(canvas.width,canvas.height)):1,lifted=state.lift,shaped=rivers.filter((_,i)=>i%step===0).map(r=>({pts:r.pts.map(([x,y])=>project(point(x,y,lifted,state.elevMode==="order"?riverHeight(r.width):null))),color:r.color,width:r.width}));shaped.sort((a,b)=>Math.max(...a.pts.map(p=>p[2]))-Math.max(...b.pts.map(p=>p[2])));ctx.lineCap="round";ctx.lineJoin="round";for(const r of shaped){const w=coreWidth(r.width)*(previewMode?.7:1)*strokeScale;line(r.pts,r.color,w*1.7,state.river*.12);line(r.pts,r.color,w,state.river*.78)}}if(!printMode)drawCardinals();}
+function drawPreview(){render(preview,true,state.detailPreview);$("previewLabel").textContent=state.detailPreview?"Print-detail preview":"Interaction preview";}
 function draw(){raf=0;render(canvas,false);if(state.spin){state.yaw+=.22;$("yaw").value=state.yaw;$("yawOut").textContent=Math.round(state.yaw)+"°";request();}}
-function setDataset(key){activeDataset=key;const d=DATASETS[key];$("modelName").textContent=d.label;$("realisticNote").textContent="“Realistic” sets a vertical scale for "+d.note+" This remains a visual elevation field, not DEM-derived terrain.";$("load").classList.toggle("active",key==="oregon");$("loadWA").classList.toggle("active",key==="washington");$("loadClark").classList.toggle("active",key==="clark");}
-function useSvg(text,label){ rivers=parseSvg(text); state.elevMode=widthRange[1]>widthRange[0]*1.05?"order":"field"; $("elevMode").textContent="Elevation: "+(state.elevMode==="order"?"stream order":"terrain field"); $("count").textContent=rivers.length.toLocaleString(); $("source").textContent="Loaded actual "+DATASETS[activeDataset].label+" river paths from "+label+"."; $("empty")?.remove(); centerOffset=[0,0]; request(); }
+function setDataset(key){activeDataset=key;const d=DATASETS[key];$("modelName").textContent=d.label;$("realisticNote").textContent="“Realistic” sets a vertical scale for "+d.note+" This remains a visual elevation field, not DEM-derived terrain.";$("load").classList.toggle("active",key==="oregon");$("loadWA").classList.toggle("active",key==="washington");$("loadClark").classList.toggle("active",key==="clark");updateSun();}
+function useSvg(text,label){ rivers=parseSvg(text); $("elevMode").textContent="Elevation: "+(state.elevMode==="order"?"stream order":"terrain field"); $("count").textContent=rivers.length.toLocaleString(); $("source").textContent="Loaded actual "+DATASETS[activeDataset].label+" river paths from "+label+"."; $("empty")?.remove(); centerOffset=[0,0]; request(); }
 async function load(key=activeDataset){setDataset(key);const d=DATASETS[key];try { const res=await fetch(d.url); if(!res.ok)throw Error(res.status); useSvg(await res.text(),d.url.replace("../","")); } catch(e) { $("source").textContent="Direct file mode blocks automatic loading. Choose the matching SVG with Open local SVG."; $("empty").textContent="Choose the "+d.label+" SVG to load the real-data model."; } }
 canvas.addEventListener("pointerdown",e=>{dragging=true;last=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)});canvas.addEventListener("pointermove",e=>{if(!dragging)return;state.yaw+=(e.clientX-last[0])*.45;state.pitch=Math.max(-85,Math.min(85,state.pitch+(e.clientY-last[1])*.35));last=[e.clientX,e.clientY];sync(false)});canvas.addEventListener("pointerup",()=>{dragging=false;sync(true)});canvas.addEventListener("wheel",e=>{e.preventDefault();state.zoom=Math.max(.35,Math.min(2.4,state.zoom*(e.deltaY>0?.92:1.08)));sync(false);clearTimeout(canvas._commit);canvas._commit=setTimeout(()=>sync(true),140)},{passive:false});
-$("spin").onclick=()=>{state.spin=!state.spin;$("spin").textContent="Auto rotate: "+(state.spin?"on":"off");request()};$("center").onclick=centerModel;$("top").onclick=()=>{state.pitch=0;state.yaw=0;state.roll=0;centerOffset=[0,0];sync()};$("reset").onclick=()=>{Object.assign(state,{yaw:0,pitch:0,roll:0,zoom:1,amp:.14,freq:2.1,exag:1.3,lift:.035,mesh:26,river:.85,persp:.6,spin:false});centerOffset=[0,0];$("spin").textContent="Auto rotate: off";sync()};
+$("spin").onclick=()=>{state.spin=!state.spin;$("spin").textContent="Auto rotate: "+(state.spin?"on":"off");request()};$("center").onclick=centerModel;$("top").onclick=()=>{state.pitch=0;state.yaw=0;state.roll=0;centerOffset=[0,0];sync()};$("reset").onclick=()=>{Object.assign(state,{yaw:0,pitch:0,roll:0,zoom:1,amp:.14,freq:2.1,exag:1.3,lift:.035,mesh:26,river:.65,persp:.6,sunStrength:.85,terrain:true,hydro:true,detailPreview:false,spin:false,elevMode:"field"});centerOffset=[0,0];$("spin").textContent="Auto rotate: off";$("terrainToggle").textContent="Terrain: on";$("terrainToggle").classList.add("active");$("hydroToggle").textContent="Hydrography: on";$("hydroToggle").classList.add("active");$("terrainOnly").classList.remove("active");$("detailPreview").textContent="Print-detail preview: off";$("detailPreview").classList.remove("active");$("layerNote").textContent="Terrain is rendered beneath the river network. Load a DEM preview to use measured elevation.";sync()};
+$("terrainToggle").onclick=()=>{state.terrain=!state.terrain;$("terrainToggle").textContent="Terrain: "+(state.terrain?"on":"off");$("terrainToggle").classList.toggle("active",state.terrain);$("terrainOnly").classList.remove("active");request()};
+$("hydroToggle").onclick=()=>{state.hydro=!state.hydro;$("hydroToggle").textContent="Hydrography: "+(state.hydro?"on":"off");$("hydroToggle").classList.toggle("active",state.hydro);$("terrainOnly").classList.remove("active");request()};
+$("terrainOnly").onclick=()=>{state.terrain=true;state.hydro=false;$("terrainToggle").textContent="Terrain: on";$("terrainToggle").classList.add("active");$("hydroToggle").textContent="Hydrography: off";$("hydroToggle").classList.remove("active");$("terrainOnly").classList.add("active");$("layerNote").textContent="Terrain-only view — turn Hydrography back on to restore the river overlay.";request()};
+$("sunDate").oninput=()=>sync();$("sunTime").oninput=()=>sync();
+$("nowSun").onclick=()=>{const n=new Date();$("sunDate").value=n.toISOString().slice(0,10);$("sunTime").value=String(n.getHours()).padStart(2,"0")+":"+String(n.getMinutes()).padStart(2,"0");sync()};
+$("middaySun").onclick=setBestMountainContrast;
+$("detailPreview").onclick=()=>{state.detailPreview=!state.detailPreview;$("detailPreview").textContent="Print-detail preview: "+(state.detailPreview?"on":"off");$("detailPreview").classList.toggle("active",state.detailPreview);$("printStatus").textContent=state.detailPreview?"The inset now uses the final DEM tile and a denser terrain mesh. It previews lighting and relief, not the full print extent.":"The small preview is optimized for interaction. Enable print-detail preview to inspect the denser terrain shading before export.";drawPreview();};
+$("exportPng").onclick=()=>{
+  if(!bounds){$("printStatus").textContent="Load an Oregon or Washington hydrography SVG before exporting.";return;}
+  const longEdge=Number($("printSize").value), aspect=canvas.width/canvas.height, out=document.createElement("canvas");
+  if(aspect>=1){out.width=longEdge;out.height=Math.round(longEdge/aspect);}else{out.width=Math.round(longEdge*aspect);out.height=longEdge;}
+  $("printStatus").textContent=`Rendering ${out.width.toLocaleString()} × ${out.height.toLocaleString()} PNG…`;
+  requestAnimationFrame(()=>{render(out,false,true);out.toBlob(blob=>{if(!blob){$("printStatus").textContent="PNG export failed in this browser.";draw();return;}const link=document.createElement("a");link.href=URL.createObjectURL(blob);link.download=`hydro-art-${activeDataset}-terrain-${out.width}x${out.height}.png`;link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);$("printStatus").textContent=`Downloaded ${out.width.toLocaleString()} × ${out.height.toLocaleString()} print PNG.`;draw();},"image/png");});
+};
 $("realistic").onclick=()=>{Object.assign(state,{amp:DATASETS[activeDataset].realisticAmp,exag:1,lift:.002});sync();};
 $("elevMode").onclick=()=>{state.elevMode=state.elevMode==="order"?"field":"order";$("elevMode").textContent="Elevation: "+(state.elevMode==="order"?"stream order":"terrain field");centerOffset=[0,0];sync();};
 const views={iso:{yaw:-35,pitch:48,roll:0},sideX:{yaw:0,pitch:78,roll:0},sideY:{yaw:90,pitch:78,roll:0}};$("presets").onclick=e=>{const b=e.target.closest("button"),view=b&&views[b.dataset.view];if(!view)return;Object.assign(state,view);centerOffset=[0,0];sync();centerModel();};
