@@ -19,27 +19,48 @@ Outcome: a deterministic, editable GIS-to-SVG pipeline for original hydrographic
 
 **Phase 1.5.1 — Water-feature ingestion & taxonomy**
 
-W1. [ ] Waterbody source layers and classification — Load NHD waterbody/area polygons with the
+W1. [x] Waterbody source layers and classification — Load NHD waterbody/area polygons with the
 attributes needed to identify lakes, reservoirs, ponds, bays, inlets, and coastal water; define
 a reviewed inclusion taxonomy rather than relying on names alone. `M`
+(`src/waterbodies.py`: immutable `WaterbodyFeature` + versioned `WATERBODY_POLICY_VERSION`,
+`FTYPE_CLASS` FType-driven taxonomy — name only refines bay/inlet, missing FType → excluded,
+never guessed. `src/loading.py` allowlists NHDWaterbody/NHDArea + attribute fields and adds
+`load_waterbody_layers`. Tested in `tests/test_waterbodies.py` + `tests/test_loading.py`.)
 
 **Phase 1.5.2 — Polygon quality & cartographic selection**
 
-W2. [ ] Waterbody repair, clipping & selection — Repair, reproject, and region-clip water
+W2. [x] Waterbody repair, clipping & selection — Repair, reproject, and region-clip water
 polygons; retain topology and provenance; apply configurable area/detail policies that preserve
 lakes and meaningful inlets/bays while controlling tiny pond clutter. `L`
+(`src/waterbody_selection.py`: `process_waterbodies` = repair → reproject(5070) → clip → area
+measure → policy select, reusing `src.geometry`/`src.clipping` (holes + multipart preserved).
+`WaterbodySelectionPolicy` (inland/coastal area thresholds, pond split, conservative vs.
+permissive coast); deterministic dedup + shared-edge detection; full `selected`/`excluded`
+provenance report. Tested in `tests/test_waterbody_selection.py`.)
 
 **Phase 1.5.3 — Layered rendering & export**
 
-W3. [ ] Waterbody-outline rendering — Add closed, editable, fill-free outlines as dedicated SVG
+W3. [x] Waterbody-outline rendering — Add closed, editable, fill-free outlines as dedicated SVG
 layers with stable feature identifiers and configurable stroke/color behavior. Keep flowlines
 visually legible at overlaps. `M`
+(`WaterbodySettings` in `src/config.py` + `--waterbodies`/`--waterbody-color`/`-stroke-width`
+in `src/cli.py`; `src/rendering.py` emits a `fill="none"` `#waterbodies` group of closed
+per-feature `<path>`s with stable ids + configurable stroke/color/z-order; `src/pipeline.py`
+loads (validate) and selects/renders (generate_svg) additively — byte-identical when disabled.
+Tested in `tests/test_waterbody_config.py`, `test_waterbody_rendering.py`, `test_waterbody_pipeline.py`.)
 
 **Phase 1.5.4 — Validation & art direction**
 
 W4. [ ] Waterbody QA and regional presets — Validate fixture and real Oregon/Washington/Clark
 County outputs for holes, multipolygons, coastal boundaries, duplicate edges, and size/detail
 thresholds; establish print and screen presets. `L`
+(Mostly done: offline fixture QA in `tests/test_waterbody_qa.py` (holes/multipolygons/coastal/
+shared-edge) + a real-region harness `tools/waterbody_qa.py` executed 2026-07-30 against Oregon
+(46,844 selected, 0 untraceable) and Washington (42,304 selected, 0 untraceable) — holes,
+multipolygons, coastal boundaries, duplicate edges, traceability all pass. **Left:** (1) the
+Clark County, WA county-level run (harness supports it, but the Census county shapefile isn't
+mounted locally), and (2) the actual print/screen **preset values** — an art-direction decision
+on stroke/size/detail thresholds, pending human review of the real-region output.)
 
 Epoch gate: a build can produce original, source-traceable outlines for lakes, large ponds,
 bays, and inlets without filling or incorrectly closing coastal water.
@@ -48,10 +69,17 @@ bays, and inlets without filling or incorrectly closing coastal water.
 
 **Phase 2.1 — Elevation contracts & provenance**
 
-11. [ ] Elevation settings and provenance model — Add validated settings for elevation source,
+11. [x] Elevation settings and provenance model — Add validated settings for elevation source,
 resolution tier, vertical-exaggeration display setting, and cache policy. Define immutable
 metadata for source product, acquisition date, horizontal CRS, vertical CRS/datum, units,
 resolution, checksum, and processing parameters. `M`
+(`src/config.py`: `ElevationSettings` (enabled/source/tier/vertical_exaggeration/cache) +
+`SUPPORTED_ELEVATION_SOURCES`/`SUPPORTED_ELEVATION_TIERS` + cache policy + `_coerce_elevation`
+boundary validation; `src/elevation.py`: immutable `ElevationProvenance` (+ `build_provenance`)
+recording source product, acquisition date, horizontal + vertical CRS/datum, units, resolution,
+checksum, processing parameters, plus the `TileDiscoverer`/`RasterReader`/`ElevationSampler`
+seams. Spec `agent-os/specs/2026-07-29-dem-elevation-and-3d-modeling`; tested in
+`tests/test_elevation_config.py` + `tests/test_elevation.py` (19 tests). Closes Epoch 2.)
 
 **Phase 2.2 — Authoritative DEM acquisition**
 
