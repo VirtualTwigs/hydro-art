@@ -54,3 +54,72 @@ def test_path_d_multiline_has_multiple_subpaths():
     # Two "M" move commands -> two sub-paths within one path string.
     assert d.count("M") == 2
     assert d == "M 0,0 L 5,0 M 0,10 L 5,10"
+
+
+# ---------------------------------------------------------------------------
+# Fixed year-max width scale (Item #25, Task Group 2)
+# ---------------------------------------------------------------------------
+
+import math
+
+from src.rendering import (
+    fixed_flow_span,
+    monthly_width_frames,
+    widths_on_span,
+)
+
+
+def test_fixed_flow_span_endpoints_and_floor():
+    # Span is on log of the positive min/max across ALL values.
+    lo, hi = fixed_flow_span([1.0, 10.0, 100.0])
+    assert math.isclose(lo, math.log(1.0))
+    assert math.isclose(hi, math.log(100.0))
+    # Values at/below the floor are floored before the log.
+    lo2, _ = fixed_flow_span([0.0, 1e-6, 5.0], floor=1e-2)
+    assert math.isclose(lo2, math.log(1e-2))
+
+
+def test_fixed_flow_span_empty_and_degenerate():
+    l = math.log(1e-2)
+    lo, hi = fixed_flow_span([], floor=1e-2)
+    assert lo == hi == l
+    lo0, hi0 = fixed_flow_span([0.0, 0.0], floor=1e-2)
+    assert lo0 == hi0 == l
+
+
+def test_widths_on_span_endpoints_and_clamp():
+    lo, hi = fixed_flow_span([1.0, 100.0])
+    w = widths_on_span({1: 1.0, 2: 100.0}, lo, hi, width_min=2.0, width_max=8.0)
+    assert math.isclose(w[1], 2.0)   # smallest flow -> width_min
+    assert math.isclose(w[2], 8.0)   # largest flow -> width_max
+    # A flow above the span's max clamps to width_max (fixed scale, not renorm).
+    w2 = widths_on_span({3: 10_000.0}, lo, hi, width_min=2.0, width_max=8.0)
+    assert math.isclose(w2[3], 8.0)
+    # A flow below the span's min clamps to width_min.
+    w3 = widths_on_span({4: 1e-9}, lo, hi, width_min=2.0, width_max=8.0)
+    assert math.isclose(w3[4], 2.0)
+
+
+def test_widths_on_span_is_fixed_not_renormalized():
+    # Two frames sharing one span: the same flow yields the same width, and a
+    # smaller-max frame does NOT stretch to width_max (that's the whole point).
+    lo, hi = fixed_flow_span([1.0, 100.0])
+    dry = widths_on_span({1: 1.0, 2: 10.0}, lo, hi, width_min=2.0, width_max=8.0)
+    wet = widths_on_span({1: 1.0, 2: 100.0}, lo, hi, width_min=2.0, width_max=8.0)
+    assert math.isclose(dry[1], wet[1])          # same flow, same width
+    assert dry[2] < wet[2]                        # seasonal swell is visible
+    assert dry[2] < 8.0                           # dry frame doesn't hit the max
+
+
+def test_monthly_width_frames_wet_gt_dry_on_shared_span():
+    # seg 1 swells mid-year, seg 2 is flat. One shared span across all months.
+    monthly = {
+        1: [1.0, 1.0, 2.0, 10.0, 100.0, 100.0, 50.0, 10.0, 2.0, 1.0, 1.0, 1.0],
+        2: [5.0] * 12,
+    }
+    frames = monthly_width_frames(monthly, width_min=2.0, width_max=8.0)
+    assert len(frames) == 12
+    # seg 1 wider at its peak month (index 4) than at its trough (index 0).
+    assert frames[4][1] > frames[0][1]
+    # seg 2 constant across months (flat flow, fixed span).
+    assert math.isclose(frames[0][2], frames[6][2])

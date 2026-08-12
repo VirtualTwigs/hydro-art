@@ -322,6 +322,13 @@ def _resolve_stroke_widths(ctx: RunContext) -> dict[int, float] | None:
 
 def _generate_svg_stage(ctx: RunContext) -> None:
     """Render the colored network into a layered SVG document (in memory)."""
+    if ctx.settings.months:
+        raise ConfigError(
+            "months=<abbrs> needs per-reach monthly discharge/climatology, which "
+            "the 2D pipeline does not load. Use tools/render_monthly.py for "
+            "month-by-month frames, or leave --months annual."
+        )
+
     hydro_graph = ctx.artifacts["hydro_graph"]
     segment_colors = ctx.artifacts["segment_colors"]
     watersheds = ctx.artifacts["watersheds"]

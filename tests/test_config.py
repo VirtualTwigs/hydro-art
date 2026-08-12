@@ -122,3 +122,46 @@ def test_county_with_multiple_regions_raises():
         build_settings(
             {**DEFAULTS, "region": ["Oregon", "Washington"], "county": "Clark"}
         )
+
+
+# ---------------------------------------------------------------------------
+# --months option (Item #25, Task Group 3)
+# ---------------------------------------------------------------------------
+
+from src.config import parse_months
+
+
+def test_months_default_is_annual_empty_tuple():
+    settings = build_settings(DEFAULTS)
+    assert settings.months == ()
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        (None, ()),
+        ("", ()),
+        ("annual", ()),
+        ("all", ()),
+        ("mean", ()),
+        ("7", (7,)),
+        ("jul", (7,)),
+        ("July", (7,)),
+        ("5-9", (5, 6, 7, 8, 9)),
+        ("may-sep", (5, 6, 7, 8, 9)),
+        ("nov-feb", (11, 12, 1, 2)),  # wrapping range
+    ],
+)
+def test_parse_months_forms(value, expected):
+    assert parse_months(value) == expected
+
+
+@pytest.mark.parametrize("bad", ["0", "13", "foo", "3-", "-3", "jan-foo", "3-15"])
+def test_parse_months_invalid_raises(bad):
+    with pytest.raises(ConfigError):
+        parse_months(bad)
+
+
+def test_months_stored_on_settings():
+    settings = build_settings({**DEFAULTS, "months": "may-sep"})
+    assert settings.months == (5, 6, 7, 8, 9)

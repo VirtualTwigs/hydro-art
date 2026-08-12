@@ -33,7 +33,7 @@ import numpy as np
 import shapely
 from PIL import Image, ImageDraw, ImageFont
 
-from src.rendering import bounds
+from src.rendering import bounds, widths_on_span
 from tools.monthly_flow import MONTH_ABBR, build_monthly_flow
 from tools.render_common import (
     CLARK_BBOX_4326,
@@ -113,13 +113,14 @@ def monthly_flow_by_id(spec) -> dict[int, np.ndarray]:
 
 def fixed_widths(month_flow, base_units: float, top_units: float,
                  lo: float, hi: float) -> dict[int, float]:
-    """Map one month's flows to stroke widths on a *fixed* global log scale."""
-    span = max(hi - lo, 1e-9)
-    return {
-        idx: base_units + (top_units - base_units)
-        * min(max((math.log(max(q, FLOOR)) - lo) / span, 0.0), 1.0)
-        for idx, q in month_flow.items()
-    }
+    """Map one month's flows to stroke widths on a *fixed* global log scale.
+
+    Thin wrapper over :func:`src.rendering.widths_on_span` (the shared source of
+    truth); ``base_units``/``top_units`` map to ``width_min``/``width_max``.
+    """
+    return widths_on_span(
+        month_flow, lo, hi, width_min=base_units, width_max=top_units, floor=FLOOR
+    )
 
 
 def _label(png_path: str, month: str, subtitle: str) -> Image.Image:

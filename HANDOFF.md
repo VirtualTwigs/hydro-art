@@ -1,10 +1,28 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction options) and #24 (county scope)._
+_Last updated: 2026-08-12, after Epoch 6 #23 (art-direction), #24 (county scope), and #25 (monthly-flow option)._
 
 ## Current state (2026-08-12)
 
-- **#24 County scope in the pipeline — implemented, commit pending.** New
+- **#25 Monthly-flow rendering option — implemented, commit pending.** Promoted
+  the disaggregation + fixed year-max width scale into tested `src/` code and
+  added a validated `--months` option (spec
+  `agent-os/specs/2026-08-12-monthly-flow-option/`, scope: "promote algorithms +
+  option", mirroring #23). New `src/monthly_flow.py` (numpy-only, no pyogrio)
+  holds `snow_available_water`/`normalize_shape`/`accumulate_downstream`/
+  `disaggregate_monthly` + constants. `src/rendering.py` adds the fixed-span
+  helpers `fixed_flow_span`/`widths_on_span`/`monthly_width_frames`.
+  `src/config.py` adds `months: tuple[int,...]` (empty = annual) via pure
+  `parse_months` (single/name/range/wrap; `DEFAULTS["months"]="annual"`);
+  `src/cli.py` adds `--months`. `src/pipeline.py` `_generate_svg_stage` fails fast
+  with `ConfigError` on non-annual months (2D pipeline doesn't load per-reach
+  monthly discharge — same limitation as `color_by=elevation`; points to
+  `tools/render_monthly.py`). Annual default is byte-identical. `tools/monthly_flow.py`
+  and `tools/render_monthly.py` now delegate to `src/` (re-export
+  `MONTH_ABBR`/`build_monthly_flow`/`_value_column`/`FLOOR`/`fixed_widths`).
+  Deferred to #27: loader/graph discharge plumbing + multi-frame export for a live
+  `build.py --months` run. Suite: **345 passing**.
+- **#24 County scope in the pipeline — committed (`489b511`).** New
   first-class `--county` build option clips hydrography to a single Census county
   polygon within the selected state (spec
   `agent-os/specs/2026-08-12-county-scope/`). `src/config.py` adds `county:

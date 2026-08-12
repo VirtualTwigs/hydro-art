@@ -154,7 +154,7 @@ builds byte-identical. `M`
 24. [x] County scope in the pipeline — Promote `tools/render_county_clip.py`'s county clip into a
 first-class `--county` build option (Census county polygon clip, validated against the selected
 state), so scope selection isn't a separate script. `M`
-25. [ ] Monthly-flow rendering option — Promote `tools/monthly_flow.py` disaggregation + the fixed
+25. [x] Monthly-flow rendering option — Promote `tools/monthly_flow.py` disaggregation + the fixed
 year-max width scale into a first-class `--months` option (single month, month range → one frame
 per month/animation, or annual mean), conserving each reach's annual QAMA. `L`
 

@@ -41,16 +41,22 @@ from pathlib import Path
 import numpy as np
 import pyogrio
 
-MONTHS = range(1, 13)
-MONTH_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-# Snow / melt thresholds, in degC (temperature-index bucket).
-T_ALL_SNOW = -1.0   # at/below this, all precip falls as snow
-T_ALL_RAIN = 3.0    # at/above this, all precip falls as rain
-T_MELT = 0.0        # melt begins above this
-T_MELT_FULL = 6.0   # snowpack melts at full monthly rate at/above this
-SPINUP_CYCLES = 3   # repeat the 12-month cycle to reach periodic snowpack
+# The pure, offline disaggregation math lives in ``src/monthly_flow.py`` (the
+# single source of truth); this tool adds only the pyogrio/GDB reads. Re-export
+# the promoted names so existing importers (render_monthly.py etc.) keep working.
+from src.monthly_flow import (  # noqa: F401  (re-exported for tool importers)
+    MONTH_ABBR,
+    MONTHS,
+    SPINUP_CYCLES,
+    T_ALL_RAIN,
+    T_ALL_SNOW,
+    T_MELT,
+    T_MELT_FULL,
+    accumulate_downstream,
+    disaggregate_monthly,
+    normalize_shape,
+    snow_available_water,
+)
 
 
 def _value_column(gdb: str, layer: str, prefix: str) -> str:
@@ -79,60 +85,13 @@ def _load_monthly(gdb: str, kind: str, prefix: str, ids_index: dict[int, int],
     return out
 
 
-def snow_available_water(precip_mm: np.ndarray, temp_c: np.ndarray) -> np.ndarray:
-    """Monthly available water (rain + snowmelt) per reach, shape [n, 12].
-
-    Vectorized temperature-index snow bucket with spin-up. Inputs already in
-    physical units (mm, degC).
-    """
-    n = precip_mm.shape[0]
-    snow_frac = np.clip((T_ALL_RAIN - temp_c) / (T_ALL_RAIN - T_ALL_SNOW), 0.0, 1.0)
-    melt_frac = np.clip((temp_c - T_MELT) / (T_MELT_FULL - T_MELT), 0.0, 1.0)
-    snowfall = precip_mm * snow_frac
-    rainfall = precip_mm - snowfall
-
-    pack = np.zeros(n)
-    available = np.zeros((n, 12))
-    for _ in range(SPINUP_CYCLES):
-        available = np.zeros((n, 12))
-        for m in range(12):
-            pack = pack + snowfall[:, m]
-            melt = pack * melt_frac[:, m]
-            pack = pack - melt
-            available[:, m] = rainfall[:, m] + melt
-    return available
-
-
-def normalize_shape(available: np.ndarray) -> np.ndarray:
-    """Normalize each reach's 12-month vector to mean 1.0 (uniform if degenerate)."""
-    mean = available.mean(axis=1, keepdims=True)
-    shape = np.divide(available, mean, out=np.ones_like(available), where=mean > 0)
-    return shape
-
-
-def accumulate_downstream(incr_monthly: np.ndarray, hydroseq: np.ndarray,
-                          dnhydroseq: np.ndarray) -> np.ndarray:
-    """Route incremental monthly volumes downstream via HydroSeq connectivity.
-
-    Downstream reaches have smaller HydroSeq, so processing in *descending*
-    HydroSeq order guarantees a reach's upstream contributions are summed before
-    we push into its downstream reach. Returns accumulated monthly flow [n, 12].
-    """
-    seq_to_idx = {int(s): i for i, s in enumerate(hydroseq)}
-    acc = incr_monthly.copy()
-    order = np.argsort(-hydroseq)  # descending: upstream first
-    for i in order:
-        dn = int(dnhydroseq[i])
-        if dn == 0:
-            continue
-        j = seq_to_idx.get(dn)
-        if j is not None:
-            acc[j] += acc[i]
-    return acc
-
-
 def build_monthly_flow(gdb: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Return (nhdplus_ids [n], monthly_flow [n,12] cfs, qama [n] cfs)."""
+    """Return (nhdplus_ids [n], monthly_flow [n,12] cfs, qama [n] cfs).
+
+    Reads the GDB (EROM discharge, VAA connectivity, monthly precip/temp
+    climatology), then delegates the disaggregation math to
+    :func:`src.monthly_flow.disaggregate_monthly` (the shared source of truth).
+    """
     erom = pyogrio.read_dataframe(
         gdb, layer="NHDPlusEROMMA",
         columns=["NHDPlusID", "QAMA", "QIncrAMA"], read_geometry=False,
@@ -155,12 +114,12 @@ def build_monthly_flow(gdb: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     precip = np.nan_to_num(precip, nan=0.0)
     temp = np.nan_to_num(temp, nan=10.0)  # missing climate -> mild, no snow
 
-    shape = normalize_shape(snow_available_water(precip, temp))
-    incr = np.clip(df["QIncrAMA"].to_numpy(dtype=np.float64), 0.0, None)
-    incr_monthly = shape * incr[:, None]  # mean_m == incr per reach
-
-    flow = accumulate_downstream(
-        incr_monthly, df["HydroSeq"].to_numpy(), df["DnHydroSeq"].to_numpy()
+    flow = disaggregate_monthly(
+        precip,
+        temp,
+        df["QIncrAMA"].to_numpy(dtype=np.float64),
+        df["HydroSeq"].to_numpy(),
+        df["DnHydroSeq"].to_numpy(),
     )
     return ids, flow, df["QAMA"].to_numpy(dtype=np.float64)
 

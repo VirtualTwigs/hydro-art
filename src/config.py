@@ -130,6 +130,7 @@ _HEX_COLOR = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 DEFAULTS: dict[str, Any] = {
     "region": ["Oregon", "Washington"],
     "county": None,
+    "months": "annual",
     "projection": "EPSG:5070",
     "stream_order": "all",
     "stream_method": "strahler",
@@ -260,6 +261,7 @@ class Settings:
 
     regions: tuple[str, ...]
     county: str | None
+    months: tuple[int, ...]
     projection: str
     stream_order: str
     stream_method: str
@@ -295,6 +297,77 @@ def _normalize_region(name: str) -> str:
     raise ConfigError(
         f"Unsupported region: {name!r}. Valid regions are: {valid}."
     )
+
+
+#: Lowercase month tokens -> month number, for :func:`parse_months`. Kept here
+#: (not imported from ``src.monthly_flow``) so ``config.py`` stays numpy-free.
+_MONTH_TOKENS: dict[str, int] = {}
+for _i, (_abbr, _full) in enumerate(
+    [
+        ("jan", "january"), ("feb", "february"), ("mar", "march"),
+        ("apr", "april"), ("may", "may"), ("jun", "june"),
+        ("jul", "july"), ("aug", "august"), ("sep", "september"),
+        ("oct", "october"), ("nov", "november"), ("dec", "december"),
+    ],
+    start=1,
+):
+    _MONTH_TOKENS[_abbr] = _i
+    _MONTH_TOKENS[_full] = _i
+
+#: Tokens that mean "no month selection" (annual mean, the default behavior).
+_ANNUAL_TOKENS = {"", "annual", "all", "mean"}
+
+
+def _month_number(token: str) -> int:
+    """Return the 1-12 month number for a numeric or named ``token``.
+
+    Raises:
+        ConfigError: If ``token`` is not a valid month.
+    """
+    token = token.strip().lower()
+    if token in _MONTH_TOKENS:
+        return _MONTH_TOKENS[token]
+    if token.isdigit():
+        n = int(token)
+        if 1 <= n <= 12:
+            return n
+    raise ConfigError(
+        f"Invalid month: {token!r}. Use 1-12, a month name (jul/july), a range "
+        "(5-9, may-sep, wrapping like nov-feb), or 'annual'."
+    )
+
+
+def parse_months(value: Any) -> tuple[int, ...]:
+    """Parse a ``--months`` value into a canonical ``tuple[int, ...]``.
+
+    Forms (case-insensitive): ``None``/``""``/``annual``/``all``/``mean`` ->
+    ``()`` (annual mean, the default); a single month ``"7"``/``"jul"``/
+    ``"july"`` -> ``(7,)``; an inclusive range ``"5-9"``/``"may-sep"`` ->
+    ``(5, 6, 7, 8, 9)``; a wrapping range ``"nov-feb"`` -> ``(11, 12, 1, 2)``.
+    Out-of-range or unparseable input raises :class:`ConfigError`.
+    """
+    if value is None:
+        return ()
+    text = str(value).strip().lower()
+    if text in _ANNUAL_TOKENS:
+        return ()
+    if "-" in text:
+        parts = text.split("-")
+        if len(parts) != 2 or not parts[0] or not parts[1]:
+            raise ConfigError(
+                f"Invalid month range: {value!r}. Use forms like '5-9' or "
+                "'may-sep' (wrapping like 'nov-feb')."
+            )
+        start, end = _month_number(parts[0]), _month_number(parts[1])
+        months: list[int] = []
+        m = start
+        while True:
+            months.append(m)
+            if m == end:
+                break
+            m = m + 1 if m < 12 else 1
+        return tuple(months)
+    return (_month_number(text),)
 
 
 def _coerce_outputs(output: Any) -> frozenset[str]:
@@ -501,6 +574,8 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             f"{list(regions)}. Select a single region alongside --county."
         )
 
+    months = parse_months(values.get("months", DEFAULTS["months"]))
+
     projection = str(values.get("projection", DEFAULTS["projection"]))
     if projection not in SUPPORTED_PROJECTIONS:
         valid = ", ".join(SUPPORTED_PROJECTIONS)
@@ -650,6 +725,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
     return Settings(
         regions=regions,
         county=county,
+        months=months,
         projection=projection,
         stream_order=stream_order,
         stream_method=stream_method,

@@ -99,3 +99,16 @@ def test_cli_county_overrides_yaml(tmp_path):
     path = _write(tmp_path, "region:\n  - Washington\ncounty: King\n")
     settings = resolve_settings(["--config", path, "--county", "Clark"])
     assert settings.county == "Clark"
+
+
+def test_cli_months_flag(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings(["--config", path, "--months", "jul"])
+    assert settings.months == (7,)
+
+
+def test_unset_months_flag_keeps_yaml(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\nmonths: may-sep\n")
+    # --months not passed; YAML's months must survive.
+    settings = resolve_settings(["--config", path])
+    assert settings.months == (5, 6, 7, 8, 9)

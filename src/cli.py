@@ -56,6 +56,12 @@ def build_parser() -> argparse.ArgumentParser:
         "state (e.g. Clark). Requires exactly one --region.",
     )
     parser.add_argument(
+        "--months",
+        default=None,
+        help="Month selection: 'annual' (default, annual mean), a single month "
+        "(7/jul/july), or a range (5-9, may-sep, wrapping like nov-feb).",
+    )
+    parser.add_argument(
         "--palette",
         default=None,
         help="Named color palette (e.g. neon).",
@@ -190,6 +196,8 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["region"] = args.region
     if args.county is not None:
         overrides["county"] = args.county
+    if args.months is not None:
+        overrides["months"] = args.months
     if args.palette is not None:
         overrides["palette"] = args.palette
     if args.color_by is not None:

@@ -31,6 +31,9 @@ __all__ = [
     "stream_order_widths",
     "flow_widths",
     "scaled_widths",
+    "fixed_flow_span",
+    "widths_on_span",
+    "monthly_width_frames",
     "hypsometric_colors",
 ]
 
@@ -590,6 +593,110 @@ def scaled_widths(
         sid: width_min + (width_max - width_min) * ((v - lo) / span) ** gamma
         for sid, v in vals.items()
     }
+
+
+def fixed_flow_span(
+    values: Iterable[float], *, floor: float = 1e-2
+) -> tuple[float, float]:
+    """Return the fixed ``(lo, hi)`` log-span over *all* ``values``.
+
+    This is the "compute once, hold fixed" trick behind month-by-month flow
+    rendering: one log-span computed across every month's flows so that a single
+    flow always maps to the same width and seasonal swell/retreat is visible
+    (per-frame renormalization would hide it). ``lo``/``hi`` are the logs of the
+    smallest/largest positive value (floored at ``floor``). Empty or all
+    non-positive input is degenerate and yields ``(log(floor), log(floor))``.
+
+    Args:
+        values: Any iterable of flows (across all frames).
+        floor: Minimum flow substituted before the log.
+
+    Returns:
+        ``(lo, hi)`` log-span endpoints.
+    """
+    positive = [v for v in values if v > 0.0]
+    if not positive:
+        l = math.log(floor)
+        return (l, l)
+    lo = math.log(max(min(positive), floor))
+    hi = math.log(max(max(positive), floor))
+    return (lo, hi)
+
+
+def widths_on_span(
+    flows: Mapping[int, float],
+    lo: float,
+    hi: float,
+    *,
+    width_min: float,
+    width_max: float,
+    floor: float = 1e-2,
+) -> dict[int, float]:
+    """Map one frame's ``flows`` onto ``[width_min, width_max]`` on a fixed span.
+
+    Each flow is placed on the *fixed* ``(lo, hi)`` log-span from
+    :func:`fixed_flow_span` via ``t = clip((log(max(q, floor)) - lo) /
+    max(hi - lo, 1e-9), 0, 1)`` and linearly interpolated to the width band. The
+    span is held fixed (clamped, not renormalized) so the same flow always yields
+    the same width across frames.
+
+    Args:
+        flows: Mapping of ``segment_id`` -> flow for this frame.
+        lo: Low endpoint of the fixed log-span.
+        hi: High endpoint of the fixed log-span.
+        width_min: Stroke width at ``lo``.
+        width_max: Stroke width at ``hi``.
+        floor: Minimum flow substituted before the log.
+
+    Returns:
+        Mapping of ``segment_id`` -> stroke width.
+    """
+    span = max(hi - lo, 1e-9)
+    return {
+        sid: width_min
+        + (width_max - width_min)
+        * min(max((math.log(max(q, floor)) - lo) / span, 0.0), 1.0)
+        for sid, q in flows.items()
+    }
+
+
+def monthly_width_frames(
+    monthly: Mapping[int, list[float]],
+    *,
+    width_min: float,
+    width_max: float,
+    floor: float = 1e-2,
+) -> list[dict[int, float]]:
+    """Return 12 per-month width dicts on one shared fixed span.
+
+    ``monthly`` maps ``segment_id`` -> a length-12 flow series. A single
+    :func:`fixed_flow_span` is computed across *all* months' flows, then each
+    month is mapped onto it with :func:`widths_on_span`, so seasonal swell and
+    retreat is visible frame to frame.
+
+    Args:
+        monthly: Mapping of ``segment_id`` -> length-12 flow series.
+        width_min: Stroke width at the span's low endpoint.
+        width_max: Stroke width at the span's high endpoint.
+        floor: Minimum flow substituted before the log.
+
+    Returns:
+        A list of 12 ``{segment_id: width}`` dicts.
+    """
+    lo, hi = fixed_flow_span(
+        (q for series in monthly.values() for q in series), floor=floor
+    )
+    return [
+        widths_on_span(
+            {sid: series[m] for sid, series in monthly.items()},
+            lo,
+            hi,
+            width_min=width_min,
+            width_max=width_max,
+            floor=floor,
+        )
+        for m in range(12)
+    ]
 
 
 def hypsometric_colors(
