@@ -176,6 +176,14 @@ found already-built (`Downloader` `.part`+HTTP-Range resume + `acquire`/`acquire
 point, and `tools/` packaging/preflight CLIs over a real NAS cache.)
 22. [ ] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
+(Partial — **terrain-aware 2D hillshade** shipped: `src/hillshade.py` (pure, offline, numpy over
+`RasterGrid`) computes Lambertian shaded relief (0-255) via Horn's 3×3 gradients + a configurable
+sun (azimuth/altitude) and shading-only `z_factor`; edge-replicated borders keep shape, nodata is
+never invented (a cell or its 8-neighborhood touching nodata → sentinel), boundary-validated
+(`HillshadeError`), deterministic. Not in `PIPELINE_STAGES`. Spec
+`agent-os/specs/2026-08-12-print-experience-modes`; tested in `tests/test_hillshade.py` (8 tests).
+**Left:** animation/camera paths (interpolated `CameraPreset` motion over `src/scene.py`), web
+delivery, and compositing the hillshade under the river SVG in a `tools/` print renderer.)
 
 ## Epoch 6 — interactive art-direction UX
 

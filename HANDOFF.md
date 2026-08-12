@@ -1,11 +1,22 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), and the #21 portable-cache-manifests slice (implemented, commit pending)._
+_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (implemented, commit pending)._
 
 ## Current state (2026-08-12)
 
-- **#21 Regional scale & offline packaging — portable-manifests slice implemented, commit
-  pending.** #21 is `XL` and spans four concerns; per the user's scoping decision this pass
+- **#22 Print/experience modes — 2D hillshade slice implemented, commit pending.** #22 is `XL`
+  and spans three concerns; per the user's scoping this pass delivers only the flagship, fully-
+  offline **terrain-aware 2D hillshade**. New pure module `src/hillshade.py` (spec
+  `agent-os/specs/2026-08-12-print-experience-modes/`): `hillshade(grid, *, azimuth_deg=315,
+  altitude_deg=45, z_factor=1.0, nodata=-1.0)` computes Lambertian shaded relief (0-255) from a
+  `RasterGrid` via Horn's 3×3 `dz/dx`/`dz/dy` + the ESRI/GDAL illumination model; edge-replicated
+  borders keep the input shape, nodata is **never invented** (a cell or its 8-neighborhood touching
+  nodata → output sentinel), `z_factor` is shading-only (never alters source Z), boundary-validated
+  (`HillshadeError`), deterministic. numpy + `src.raster`/`src.elevation` only; not in
+  `PIPELINE_STAGES`. Tested in `tests/test_hillshade.py` (8 tests). Suite: **409 passing** (+8).
+  **Deferred on #22:** animation/camera paths (interpolated `CameraPreset` motion over `src/scene.py`),
+  web delivery, and compositing hillshade under the river SVG in a `tools/` print renderer.
+- **#21 Regional scale & offline packaging — two offline slices committed (`f5997d8`, `0825475`).** #21 is `XL` and spans four concerns; per the user's scoping decision this pass
   delivers only the fully-offline **portable cache manifests**. New pure module
   `src/manifest.py` (spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging/`) turns
   a `Cache`'s recorded provenance into a deterministic, portable manifest: `build_manifest` /
