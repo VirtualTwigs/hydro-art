@@ -30,6 +30,8 @@ __all__ = [
     "render_svg",
     "stream_order_widths",
     "flow_widths",
+    "scaled_widths",
+    "hypsometric_colors",
 ]
 
 Coord = tuple[float, float]
@@ -535,3 +537,102 @@ def flow_widths(
         sid: base_width + (top - base_width) * ((v - lo) / span)
         for sid, v in logs.items()
     }
+
+
+#: Elevation ramp anchors for :func:`hypsometric_colors`: deep blue (sea level)
+#: → white (summit). The low anchor stays visibly saturated (not near-black) so
+#: tidewater reaches read as blue against a dark background. Mirrors
+#: ``tools/render_state_mono.py`` so the tool and pipeline share one ramp.
+_HYPSO_LOW = (26, 72, 156)
+_HYPSO_HIGH = (255, 255, 255)
+
+
+def scaled_widths(
+    metric: Mapping[int, float],
+    *,
+    width_min: float,
+    width_max: float,
+    gamma: float = 1.0,
+    log: bool = False,
+) -> dict[int, float]:
+    """Map a per-segment metric onto ``[width_min, width_max]`` via a shaped ramp.
+
+    Normalizes ``metric`` to ``[0, 1]`` across the network (on ``log(metric)``
+    when ``log`` is set — appropriate for discharge, which spans orders of
+    magnitude), applies ``t ** gamma`` shaping, then maps to the width band. This
+    is the general width resolver behind the ``width_by=flow`` art-direction
+    option: the pipeline feeds it stream orders (``log=False``); the tools feed
+    it discharge (``log=True``). Deterministic; a degenerate (empty or
+    single-value) network yields a uniform ``width_min``.
+
+    Args:
+        metric: Mapping of ``segment_id`` -> a non-negative flow/order metric.
+        width_min: Stroke width at the smallest metric value.
+        width_max: Stroke width at the largest metric value.
+        gamma: Shaping exponent (``> 0``); ``> 1`` keeps more channels thin,
+            ``< 1`` widens mid-range channels.
+        log: Normalize on ``log(max(metric, 1e-2))`` instead of the raw value.
+
+    Returns:
+        Mapping of ``segment_id`` -> stroke width.
+    """
+    if not metric:
+        return {}
+    if log:
+        vals = {sid: math.log(max(v, 1e-2)) for sid, v in metric.items()}
+    else:
+        vals = {sid: float(v) for sid, v in metric.items()}
+    lo, hi = min(vals.values()), max(vals.values())
+    span = hi - lo
+    if span < 1e-9:
+        return {sid: width_min for sid in metric}
+    return {
+        sid: width_min + (width_max - width_min) * ((v - lo) / span) ** gamma
+        for sid, v in vals.items()
+    }
+
+
+def hypsometric_colors(
+    elevations: Mapping[int, float],
+    *,
+    gamma: float = 0.75,
+    anchor: float | None = None,
+    low: tuple[int, int, int] = _HYPSO_LOW,
+    high: tuple[int, int, int] = _HYPSO_HIGH,
+) -> dict[int, str]:
+    """Map per-segment elevation (m) onto a deep-blue → white hypsometric tint.
+
+    ``t = clip(elev / anchor, 0, 1) ** gamma``; sea level (``t=0``) is ``low``
+    and the anchor elevation (``t=1``) is ``high``. ``anchor`` defaults to the
+    maximum elevation in ``elevations``; a percentile can be passed to pull more
+    of the high country toward white. ``gamma < 1`` brightens mid-slopes. This is
+    the ``color_by=elevation`` primitive, promoted from
+    ``tools/render_state_mono.py`` so both share one tested ramp. Deterministic;
+    a degenerate (all sea-level / non-positive anchor) input yields all ``low``.
+
+    Args:
+        elevations: Mapping of ``segment_id`` -> elevation in metres.
+        gamma: Ramp-shaping exponent (``> 0``).
+        anchor: Elevation mapped to ``high`` (defaults to the max elevation).
+        low: RGB triple for sea level.
+        high: RGB triple for the anchor (summit).
+
+    Returns:
+        Mapping of ``segment_id`` -> hex color string.
+    """
+    if not elevations:
+        return {}
+    emax = anchor if anchor is not None else max(elevations.values())
+    lr, lg, lb = low
+    hr, hg, hb = high
+    colors: dict[int, str] = {}
+    for sid, elev in elevations.items():
+        if emax <= 0:
+            t = 0.0
+        else:
+            t = min(max(elev / emax, 0.0), 1.0) ** gamma
+        r = round(lr + (hr - lr) * t)
+        g = round(lg + (hg - lg) * t)
+        b = round(lb + (hb - lb) * t)
+        colors[sid] = f"#{r:02x}{g:02x}{b:02x}"
+    return colors

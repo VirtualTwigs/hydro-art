@@ -32,6 +32,8 @@ __all__ = [
     "SUPPORTED_STREAM_METHODS",
     "SUPPORTED_HUC_LEVELS",
     "SUPPORTED_PALETTES",
+    "SUPPORTED_COLOR_MODES",
+    "SUPPORTED_WIDTH_MODES",
     "SUPPORTED_GLOW_MODES",
     "SUPPORTED_COASTAL_MODES",
     "SUPPORTED_RENDER_ORDERS",
@@ -85,6 +87,17 @@ SUPPORTED_HUC_LEVELS: tuple[str, ...] = (
 #: in :mod:`src.coloring`; this allowlist gates the ``palette`` config value.
 SUPPORTED_PALETTES: tuple[str, ...] = ("neon",)
 
+#: Color art-direction modes (roadmap #23). ``watershed`` = deterministic
+#: high-contrast palette per HUC group (default, unchanged); ``single`` = one
+#: color for every flowline (``single_color``); ``elevation`` = hypsometric tint
+#: mirroring ``tools/render_state_mono.py``.
+SUPPORTED_COLOR_MODES: tuple[str, ...] = ("watershed", "single", "elevation")
+
+#: Line-width art-direction modes (roadmap #23). ``uniform`` = every stroke is
+#: the base ``line_width`` (default, unchanged); ``flow`` = width scales with a
+#: channel's flow, mapped ``[width_min, width_max]`` shaped by ``width_gamma``.
+SUPPORTED_WIDTH_MODES: tuple[str, ...] = ("uniform", "flow")
+
 #: Glow rendering modes (PRD section 20): ``vector`` (pure-vector halo) or
 #: ``blur`` (SVG Gaussian-blur filter). Only used when ``glow`` is enabled.
 SUPPORTED_GLOW_MODES: tuple[str, ...] = ("vector", "blur")
@@ -123,6 +136,12 @@ DEFAULTS: dict[str, Any] = {
     "background": "#000000",
     "line_width": 0.35,
     "palette": "neon",
+    "color_by": "watershed",
+    "single_color": "#00ffff",
+    "width_by": "uniform",
+    "width_min": 0.35,
+    "width_max": 2.0,
+    "width_gamma": 1.0,
     "glow": False,
     "glow_mode": "blur",
     "glow_radius": 2.0,
@@ -215,6 +234,15 @@ class Settings:
         background: Background color as a hex string (e.g. ``"#000000"``).
         line_width: Default stroke width in SVG user units; must be > 0.
         palette: Named color palette (e.g. ``"neon"``).
+        color_by: Color art-direction mode (one of
+            :data:`SUPPORTED_COLOR_MODES`); ``"watershed"`` is the default.
+        single_color: Hex color used when ``color_by == "single"``.
+        width_by: Line-width art-direction mode (one of
+            :data:`SUPPORTED_WIDTH_MODES`); ``"uniform"`` is the default.
+        width_min: Minimum stroke width for ``width_by == "flow"``; must be > 0.
+        width_max: Maximum stroke width for ``width_by == "flow"``; must be > 0
+            and >= ``width_min``.
+        width_gamma: Shaping exponent for the flow→width ramp; must be > 0.
         glow: Whether the optional glow effect is enabled.
         glow_mode: Glow style when enabled (``"vector"`` or ``"blur"``).
         glow_radius: Glow radius in SVG user units; must be > 0.
@@ -234,6 +262,12 @@ class Settings:
     background: str
     line_width: float
     palette: str
+    color_by: str
+    single_color: str
+    width_by: str
+    width_min: float
+    width_max: float
+    width_gamma: float
     glow: bool
     glow_mode: str
     glow_radius: float
@@ -501,6 +535,64 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             f"Unsupported palette: {palette!r}. Valid: {valid}."
         )
 
+    color_by = str(values.get("color_by", DEFAULTS["color_by"])).lower()
+    if color_by not in SUPPORTED_COLOR_MODES:
+        valid = ", ".join(SUPPORTED_COLOR_MODES)
+        raise ConfigError(
+            f"Unsupported color_by: {color_by!r}. Valid: {valid}."
+        )
+
+    single_color = str(values.get("single_color", DEFAULTS["single_color"]))
+    if not _HEX_COLOR.match(single_color):
+        raise ConfigError(
+            f"Invalid single_color: {single_color!r}. "
+            "Expected a hex color like '#00ffff'."
+        )
+
+    width_by = str(values.get("width_by", DEFAULTS["width_by"])).lower()
+    if width_by not in SUPPORTED_WIDTH_MODES:
+        valid = ", ".join(SUPPORTED_WIDTH_MODES)
+        raise ConfigError(
+            f"Unsupported width_by: {width_by!r}. Valid: {valid}."
+        )
+
+    try:
+        width_min = float(values.get("width_min", DEFAULTS["width_min"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid width_min: {values.get('width_min')!r}. "
+            "Expected a positive number."
+        )
+    if width_min <= 0:
+        raise ConfigError(f"width_min must be greater than 0, got {width_min}.")
+
+    try:
+        width_max = float(values.get("width_max", DEFAULTS["width_max"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid width_max: {values.get('width_max')!r}. "
+            "Expected a positive number."
+        )
+    if width_max <= 0:
+        raise ConfigError(f"width_max must be greater than 0, got {width_max}.")
+    if width_max < width_min:
+        raise ConfigError(
+            f"width_max must be >= width_min, got width_max={width_max} "
+            f"and width_min={width_min}."
+        )
+
+    try:
+        width_gamma = float(values.get("width_gamma", DEFAULTS["width_gamma"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid width_gamma: {values.get('width_gamma')!r}. "
+            "Expected a positive number."
+        )
+    if width_gamma <= 0:
+        raise ConfigError(
+            f"width_gamma must be greater than 0, got {width_gamma}."
+        )
+
     glow = bool(values.get("glow", DEFAULTS["glow"]))
 
     glow_mode = str(values.get("glow_mode", DEFAULTS["glow_mode"])).lower()
@@ -549,6 +641,12 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         background=background,
         line_width=line_width,
         palette=palette,
+        color_by=color_by,
+        single_color=single_color,
+        width_by=width_by,
+        width_min=width_min,
+        width_max=width_max,
+        width_gamma=width_gamma,
         glow=glow,
         glow_mode=glow_mode,
         glow_radius=glow_radius,

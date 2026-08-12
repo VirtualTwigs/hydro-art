@@ -143,7 +143,7 @@ real generator, not a mock.
 
 **Phase 6.1 — Art-direction flag parity (pipeline)**
 
-23. [ ] Color & line-width art-direction options — Promote the "proposed" style controls into
+23. [x] Color & line-width art-direction options — Promote the "proposed" style controls into
 `src/config.py`/`src/cli.py`/`src/rendering.py` as validated options: `color_by`
 (`watershed`|`single`|`elevation`, the last mirroring `tools/render_state_mono.py`'s hypsometric
 tint) and `width_by` (`flow`|`uniform`) with min/max/gamma. Deterministic; defaults keep existing

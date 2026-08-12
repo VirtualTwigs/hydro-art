@@ -17,7 +17,7 @@ from typing import Any, Callable
 from rich.console import Console
 
 from src.cache import Cache, DownloaderLike, ensure_cached, extract_all
-from src.config import Settings
+from src.config import ConfigError, Settings
 from src.datasets import resolve_required_files
 from src.clipping import clip_layers, region_boundary
 from src.coloring import assign_colors
@@ -29,7 +29,7 @@ from src.loading import LayerLoader, PyogrioLayerLoader
 from src.optimize import SvgOptimizer, SvgoOptimizer
 from src.ordering import assign_stream_order
 from src.projection import reproject_layer
-from src.rendering import render_svg
+from src.rendering import render_svg, scaled_widths
 from src.waterbodies import classify_layer
 from src.waterbody_selection import (
     WaterbodySelectionPolicy,
@@ -220,25 +220,76 @@ def _compute_watersheds_stage(ctx: RunContext) -> None:
 
 
 def _assign_colors_stage(ctx: RunContext) -> None:
-    """Assign deterministic, high-contrast colors to each watershed."""
+    """Assign flowline colors per the ``color_by`` art-direction mode (roadmap #23).
+
+    ``watershed`` (default) assigns a deterministic, high-contrast palette color
+    per HUC group; ``single`` paints every flowline ``single_color``;
+    ``elevation`` (hypsometric tint) requires per-segment elevation the 2D
+    pipeline does not carry, so it fails fast with an actionable message.
+    """
     hydro_graph = ctx.artifacts["hydro_graph"]
     watersheds = ctx.artifacts["watersheds"]
-    palette = ctx.settings.palette
+    color_by = ctx.settings.color_by
 
-    watershed_colors = assign_colors(hydro_graph, watersheds, palette)
-    segment_colors = {
-        segment_id: watershed_colors[code]
-        for code, segment_ids in watersheds.items()
+    if color_by == "elevation":
+        raise ConfigError(
+            "color_by=elevation needs per-segment ground elevation, which the "
+            "2D pipeline does not load. Use tools/render_state_mono.py (or the "
+            "DEM subsystem) for the hypsometric tint, or choose color_by "
+            "watershed/single."
+        )
+
+    all_segments = {
+        segment_id
+        for segment_ids in watersheds.values()
         for segment_id in segment_ids
     }
+    if color_by == "single":
+        single = ctx.settings.single_color
+        watershed_colors = {code: single for code in watersheds}
+        segment_colors = {segment_id: single for segment_id in all_segments}
+        detail = f"single color {single}"
+    else:  # watershed (default)
+        watershed_colors = assign_colors(hydro_graph, watersheds, ctx.settings.palette)
+        segment_colors = {
+            segment_id: watershed_colors[code]
+            for code, segment_ids in watersheds.items()
+            for segment_id in segment_ids
+        }
+        detail = (
+            f"{len(set(watershed_colors.values()))} distinct "
+            f"{ctx.settings.palette} color(s)"
+        )
 
     ctx.artifacts["watershed_colors"] = watershed_colors
     ctx.artifacts["segment_colors"] = segment_colors
-    ctx.artifacts["palette"] = palette
+    ctx.artifacts["palette"] = ctx.settings.palette
     ctx.log(
         f"[bold]assign_colors[/bold] colored {len(watershed_colors)} watershed(s) "
-        f"({len(set(watershed_colors.values()))} distinct {palette} color(s)) "
-        f"over {len(segment_colors)} segments"
+        f"({detail}) over {len(segment_colors)} segments"
+    )
+
+
+def _resolve_stroke_widths(ctx: RunContext) -> dict[int, float] | None:
+    """Resolve per-segment stroke widths for the ``width_by`` mode (roadmap #23).
+
+    ``uniform`` (default) returns ``None`` so every stroke inherits the base
+    ``line_width`` — byte-identical to a pre-#23 render. ``flow`` scales width
+    with the channel's flow; the 2D pipeline's available flow proxy is the
+    computed stream order (PRD §17 width scaling), mapped onto
+    ``[width_min, width_max]`` and shaped by ``width_gamma``. True EROM-discharge
+    scaling remains a ``tools/`` capability.
+    """
+    if ctx.settings.width_by != "flow":
+        return None
+    stream_orders = ctx.artifacts.get("stream_orders")
+    if not stream_orders:
+        return None
+    return scaled_widths(
+        stream_orders,
+        width_min=ctx.settings.width_min,
+        width_max=ctx.settings.width_max,
+        gamma=ctx.settings.width_gamma,
     )
 
 
@@ -255,6 +306,8 @@ def _generate_svg_stage(ctx: RunContext) -> None:
 
     waterbody_items = _select_waterbody_outlines(ctx)
 
+    stroke_widths = _resolve_stroke_widths(ctx)
+
     wb = ctx.settings.waterbodies
     svg = render_svg(
         geometries,
@@ -262,6 +315,7 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         watersheds,
         background=ctx.settings.background,
         line_width=ctx.settings.line_width,
+        stroke_widths=stroke_widths,
         glow=ctx.settings.glow,
         glow_mode=ctx.settings.glow_mode,
         glow_radius=ctx.settings.glow_radius,

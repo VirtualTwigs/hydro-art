@@ -51,3 +51,32 @@ def test_cli_glow_and_output_flags(tmp_path):
     )
     assert settings.glow is True
     assert settings.outputs == frozenset({"svg", "png"})
+
+
+def test_cli_art_direction_flags(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings(
+        [
+            "--config", path,
+            "--color-by", "single",
+            "--single-color", "#ff00ff",
+            "--width-by", "flow",
+            "--width-min", "0.5",
+            "--width-max", "4.0",
+            "--width-gamma", "0.5",
+        ]
+    )
+    assert settings.color_by == "single"
+    assert settings.single_color == "#ff00ff"
+    assert settings.width_by == "flow"
+    assert settings.width_min == 0.5
+    assert settings.width_max == 4.0
+    assert settings.width_gamma == 0.5
+
+
+def test_unset_art_direction_flags_keep_yaml(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\ncolor_by: single\nwidth_by: flow\n")
+    # Neither --color-by nor --width-by passed; YAML values must survive.
+    settings = resolve_settings(["--config", path])
+    assert settings.color_by == "single"
+    assert settings.width_by == "flow"

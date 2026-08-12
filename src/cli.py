@@ -55,6 +55,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Named color palette (e.g. neon).",
     )
     parser.add_argument(
+        "--color-by",
+        default=None,
+        help="Color art-direction mode: watershed single elevation.",
+    )
+    parser.add_argument(
+        "--single-color",
+        default=None,
+        help="Stroke color for --color-by single (hex, e.g. #00ffff).",
+    )
+    parser.add_argument(
+        "--width-by",
+        default=None,
+        help="Line-width art-direction mode: uniform flow.",
+    )
+    parser.add_argument(
+        "--width-min",
+        type=float,
+        default=None,
+        help="Minimum stroke width for --width-by flow (positive number).",
+    )
+    parser.add_argument(
+        "--width-max",
+        type=float,
+        default=None,
+        help="Maximum stroke width for --width-by flow (>= --width-min).",
+    )
+    parser.add_argument(
+        "--width-gamma",
+        type=float,
+        default=None,
+        help="Shaping exponent for the flow-to-width ramp (positive number).",
+    )
+    parser.add_argument(
         "--stream-method",
         default=None,
         help="Stream-hierarchy method: strahler shreve hack custom.",
@@ -151,6 +184,18 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["region"] = args.region
     if args.palette is not None:
         overrides["palette"] = args.palette
+    if args.color_by is not None:
+        overrides["color_by"] = args.color_by
+    if args.single_color is not None:
+        overrides["single_color"] = args.single_color
+    if args.width_by is not None:
+        overrides["width_by"] = args.width_by
+    if args.width_min is not None:
+        overrides["width_min"] = args.width_min
+    if args.width_max is not None:
+        overrides["width_max"] = args.width_max
+    if args.width_gamma is not None:
+        overrides["width_gamma"] = args.width_gamma
     if args.stream_method is not None:
         overrides["stream_method"] = args.stream_method
     if args.huc_level is not None:

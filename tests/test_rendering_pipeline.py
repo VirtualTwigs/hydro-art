@@ -13,7 +13,9 @@ import zipfile
 from rich.console import Console
 from shapely.geometry import LineString, box
 
-from src.config import build_settings
+import pytest
+
+from src.config import ConfigError, build_settings
 from src.loading import Layer
 from src.pipeline import Pipeline
 
@@ -81,6 +83,57 @@ def test_pipeline_svg_is_deterministic(tmp_path):
     first = _pipeline(tmp_path).run(settings).artifacts["svg"]
     second = _pipeline(tmp_path).run(settings).artifacts["svg"]
     assert first == second
+
+
+def _paths(svg):
+    root = ET.fromstring(svg)
+    return [p for g in root for p in g if p.tag.endswith("path")]
+
+
+def test_default_render_uniform_has_no_per_path_widths(tmp_path):
+    # Byte-identical baseline: color_by=watershed + width_by=uniform (the
+    # defaults) render the current code path — no per-path stroke-width attrs.
+    settings = build_settings({"region": ["Oregon"]})
+    svg = _pipeline(tmp_path).run(settings).artifacts["svg"]
+    assert all(p.get("stroke-width") is None for p in _paths(svg))
+
+
+def test_color_by_single_paints_every_flowline_one_color(tmp_path):
+    settings = build_settings(
+        {"region": ["Oregon"], "color_by": "single", "single_color": "#ff00ff"}
+    )
+    context = _pipeline(tmp_path).run(settings)
+    svg = context.artifacts["svg"]
+    root = ET.fromstring(svg)
+    groups = [g for g in root if g.get("id", "").startswith("watershed_")]
+    assert groups
+    assert all(g.get("stroke") == "#ff00ff" for g in groups)
+    # No stray per-segment stroke overrides — the whole network is one color.
+    assert all(p.get("stroke") in (None, "#ff00ff") for p in _paths(svg))
+
+
+def test_color_by_elevation_raises_without_metric_data(tmp_path):
+    settings = build_settings({"region": ["Oregon"], "color_by": "elevation"})
+    with pytest.raises(ConfigError, match="elevation"):
+        _pipeline(tmp_path).run(settings)
+
+
+def test_width_by_flow_scales_stroke_widths(tmp_path):
+    settings = build_settings(
+        {
+            "region": ["Oregon"],
+            "width_by": "flow",
+            "width_min": 0.5,
+            "width_max": 3.0,
+        }
+    )
+    svg = _pipeline(tmp_path).run(settings).artifacts["svg"]
+    widths = [float(p.get("stroke-width")) for p in _paths(svg)]
+    assert widths, "expected per-path stroke widths under width_by=flow"
+    # The confluence mainstem (higher stream order) is the widest channel.
+    assert max(widths) == 3.0
+    assert min(widths) == 0.5
+    assert max(widths) > min(widths)
 
 
 def test_generate_svg_feeds_downstream_stages(tmp_path):

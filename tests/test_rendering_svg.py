@@ -10,7 +10,13 @@ import xml.etree.ElementTree as ET
 
 from shapely.geometry import LineString
 
-from src.rendering import flow_widths, render_svg, stream_order_widths
+from src.rendering import (
+    flow_widths,
+    hypsometric_colors,
+    render_svg,
+    scaled_widths,
+    stream_order_widths,
+)
 
 # Two watersheds: 'A' (segments 0,1) and 'B' (segment 2).
 GEOMS = {
@@ -116,3 +122,47 @@ def test_flow_widths_floors_nonpositive_and_handles_degenerate():
     w = flow_widths({0: 0.0, 1: -5.0, 2: 1.0}, base_width=0.6, max_scale=6.0, floor=1.0)
     assert w[0] == w[1] == w[2] == 0.6  # all floored to 1.0 -> single value -> uniform
     assert flow_widths({}, base_width=0.6) == {}
+
+
+# --- Art-direction primitives (roadmap #23) ---------------------------------
+
+
+def test_hypsometric_colors_anchors_sea_level_and_summit():
+    # Sea level (0 m) -> deep blue; the max reach -> white; gamma=1 is linear.
+    colors = hypsometric_colors({0: 0.0, 1: 500.0, 2: 1000.0}, gamma=1.0)
+    assert colors[0] == "#1a489c"  # DEEP_BLUE (26, 72, 156)
+    assert colors[2] == "#ffffff"  # WHITE at the anchor
+    # Midpoint sits between the two anchors on every channel.
+    r, g, b = int(colors[1][1:3], 16), int(colors[1][3:5], 16), int(colors[1][5:7], 16)
+    assert 26 < r < 255 and 72 < g < 255 and 156 < b < 255
+
+
+def test_hypsometric_colors_gamma_and_degenerate():
+    # gamma < 1 brightens mid-slopes (higher toward white) vs. gamma = 1.
+    lin = hypsometric_colors({0: 250.0}, gamma=1.0, anchor=1000.0)[0]
+    bright = hypsometric_colors({0: 250.0}, gamma=0.5, anchor=1000.0)[0]
+    assert int(bright[1:3], 16) > int(lin[1:3], 16)  # brighter red channel
+    # All-sea-level (anchor <= 0) collapses to the low color, no divide-by-zero.
+    assert hypsometric_colors({0: 0.0, 1: 0.0}) == {0: "#1a489c", 1: "#1a489c"}
+
+
+def test_scaled_widths_maps_endpoints_and_gamma():
+    w = scaled_widths({0: 1.0, 1: 2.0, 2: 3.0}, width_min=0.5, width_max=2.5, gamma=1.0)
+    assert w[0] == 0.5  # min metric -> width_min
+    assert w[2] == 2.5  # max metric -> width_max
+    assert abs(w[1] - 1.5) < 1e-9  # linear midpoint
+    # gamma > 1 pulls mid values down toward width_min.
+    wg = scaled_widths({0: 1.0, 1: 2.0, 2: 3.0}, width_min=0.5, width_max=2.5, gamma=2.0)
+    assert wg[1] < w[1]
+
+
+def test_scaled_widths_log_and_degenerate():
+    # log=True orders by magnitude; a geometric midpoint lands at the middle.
+    wl = scaled_widths(
+        {0: 1.0, 1: 100.0, 2: 10000.0}, width_min=0.6, width_max=3.6, log=True
+    )
+    assert wl[0] == 0.6 and wl[2] == 3.6
+    assert abs(wl[1] - 2.1) < 1e-9
+    # Single distinct value -> uniform width_min; empty -> empty.
+    assert scaled_widths({0: 5.0, 1: 5.0}, width_min=0.6, width_max=3.6) == {0: 0.6, 1: 0.6}
+    assert scaled_widths({}, width_min=0.6, width_max=3.6) == {}
