@@ -100,6 +100,18 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
   Epoch 2 is now complete. **W4** stays `[ ]`: OR/WA real-region QA passed, but the Clark
   County run (Census shapefile not mounted) and print/screen preset **values**
   (art-direction) remain.
+- **W4 waterbody preset *mechanism* — uncommitted (offline slice).** Closes the W4 "establish
+  print and screen presets" plumbing while leaving the *values* human-tunable (spec
+  `agent-os/specs/2026-08-12-waterbody-regional-presets/`). `src/config.py` gains `WATERBODY_PRESETS`
+  (provisional `screen`/`print` bundles, marked as placeholders pending human review) +
+  `SUPPORTED_WATERBODY_PRESETS`; `_coerce_waterbodies` pops a `preset` directive and layers
+  `defaults < preset < explicit` (unknown → `ConfigError`), consuming `preset` so it never lands on
+  the frozen `WaterbodySettings` (no-preset builds byte-identical). `src/cli.py` adds
+  `--waterbody-preset {screen,print}` and — critically — changes the nested `waterbodies` merge base
+  from `dict(DEFAULTS["waterbodies"])` to `{}` (behavior-preserving, since `_coerce_waterbodies` fills
+  defaults) so a preset isn't shadowed by pre-seeded default values. Tests in
+  `tests/test_waterbody_config.py` (+8). Suite: **443 passing** (+8). **Still deferred on W4:** the
+  final tuned preset numbers (art-direction) and the Clark County run (mounted Census data).
 - **#28 Presets & shareable render recipes — committed (`b80296d`).**
   Added a **recipe** layer to the control surface (spec
   `agent-os/specs/2026-08-12-presets-and-recipes/`). All logic is pure and lives

@@ -37,6 +37,8 @@ __all__ = [
     "SUPPORTED_GLOW_MODES",
     "SUPPORTED_COASTAL_MODES",
     "SUPPORTED_RENDER_ORDERS",
+    "WATERBODY_PRESETS",
+    "SUPPORTED_WATERBODY_PRESETS",
     "SUPPORTED_ELEVATION_SOURCES",
     "SUPPORTED_ELEVATION_TIERS",
     "SUPPORTED_CACHE_POLICIES",
@@ -109,6 +111,39 @@ SUPPORTED_COASTAL_MODES: tuple[str, ...] = ("conservative", "permissive")
 
 #: Where the waterbody-outline layer sits relative to the flowline layers.
 SUPPORTED_RENDER_ORDERS: tuple[str, ...] = ("below", "above")
+
+#: Named waterbody art-direction presets (Item W4). A preset is a convenience
+#: directive: naming one in the ``waterbodies`` block expands to this bundle of
+#: existing ``WaterbodySettings`` fields (precedence ``defaults < preset <
+#: explicit``), inventing no new render behavior. ``screen`` mirrors the default
+#: on-screen build; ``print`` uses a bolder stroke and positive area thresholds to
+#: declutter tiny ponds so outlines survive ink / large-format rasterization.
+#:
+#: NOTE: these values are **provisional placeholders**. Roadmap W4 defers the final
+#: print/screen thresholds to human art-direction pending review of real Oregon/
+#: Washington/Clark-County output; tune them here once that review happens. The
+#: *mechanism* (naming, precedence, CLI/YAML wiring) is what this slice fixes.
+WATERBODY_PRESETS: dict[str, dict[str, Any]] = {
+    "screen": {
+        "color": "#2ec4ff",
+        "stroke_width": 0.45,
+        "min_inland_area_m2": 0.0,
+        "min_coastal_area_m2": 0.0,
+        "coastal_mode": "conservative",
+        "render_order": "below",
+    },
+    "print": {
+        "color": "#2ec4ff",
+        "stroke_width": 0.9,
+        "min_inland_area_m2": 100_000.0,  # ~0.1 km²: drop tiny ponds for legibility
+        "min_coastal_area_m2": 250_000.0,
+        "coastal_mode": "conservative",
+        "render_order": "below",
+    },
+}
+
+#: Allowlist of preset names (for CLI ``choices`` + validation).
+SUPPORTED_WATERBODY_PRESETS: tuple[str, ...] = tuple(WATERBODY_PRESETS)
 
 #: Authoritative elevation sources (Item 11 / Epoch 2). USGS 3DEP bare-earth
 #: DEMs are the only source for the first release; the allowlist leaves room
@@ -411,18 +446,36 @@ def _coerce_waterbodies(value: Any) -> WaterbodySettings:
     :data:`DEFAULTS`, so ``{"enabled": False}`` keeps every other default. This
     makes both direct ``build_settings`` calls and merged CLI/YAML input safe.
 
+    A ``preset`` directive (Item W4) expands a named :data:`WATERBODY_PRESETS`
+    bundle with precedence ``defaults < preset < explicit`` — so an explicit
+    sub-key passed alongside a preset still wins. ``preset`` is consumed here and
+    never stored on :class:`WaterbodySettings`, so a build without one is unchanged.
+
     Raises:
-        ConfigError: If any provided sub-value is invalid.
+        ConfigError: If any provided sub-value (or the preset name) is invalid.
     """
     defaults = DEFAULTS["waterbodies"]
     if value is None:
-        merged = dict(defaults)
+        provided: dict[str, Any] = {}
     elif isinstance(value, Mapping):
-        merged = {**defaults, **value}
+        provided = dict(value)
     else:
         raise ConfigError(
             f"Invalid 'waterbodies' value: {value!r}. Expected a mapping."
         )
+
+    preset_values: dict[str, Any] = {}
+    preset_name = provided.pop("preset", None)
+    if preset_name is not None:
+        key = str(preset_name).lower()
+        if key not in WATERBODY_PRESETS:
+            valid = ", ".join(SUPPORTED_WATERBODY_PRESETS)
+            raise ConfigError(
+                f"Unsupported waterbodies.preset: {preset_name!r}. Valid: {valid}."
+            )
+        preset_values = WATERBODY_PRESETS[key]
+
+    merged = {**defaults, **preset_values, **provided}
 
     enabled = bool(merged.get("enabled", defaults["enabled"]))
 

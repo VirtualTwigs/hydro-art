@@ -57,10 +57,16 @@ thresholds; establish print and screen presets. `L`
 (Mostly done: offline fixture QA in `tests/test_waterbody_qa.py` (holes/multipolygons/coastal/
 shared-edge) + a real-region harness `tools/waterbody_qa.py` executed 2026-07-30 against Oregon
 (46,844 selected, 0 untraceable) and Washington (42,304 selected, 0 untraceable) — holes,
-multipolygons, coastal boundaries, duplicate edges, traceability all pass. **Left:** (1) the
-Clark County, WA county-level run (harness supports it, but the Census county shapefile isn't
-mounted locally), and (2) the actual print/screen **preset values** — an art-direction decision
-on stroke/size/detail thresholds, pending human review of the real-region output.)
+multipolygons, coastal boundaries, duplicate edges, traceability all pass. The **preset *mechanism***
+now ships (spec `agent-os/specs/2026-08-12-waterbody-regional-presets`): `WATERBODY_PRESETS`
+(provisional `screen`/`print` bundles) + `SUPPORTED_WATERBODY_PRESETS` in `src/config.py`, expanded in
+`_coerce_waterbodies` with `defaults < preset < explicit` precedence, and a `--waterbody-preset`
+CLI flag (unknown → argparse exit 2); `preset` is consumed at config time so a no-preset build stays
+byte-identical (tests in `tests/test_waterbody_config.py`, +8). **Left:** (1) the Clark County, WA
+county-level run (harness supports it, but the Census county shapefile isn't mounted locally), and
+(2) the actual print/screen **preset values** — an art-direction decision on stroke/size/detail
+thresholds, pending human review of the real-region output (the mechanism is done; only the numbers
+in `WATERBODY_PRESETS` await tuning).)
 
 Epoch gate: a build can produce original, source-traceable outlines for lakes, large ponds,
 bays, and inlets without filling or incorrectly closing coastal water.

@@ -16,6 +16,7 @@ from typing import Any, Sequence
 
 from src.config import (
     DEFAULTS,
+    SUPPORTED_WATERBODY_PRESETS,
     Settings,
     build_settings,
     load_yaml,
@@ -156,6 +157,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Waterbody outline stroke width in SVG user units (positive number).",
     )
     parser.add_argument(
+        "--waterbody-preset",
+        choices=SUPPORTED_WATERBODY_PRESETS,
+        default=None,
+        help="Named waterbody art-direction preset (expands to a bundle of "
+        "waterbody options; explicit --waterbody-* flags still win).",
+    )
+    parser.add_argument(
         "--elevation",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -230,6 +238,8 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
     # Waterbody sub-keys are collected under a nested mapping so precedence can
     # deep-merge them onto YAML/defaults (see :func:`resolve_settings`).
     waterbodies: dict[str, Any] = {}
+    if args.waterbody_preset is not None:
+        waterbodies["preset"] = args.waterbody_preset
     if args.waterbodies is not None:
         waterbodies["enabled"] = args.waterbodies
     if args.waterbody_color is not None:
@@ -284,8 +294,11 @@ def resolve_settings(argv: Sequence[str] | None = None) -> Settings:
 
     # `waterbodies` is a nested block; a shallow merge would let a later layer
     # replace the whole dict. Deep-merge its sub-keys so YAML < CLI precedence
-    # holds per sub-key (e.g. --no-waterbodies keeps a YAML stroke_width).
-    waterbodies: dict[str, Any] = dict(DEFAULTS["waterbodies"])
+    # holds per sub-key (e.g. --no-waterbodies keeps a YAML stroke_width). Start
+    # from `{}` (not seeded defaults): `_coerce_waterbodies` fills every missing
+    # field from DEFAULTS anyway, and pre-seeding would make a `preset` bundle
+    # indistinguishable from — and shadowed by — explicit values (Item W4).
+    waterbodies: dict[str, Any] = {}
     for layer in (yaml_values, overrides):
         block = layer.get("waterbodies")
         if isinstance(block, dict):
