@@ -252,6 +252,10 @@ selections. `L`
 27. [x] Live pipeline integration — Wire the control surface to a local job runner that executes
 the real pipeline for the selected options and returns the produced SVG/PNG for preview and
 download, keeping determinism and the offline test posture intact. `XL`
+(Run-pipeline reconcile `5dc8ebf`: `_download_stage` now skips fetching when datasets are already
+extracted and `serve.py` falls back to a local cache when the NAS is unmounted, so the served
+"Run pipeline" button was verified end-to-end offline — Oregon/Deschutes job succeeded with zero
+downloads, artifact identical to the direct build.)
 28. [x] Presets & shareable render recipes — Named state/county/print presets and encodable render
 recipes (URL/JSON) so a look can be saved, shared, and reproduced exactly. `M`
 (`web/shared/hydro-ux.js` gains pure recipe helpers — `toRecipe`/`sanitizeRecipe`/
