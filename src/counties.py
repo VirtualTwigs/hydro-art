@@ -35,6 +35,7 @@ STATE_FIPS: dict[str, str] = {
     "Oregon": "41",
     "Washington": "53",
     "California": "06",
+    "Idaho": "16",
 }
 
 #: Default Census cartographic-boundary counties shapefile (matches the path the

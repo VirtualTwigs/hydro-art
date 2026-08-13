@@ -128,6 +128,13 @@ REGION_HUC4: dict[str, tuple[str, ...]] = {
         "1801", "1802", "1803", "1804", "1805",
         "1806", "1807", "1808", "1809", "1810",
     ),
+    # Idaho: the Snake River system + panhandle, all in HU2 region 17. Derived
+    # from local WBD via ``tools/derive_state_huc4.py Idaho --min-overlap-frac
+    # 0.01``: 1701 (panhandle), 1704 (Upper Snake), 1705 (Middle Snake), 1706
+    # (Salmon/Clearwater/Lower Snake). The far-SE Bear River corner is in HU2 15
+    # (Lower Colorado) / 16 (Great Basin) and is omitted pending those archives —
+    # re-run the deriver with the national WBD GDB to add them if needed.
+    "Idaho": ("1701", "1704", "1705", "1706"),
 }
 
 

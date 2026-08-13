@@ -48,6 +48,10 @@ STATE_HUC4: dict[str, tuple[str, ...]] = {
         "1801", "1802", "1803", "1804", "1805",
         "1806", "1807", "1808", "1809", "1810",
     ),
+    # Idaho: Snake River system + panhandle (all HU2 region 17). Mirrors
+    # src/datasets.REGION_HUC4; the SE Bear River corner (HU2 15/16) is omitted
+    # (see that file's note).
+    "Idaho": ("1701", "1704", "1705", "1706"),
 }
 
 #: Approximate Clark County, WA extent in lon/lat (WGS84) for the no-download

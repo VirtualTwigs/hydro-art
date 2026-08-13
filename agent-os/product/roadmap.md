@@ -197,8 +197,14 @@ Also a **manifest packaging CLI**: `src/manifest.py` gains pure `format_verifica
 (e.g. NAS) cache — build a portable manifest to disk, verify a moved cache against it, and reconcile
 two manifests (exit codes reflect completeness/sync); not in the offline suite (reads a real cache),
 tests in `tests/test_manifest.py` (+4).
-**Left:** region expansion beyond OR/WA/CA (needs real WBD) and putting the DEM subsystem into a real
-(non-offline) entry point / `PIPELINE_STAGES`.)
+Also **region expansion to Idaho** (fourth supported region): HUC4 basins derived from local WBD
+(`tools/derive_state_huc4.py Idaho`) → `("1701", "1704", "1705", "1706")` (Snake system + panhandle,
+all HU2 17; SE Bear-River corner in HU2 16 omitted like CA's desert fringes), wired into
+`SUPPORTED_REGIONS` (`config`), `REGION_HUC4` (`datasets`), `STATE_FIPS` (`counties`), and the
+`tools/render_common.STATE_HUC4` mirror; tested in `tests/test_config.py`/`test_datasets.py`/
+`test_counties.py`. Acquisition/config plumbing — a full render also fetches the region-17 NHDPlus HR
+archives on demand.
+**Left:** putting the DEM subsystem into a real (non-offline) entry point / `PIPELINE_STAGES`.)
 22. [x] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 (All three concerns shipped across three offline slices. **(1) Terrain-aware 2D hillshade**:

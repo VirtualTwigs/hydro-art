@@ -35,6 +35,15 @@ def test_region_resolves_expected_huc4s():
     assert hucs == set(REGION_HUC4["Oregon"])
 
 
+def test_idaho_resolves_region17_basins():
+    files = resolve_required_files(_settings("Idaho"))
+    nhd = {f.huc4 for f in files if f.dataset_id == "nhdplus_hr"}
+    assert nhd == {"1701", "1704", "1705", "1706"}
+    assert nhd == set(REGION_HUC4["Idaho"])
+    # Every Idaho basin is in HU2 region 17, so WBD collapses to one archive.
+    assert {f.huc4 for f in files if f.dataset_id == "wbd"} == {"17"}
+
+
 def test_wbd_resolves_to_deduplicated_hu2():
     files = resolve_required_files(_settings("Oregon"))
     wbd = [f for f in files if f.dataset_id == "wbd"]

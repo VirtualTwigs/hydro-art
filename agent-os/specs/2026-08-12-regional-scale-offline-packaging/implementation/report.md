@@ -193,3 +193,39 @@ suite: **456 passed** (+4), no regressions.
 
 **Still open on #21:** region expansion beyond OR/WA/CA (needs real WBD) and putting
 the DEM subsystem into a real (non-offline) entry point / `PIPELINE_STAGES`.
+
+## Addendum — Region expansion: Idaho (2026-08-13)
+
+Adds Idaho as a fourth supported region — the first of the two remaining #21
+directions ("region expansion beyond OR/WA/CA").
+
+**Derivation.** Ran `tools/derive_state_huc4.py Idaho --min-overlap-frac 0.01`
+against the local WBD (HU2 regions 17 + 18) → `("1701", "1704", "1705", "1706")`:
+1701 (panhandle), 1704 (Upper Snake), 1705 (Middle Snake), 1706
+(Salmon/Clearwater/Lower Snake) — each ≥14% (three ≥52%) of its basin in-state.
+Idaho's far-SE Bear River corner is in HU2 region 16 (Great Basin), which isn't in
+the local or NAS WBD, so it is omitted — the same documented caveat California
+carries for its desert fringes (no national WBD GDB was found locally or on
+`/Volumes/home`). Every Idaho basin is region 17, so WBD collapses to a single `17`
+archive (present locally).
+
+**Changes.**
+- `src/config.py`: `SUPPORTED_REGIONS` += `"Idaho"`.
+- `src/datasets.py`: `REGION_HUC4["Idaho"] = ("1701", "1704", "1705", "1706")` with a
+  derivation + Bear-River-omission comment.
+- `src/counties.py`: `STATE_FIPS["Idaho"] = "16"` (so a county build works statewide).
+- `tools/render_common.py`: `STATE_HUC4` mirror updated (tools-side, untested).
+
+**Tests (TDD).** `tests/test_config.py` (Idaho accepted; unsupported-region example
+switched to "Nevada"), `tests/test_datasets.py` (Idaho resolves the four region-17
+basins + WBD `{17}`), `tests/test_counties.py` (FIPS `16`; unknown-region example →
+"Nevada"). Three suite tests used "Idaho" as their canonical *unsupported* region and
+were repointed to "Nevada" (`test_config.py`, `test_counties.py`, `test_build.py`).
+
+**Verification.** Region/config/county/build tests green; full suite green (see
+tasks.md). This is acquisition/config plumbing — a full Idaho *render* additionally
+needs the region-17 NHDPlus HR archives (1704/1705/1706), which the download-skip-aware
+pipeline fetches on demand.
+
+**Still open on #21:** wiring the DEM subsystem into a real (non-offline) entry point
+/ `PIPELINE_STAGES`.

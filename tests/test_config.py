@@ -23,9 +23,14 @@ def test_region_is_normalized_case_insensitively():
     assert settings.regions == ("Washington",)
 
 
+def test_idaho_is_a_supported_region():
+    settings = build_settings({**DEFAULTS, "region": ["idaho"]})
+    assert settings.regions == ("Idaho",)
+
+
 def test_unsupported_region_raises():
     with pytest.raises(ConfigError, match="Unsupported region"):
-        build_settings({**DEFAULTS, "region": ["Idaho"]})
+        build_settings({**DEFAULTS, "region": ["Nevada"]})
 
 
 def test_invalid_background_hex_raises():

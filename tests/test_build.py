@@ -51,7 +51,7 @@ def test_main_with_defaults_exits_zero(tmp_path):
 
 
 def test_main_with_invalid_region_exits_nonzero(tmp_path):
-    assert main(["--config", str(tmp_path / "none.yaml"), "--region", "Idaho"]) == 1
+    assert main(["--config", str(tmp_path / "none.yaml"), "--region", "Nevada"]) == 1
 
 
 def test_pipeline_stage_order_matches_prd_section_8():

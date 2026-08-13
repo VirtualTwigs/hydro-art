@@ -8,7 +8,23 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
 
 ## Current state (2026-08-12)
 
-- **#21 Manifest packaging CLI — implemented, commit pending.** Closes the last
+- **#21 Region expansion → Idaho — implemented, commit pending.** Adds Idaho as a
+  fourth supported region (the first of #21's two remaining directions). HUC4 basins
+  derived from local WBD via `tools/derive_state_huc4.py Idaho --min-overlap-frac 0.01`
+  → `("1701", "1704", "1705", "1706")` (Snake system + panhandle, all HU2 region 17;
+  the SE Bear-River corner in HU2 16 is omitted, same caveat as California's desert
+  fringes — no national WBD locally or on the NAS). Wired into `SUPPORTED_REGIONS`
+  (`src/config.py`), `REGION_HUC4` (`src/datasets.py`), `STATE_FIPS` (`src/counties.py`),
+  and the `tools/render_common.STATE_HUC4` mirror. TDD: `tests/test_config.py` (Idaho
+  accepted), `tests/test_datasets.py` (resolves the four basins + WBD `{17}`),
+  `tests/test_counties.py` (FIPS `16`). Three suite tests used "Idaho" as their
+  canonical *unsupported* region and were repointed to "Nevada" (`test_config.py`,
+  `test_counties.py`, `test_build.py`). Suite: **458 passing** (+2). This is
+  acquisition/config plumbing — a full Idaho render additionally fetches the region-17
+  NHDPlus HR archives (1704/1705/1706) on demand via the download-skip-aware pipeline.
+  **Left on #21:** wiring the DEM subsystem into a real (non-offline) entry point /
+  `PIPELINE_STAGES`.
+- **#21 Manifest packaging CLI — committed (`14a2107`).** Closes the last
   small offline-packaging gap on #21: a CLI that writes/verifies/diffs a portable
   cache manifest over a real (e.g. NAS) cache. `src/manifest.py` gains two pure,
   tested formatters — `format_verification` (COMPLETE/INCOMPLETE + `ok`/total, then

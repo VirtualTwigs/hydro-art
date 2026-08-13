@@ -38,6 +38,7 @@ def test_state_fips_for_each_supported_region():
     assert state_fips_for_region("Oregon") == "41"
     assert state_fips_for_region("Washington") == "53"
     assert state_fips_for_region("California") == "06"
+    assert state_fips_for_region("Idaho") == "16"
 
 
 def test_every_supported_region_has_a_fips():
@@ -47,7 +48,7 @@ def test_every_supported_region_has_a_fips():
 
 def test_state_fips_for_unknown_region_raises():
     with pytest.raises(ConfigError, match="no Census FIPS"):
-        state_fips_for_region("Idaho")
+        state_fips_for_region("Nevada")
 
 
 def test_county_boundary_delegates_with_resolved_fips_and_crs():

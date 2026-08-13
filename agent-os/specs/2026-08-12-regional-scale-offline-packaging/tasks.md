@@ -172,3 +172,45 @@ thin `tools/` CLI that drives build/write/verify/diff over a real cache.
 - [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; update the
       roadmap #21 "Left" note, `HANDOFF.md`, and the `CLAUDE.md` module map (both
       `src/manifest.py` formatters and the new tool). Report; STOP.
+
+---
+
+# Tasks — Region expansion: Idaho (roadmap #21, region-expansion slice)
+
+Adds Idaho as a fourth supported region. HUC4 basins derived from the local WBD
+(HU2 region 17) with `tools/derive_state_huc4.py Idaho --min-overlap-frac 0.01` →
+`("1701", "1704", "1705", "1706")` (the Snake system + panhandle). Idaho's SE Bear
+River corner sits in HU2 region 16, which isn't in the local/NAS WBD, so it is
+omitted — the same documented caveat California carries for its desert fringes.
+All Idaho basins are region 17, so WBD collapses to a single `17` archive (present
+locally). This slice is the acquisition/config *plumbing*; a full render also needs
+the region-17 NHDPlus HR archives, which the (now download-skip-aware) pipeline
+fetches on demand.
+
+## TG-I1 — region plumbing (config + datasets)
+
+- [x] Write tests first: `tests/test_config.py` accepts Idaho
+      (`build_settings({"region": ["Idaho"]}).regions == ("Idaho",)`) and switch the
+      existing unsupported-region test off Idaho to a still-unsupported state
+      ("Nevada"). `tests/test_datasets.py`: `resolve_required_files(Idaho)` nhdplus_hr
+      HUC4s == `{1701,1704,1705,1706}` and the WBD set == `{"17"}`.
+- [x] `src/config.py`: add "Idaho" to `SUPPORTED_REGIONS`. `src/datasets.py`: add the
+      Idaho `REGION_HUC4` entry with a derivation + Bear-River-omission comment.
+- [x] Run ONLY the new/changed tests; green (3 passed).
+
+## TG-I2 — county FIPS
+
+- [x] Write tests first (`tests/test_counties.py`): `state_fips_for_region("Idaho")
+      == "16"`; switch the unknown-region test off Idaho to "Nevada".
+- [x] `src/counties.py`: add `"Idaho": "16"` to `STATE_FIPS`.
+- [x] Run ONLY the new/changed tests; green (4 passed).
+
+## TG-I3 — verify + docs + tools mirror
+
+- [x] Full Python suite (regression check): **458 passed** (+2). Fixed one further
+      regression — `tests/test_build.py` also used "Idaho" as its invalid-region
+      example → repointed to "Nevada".
+- [x] Sync the `tools/render_common.py` `STATE_HUC4` mirror (add Idaho).
+- [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; update the
+      roadmap #21 note, `HANDOFF.md`, and the `CLAUDE.md`/module-map region references.
+      Report; STOP.
