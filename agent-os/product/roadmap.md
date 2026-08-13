@@ -172,8 +172,13 @@ tested in `tests/test_manifest.py` (13 tests). Also **tile-budget controls**: `E
 `acquire_dem(max_tiles=…)` guard that fails fast before any COG download when a region's tile count
 exceeds the budget (tests in `tests/test_elevation_config.py` + `tests/test_dem.py`). **Resumable jobs**
 found already-built (`Downloader` `.part`+HTTP-Range resume + `acquire`/`acquire_dem` cache-skip).
+Also a **package preflight planner**: `src/packaging.py` `plan_package`/`PackagePlan`/`format_plan`
+(pure, offline) composes `resolve_required_files` + `build_manifest`/`verify_manifest` +
+`tile_budget` into one "is this cache ready to ship?" verdict (present/missing/corrupt +
+injected-tile-count preflight → `is_ready`), driven by `tools/package_cache.py`
+(`--region`/`--cache-dir`/`--tile-count`); tests in `tests/test_packaging.py` (7 tests).
 **Left:** region expansion beyond OR/WA/CA (needs real WBD), wiring `tile_budget` into a live DEM entry
-point, and `tools/` packaging/preflight CLIs over a real NAS cache.)
+point, and a `write_manifest`-to-disk packaging CLI over a real NAS cache.)
 22. [x] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 (All three concerns shipped across three offline slices. **(1) Terrain-aware 2D hillshade**:

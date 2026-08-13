@@ -99,6 +99,36 @@ and atomically moves into place; and `acquire`/`acquire_dem` skip already-cached
 files. Re-running an interrupted acquisition therefore resumes naturally. No new
 work was needed here beyond noting it.
 
+## Phase 3 — Package preflight planner (third #21 slice)
+
+A third offline slice composes the manifest + tile-budget primitives into a single
+**"is this cache ready to ship?"** verdict, plus the `tools/` CLI the earlier
+follow-up note called for.
+
+- `src/packaging.py` — pure/offline planner. `PackagingError(AcquisitionError)`;
+  a frozen `PackagePlan` (`required`/`present`/`missing`/`corrupt` disjoint key
+  subsets + `total_bytes` + `tile_count`/`tile_budget`) with `is_complete`,
+  `within_tile_budget`, and `is_ready` properties; `plan_package(cache, settings,
+  *, cache_root=None, tile_count=None)` resolves the required files, builds a
+  manifest of the cached subset, and verifies it — a key is `present` if it
+  verifies, `corrupt` if cached-but-mismatched, else `missing`. `format_plan(plan)`
+  renders a one-block human summary (readiness verdict, counts, DEM tile preflight,
+  and the missing/corrupt keys). Imports only stdlib + `src.manifest`/`datasets`/
+  `config`/`cache`; not in `PIPELINE_STAGES`.
+- The DEM tile count is **injected** (`tile_count`), compared against
+  `settings.elevation.tile_budget` (0 = unlimited); `None` skips the preflight so
+  the planner stays offline rather than reimplementing WBD boundary loading.
+- `tools/package_cache.py` — thin non-offline CLI: `--region` (nargs+),
+  `--cache-dir`, `--config`, optional `--tile-count` (from `src.dem.count_tiles`).
+  Builds `Settings` via `resolve_settings`, opens the real `Cache`, prints
+  `format_plan`, exits `0` when ready else `1`.
+- Tests: `tests/test_packaging.py` (+7) — TG-P1 coverage (full/missing/corrupt/
+  determinism) and TG-P2 (tile-budget within/over/unlimited/skipped, `is_ready`,
+  `format_plan`), a real `Cache` in `tmp_path` with hand-written archive bytes.
+  Full suite: **430 passed** (+7), no regressions. Smoke-tested the CLI: empty
+  cache → "NOT READY" exit 1 listing 8 missing files; populated cache → "READY"
+  exit 0 with "DEM tiles: 5 (budget unlimited) — within budget".
+
 ## Not done / follow-ups (remain open on roadmap #21)
 
 - **Region expansion** beyond OR/WA/CA — needs real WBD to derive HUC4 coverage
@@ -106,6 +136,8 @@ work was needed here beyond noting it.
 - **Wiring the tile budget end-to-end** — `acquire_dem` accepts `max_tiles`, but
   nothing calls it with `settings.elevation.tile_budget` yet (the DEM subsystem
   isn't in `PIPELINE_STAGES`); the wiring lands when a real DEM entry point does.
-- A thin `tools/` packaging CLI (`build_manifest` → `write_manifest` over a real
-  NAS cache; `verify_manifest` on a transferred copy; `count_tiles` preflight) —
-  the offline engines ship here; the CLI wrappers are non-offline follow-ons.
+- A `tools/` packaging CLI shipped as `tools/package_cache.py` (Phase 3 above:
+  `plan_package` + `format_plan` readiness check with an injected `--tile-count`
+  preflight). A `write_manifest`-to-disk variant over a real NAS cache (emit a
+  portable manifest alongside the packaged files; `verify_manifest` on the
+  transferred copy) remains a small non-offline follow-on.

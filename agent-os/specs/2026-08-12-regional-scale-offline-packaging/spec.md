@@ -126,3 +126,84 @@ roadmap #21. Resumable jobs turned out to be already implemented
 (`Downloader` `.part`+Range resume + `acquire`/`acquire_dem` cache-skip), so no
 new work was needed there. Wiring `tile_budget` into a live DEM entry point is a
 non-offline follow-on (the DEM subsystem is not in `PIPELINE_STAGES`).
+
+---
+
+# Spec — Package preflight planner (roadmap #21, offline-packaging slice)
+
+## Summary
+
+Add `src/packaging.py`: a pure, deterministic, offline planner that answers "is
+this cache ready to package and ship to an offline machine?" for a given
+`Settings`. It composes the already-shipped primitives — `resolve_required_files`
+(what a build needs), `build_manifest`/`verify_manifest` (what the cache holds,
+intact), and the `elevation.tile_budget` (DEM preflight) — into one `PackagePlan`.
+Plus a thin `tools/package_cache.py` CLI. Not in `PIPELINE_STAGES`.
+
+## Public API (`src/packaging.py`)
+
+```
+PackagingError(AcquisitionError)
+
+@dataclass(frozen=True)
+class PackagePlan:
+    required: tuple[str, ...]      # all keys the build needs (resolve order)
+    present: tuple[str, ...]       # required keys with a valid cached file
+    missing: tuple[str, ...]       # required keys absent / unrecorded / file gone
+    corrupt: tuple[str, ...]       # required keys cached but checksum/size mismatch
+    total_bytes: int               # summed size of cached required entries
+    tile_count: int | None         # injected DEM tile preflight (None = skipped)
+    tile_budget: int               # settings.elevation.tile_budget (0 = unlimited)
+    is_complete    -> bool         # no missing and no corrupt
+    within_tile_budget -> bool     # tile_count None or budget 0 or count <= budget
+    is_ready       -> bool         # is_complete and within_tile_budget
+
+plan_package(cache, settings, *, cache_root=None, tile_count=None) -> PackagePlan
+format_plan(plan) -> str
+```
+
+## Behavior
+
+- `required` = `[d.key for d in resolve_required_files(settings)]` (deterministic
+  order). Coverage is computed by building a manifest of the cached subset and
+  verifying it against `cache_root` (defaults to `cache.root`): a required key is
+  `present` if its file verifies, `corrupt` if cached-but-mismatched, else
+  `missing` (never recorded, or recorded but the file is gone). The three sets are
+  disjoint and partition `required`.
+- `total_bytes` sums the sizes of cached required entries (the package footprint).
+- **Tile preflight is injected, not computed** — `plan_package` takes an optional
+  `tile_count` (the CLI supplies it from `dem.count_tiles` over a real boundary),
+  so `src/packaging.py` stays free of numpy/GDAL/shapely and fully offline-testable.
+  `tile_budget` is read from `settings.elevation.tile_budget`.
+- `is_ready` gates packaging: every required file present + intact and the DEM tile
+  count within budget.
+
+## CLI (`tools/package_cache.py`)
+
+A thin wrapper: builds `Settings` for a region + points a `Cache` at a real cache
+dir, best-effort computes `count_tiles` when the GIS stack + region boundary are
+available (else skips the tile preflight), prints `format_plan`, and exits non-zero
+when the plan is not ready. Reads a real (NAS) cache, imports heavy libs → not in
+the offline suite, consistent with the other `tools/`.
+
+## Guardrails
+
+- `src/packaging.py` imports only stdlib + `src.manifest` / `src.datasets` /
+  `src.config` / `src.cache` — no numpy / geopandas / GDAL / shapely. Pure,
+  deterministic, offline; not in `PIPELINE_STAGES`; `PackagingError` subclasses
+  `AcquisitionError` (packaging is an acquisition-domain utility).
+- `from __future__ import annotations`; docstrings; 88-col.
+
+## Tests (`tests/test_packaging.py`)
+
+TG-P1: full-coverage cache → all present, complete, `total_bytes` summed; a missing
+required file → `missing`; a post-record on-disk mutation → `corrupt`; determinism.
+
+TG-P2: injected `tile_count` within/over budget, unlimited budget, and `None`;
+`is_ready` composition; `format_plan` summary contents.
+
+## Not in scope (this slice)
+
+Computing the DEM tile count inside `src/` (kept injected/offline); region
+expansion beyond OR/WA/CA (needs real WBD); actually copying/zipping a cache into a
+shippable bundle (the planner reports readiness; bundling is a `tools/` follow-on).

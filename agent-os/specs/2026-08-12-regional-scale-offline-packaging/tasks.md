@@ -63,3 +63,44 @@
       (`Downloader` `.part`+Range resume + cache-skip).
 - [x] Extend `implementation/report.md`, this `tasks.md`, `spec.md`; roadmap #21
       note; `HANDOFF.md` + `CLAUDE.md`. Report; STOP.
+
+---
+
+# Tasks — Package preflight planner (roadmap #21, offline-packaging slice)
+
+## TG-P1 — Cache-coverage planning
+
+- [x] Write tests first (`tests/test_packaging.py`): `plan_package(cache, settings)`
+      over a cache holding every required file reports `required` == all resolved
+      keys, `present` == all, empty `missing`/`corrupt`, `is_complete` True, and
+      `total_bytes` == the summed sizes; a required file absent from the cache lands
+      in `missing` (not present); a cached file whose bytes changed on disk after
+      `record` lands in `corrupt`; two identical calls are equal (determinism).
+- [x] `src/packaging.py`: `PackagingError(AcquisitionError)`, frozen `PackagePlan`,
+      and `plan_package(cache, settings, *, cache_root=None, tile_count=None)` —
+      composes `resolve_required_files` + `build_manifest`/`verify_manifest`; pure,
+      offline (stdlib + `src.manifest`/`datasets`/`config`/`cache`; no
+      numpy/GDAL/shapely); not in `PIPELINE_STAGES`.
+- [x] Run ONLY the new tests; green.
+
+## TG-P2 — Tile-budget preflight + readiness + formatting
+
+- [x] Write tests first: an injected `tile_count` within `settings.elevation
+      .tile_budget` → `within_tile_budget` True; over budget → False; `tile_budget`
+      0 (unlimited) → True even for a large count; `tile_count=None` → True;
+      `is_ready` = complete AND within-budget; `format_plan(plan)` returns a
+      human-readable summary mentioning readiness + the missing/corrupt counts.
+- [x] `src/packaging.py`: `within_tile_budget`/`is_ready` properties + `format_plan`.
+- [x] Run ONLY the new tests; green.
+
+## TG-P3 — CLI + verify + docs
+
+- [x] Add `tools/package_cache.py`: a thin CLI over `plan_package` — build settings
+      for a region/cache dir, take the DEM tile count via an explicit `--tile-count`
+      (from `src.dem.count_tiles`; omitted → preflight skipped, staying honest rather
+      than reimplementing WBD boundary loading), print `format_plan`, exit non-zero
+      when not ready. Not in the offline suite (reads a real cache).
+- [x] Confirm the full Python suite passes (regression check): **430 passed** (+7).
+- [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`.
+- [x] Update the roadmap #21 note, `HANDOFF.md`, and the `CLAUDE.md` module map.
+      Report; STOP.
