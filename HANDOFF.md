@@ -8,6 +8,26 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
 
 ## Current state (2026-08-12)
 
+- **#27 Run-pipeline reconcile — implemented, commit pending.** The served
+  "Run pipeline" button now actually completes a real render offline. Two root
+  causes fixed: (1) `_download_stage` unconditionally fetched archives even when
+  the extracted GDBs already exist — `extract_all` would skip them, so the fetch
+  was pure waste that also required the NAS. `src/cache.py` gains
+  `is_extracted(datasets_root, descriptor)` and `ensure_cached` takes a
+  `datasets_root` param that skips already-extracted descriptors before touching
+  the cache/downloader; `src/pipeline.py` wires `ctx.datasets_dir` into
+  `_download_stage`. This lets a build run with **zero downloads** off
+  pre-extracted `datasets/` (no NAS, no network). (2) `serve.py` hardcoded the
+  NAS cache dir, so an unmounted NAS crashed the run with
+  `[Errno 13] Permission denied: '/Volumes/home'`. New `_resolve_cache_dir()`
+  prefers the NAS only when mounted (its parent exists), else falls back to local
+  `cache/`; a `--cache-dir` flag always wins. **Verified end-to-end**: served
+  `POST /api/render` `{"region":["Oregon"],"county":"Deschutes","output":["svg"]}`
+  → job `succeeded` → artifact `output/oregon-deschutes.svg` (8.4 MB, sha256
+  `0f1f0976e6c4b93e2cc46f136ce84c8e5cf3cdad1e259bad03309a89a4055733`), identical
+  to the direct `Pipeline` build, with **no downloads triggered**. Tests:
+  `tests/test_cache.py` (+4), `tests/test_acquisition_integration.py` (+1),
+  new `tests/test_serve.py` (+3). Suite: **452 passing** (+8), no regressions.
 - **#22 Print/experience modes — web-delivery slice implemented, commit pending; completes #22
   (hillshade `a0674c4`, camera paths `d22a0d1`).** #22 is `XL` and spans three concerns; all three
   offline slices have now shipped. **(3) Web delivery** (commit pending): new pure module

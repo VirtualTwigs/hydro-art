@@ -29,20 +29,53 @@ from src.server import serve
 
 #: Mirrors ``build.py``: stage the large hydrography archives on the NAS share.
 NAS_CACHE_DIR = "/Volumes/home/data/incoming"
+#: Local fallback when the NAS share isn't mounted.
+LOCAL_CACHE_DIR = "cache"
 WEB_ROOT = Path(__file__).parent / "web"
+
+
+def _resolve_cache_dir(
+    preferred: str | None = None,
+    *,
+    nas_dir: str = NAS_CACHE_DIR,
+    local_dir: str = LOCAL_CACHE_DIR,
+) -> Path:
+    """Choose where the pipeline stages downloaded archives.
+
+    An explicit ``--cache-dir`` always wins. Otherwise prefer the NAS share, but
+    only when it's actually mounted (its parent directory exists); if not, fall
+    back to the local cache so a run never dies trying to ``mkdir`` under an
+    unmounted ``/Volumes`` mount point (the ``[Errno 13] Permission denied:
+    '/Volumes/home'`` the Run-pipeline button used to hit). Builds whose datasets
+    are already extracted download nothing, so the local fallback is harmless.
+    """
+    if preferred:
+        return Path(preferred)
+    nas = Path(nas_dir)
+    if nas.parent.exists():
+        return nas
+    return Path(local_dir)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the hydro-art control surface.")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument(
+        "--cache-dir",
+        default=None,
+        help="Archive cache dir (default: NAS share when mounted, else local "
+        f"{LOCAL_CACHE_DIR}/).",
+    )
     args = parser.parse_args(argv)
 
     # Imported lazily so the offline test suite never pulls the GIS stack via serve.py.
     from src.pipeline import Pipeline
 
     console = Console()
-    runner = JobRunner(Pipeline(console=console, cache_dir=NAS_CACHE_DIR))
+    cache_dir = _resolve_cache_dir(args.cache_dir)
+    console.print(f"[dim]archive cache:[/] {cache_dir}")
+    runner = JobRunner(Pipeline(console=console, cache_dir=cache_dir))
     url = f"http://{args.host}:{args.port}/"
     console.print(f"[bold green]Control surface:[/] {url}  (Ctrl-C to stop)")
     try:

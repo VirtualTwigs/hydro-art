@@ -2,10 +2,11 @@
 
 import io
 import zipfile
+from pathlib import Path
 
 import pytest
 
-from src.cache import Cache, acquire, extract_archive
+from src.cache import Cache, acquire, ensure_cached, extract_archive
 from src.datasets import AcquisitionError, FileDescriptor
 
 
@@ -80,3 +81,63 @@ def test_acquire_reuses_cache_on_second_run(tmp_path):
     # Second run: cached archive + extracted output already present.
     acquire([desc], cache, downloader, tmp_path / "datasets")
     assert downloader.calls == 1  # NOT called again
+
+
+# --- Skip download when the dataset is already extracted (offline reuse) ------
+
+
+def _extracted(datasets_root, desc):
+    """Create a non-empty extracted dataset dir for ``desc``."""
+    target = Path(datasets_root) / desc.dataset_id / desc.huc4
+    target.mkdir(parents=True)
+    (target / "layer.gdb").write_text("x")
+    return target
+
+
+def test_ensure_cached_skips_download_when_already_extracted(tmp_path):
+    # The extracted GDB is on disk but NO archive is cached: we must not fetch,
+    # since extract_all would reuse the existing directory anyway.
+    cache = Cache(tmp_path / "cache")
+    downloader = SpyDownloader()
+    desc = _descriptor()
+    datasets = tmp_path / "datasets"
+    _extracted(datasets, desc)
+
+    ensure_cached([desc], cache, downloader, datasets_root=datasets)
+
+    assert downloader.calls == 0
+    assert cache.metadata(desc) is None  # nothing recorded either
+
+
+def test_ensure_cached_downloads_when_not_extracted(tmp_path):
+    cache = Cache(tmp_path / "cache")
+    downloader = SpyDownloader()
+    desc = _descriptor()
+
+    ensure_cached([desc], cache, downloader, datasets_root=tmp_path / "datasets")
+
+    assert downloader.calls == 1
+
+
+def test_ensure_cached_ignores_empty_extract_dir(tmp_path):
+    # An existing but EMPTY dataset dir must not count as extracted.
+    cache = Cache(tmp_path / "cache")
+    downloader = SpyDownloader()
+    desc = _descriptor()
+    datasets = tmp_path / "datasets"
+    (Path(datasets) / desc.dataset_id / desc.huc4).mkdir(parents=True)
+
+    ensure_cached([desc], cache, downloader, datasets_root=datasets)
+
+    assert downloader.calls == 1
+
+
+def test_ensure_cached_without_datasets_root_downloads_uncached(tmp_path):
+    # Back-compat: no datasets_root → old behavior (download when zip uncached).
+    cache = Cache(tmp_path / "cache")
+    downloader = SpyDownloader()
+    desc = _descriptor()
+
+    ensure_cached([desc], cache, downloader)
+
+    assert downloader.calls == 1

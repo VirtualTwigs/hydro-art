@@ -105,7 +105,12 @@ def _download_stage(ctx: RunContext) -> None:
     ctx.artifacts["descriptors"] = descriptors
     ctx.artifacts["cache"] = cache
     ctx.log(f"[bold]download[/bold] resolving {len(descriptors)} file(s)")
-    ensure_cached(descriptors, cache, ctx.downloader, log=ctx.log)
+    # Pass the datasets dir so descriptors already extracted there are reused
+    # without downloading (extract_all would skip them anyway) — this is what
+    # lets a build run offline from pre-extracted GDBs (no NAS/network).
+    ensure_cached(
+        descriptors, cache, ctx.downloader, log=ctx.log, datasets_root=ctx.datasets_dir
+    )
 
 
 def _extract_stage(ctx: RunContext) -> None:

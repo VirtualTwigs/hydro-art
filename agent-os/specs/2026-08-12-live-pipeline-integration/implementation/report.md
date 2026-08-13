@@ -79,3 +79,36 @@ never pulls the GIS stack through `serve.py`), wraps it in a `JobRunner`, and se
 - `color_by=elevation` and non-annual `--months` intentionally produce a **failed job**
   carrying the pipeline's fail-fast message (their real render paths are the DEM
   subsystem / a future multi-frame export, not this item).
+
+## Addendum — Run-pipeline reconcile (2026-08-13)
+
+The "Manual browser + real-dataset smoke" caveat above is now **closed** for the
+offline-runnable case. Clicking "Run pipeline" against a served `serve.py` had been
+failing with `[Errno 13] Permission denied: '/Volumes/home'`. Two root causes, both
+fixed:
+
+1. **Unconditional download even when datasets are extracted.** `_download_stage`
+   always fetched archives, so a run required the NAS/network even though the extracted
+   GDBs already sit in `datasets/` and `extract_all` would skip them. Fix:
+   `src/cache.py` gains `is_extracted(datasets_root, descriptor)`; `ensure_cached`
+   takes a `datasets_root` param and skips any already-extracted descriptor before
+   touching the cache or downloader; `src/pipeline.py`'s `_download_stage` passes
+   `ctx.datasets_dir`. A build now runs with **zero downloads** off pre-extracted GDBs.
+2. **Hardcoded NAS cache dir in `serve.py`.** `_resolve_cache_dir()` prefers the NAS
+   only when mounted (its parent dir exists), else falls back to local `cache/`; a
+   `--cache-dir` flag always wins.
+
+**End-to-end verification (served path):** `python serve.py --port 8765 --cache-dir cache`,
+then `POST /api/render` `{"region":["Oregon"],"county":"Deschutes","output":["svg"]}` →
+job `succeeded` → `GET …/artifact?fmt=svg` returned `output/oregon-deschutes.svg`
+(8.4 MB, sha256 `0f1f0976e6c4b93e2cc46f136ce84c8e5cf3cdad1e259bad03309a89a4055733`,
+identical to the direct `Pipeline` build) — **no downloads triggered**.
+
+**Tests:** `tests/test_cache.py` (+4 covering skip-when-extracted / download-when-not /
+ignore-empty-dir / no-datasets_root), `tests/test_acquisition_integration.py` (+1
+pipeline-skips-download-when-extracted), new `tests/test_serve.py` (+3 cache-dir
+resolver). Full suite: **452 passing** (+8), no regressions.
+
+Still deferred: `color_by=elevation` and non-annual `--months` remain intentional
+failed jobs; a from-scratch run that must actually download (empty `datasets/` + NAS)
+is unchanged and still needs the mount.

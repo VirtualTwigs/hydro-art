@@ -22,6 +22,7 @@ from src.datasets import AcquisitionError, FileDescriptor
 __all__ = [
     "Cache",
     "extract_archive",
+    "is_extracted",
     "ensure_cached",
     "extract_all",
     "acquire",
@@ -133,14 +134,35 @@ def _noop(_message: str) -> None:
     """Default logger that discards messages."""
 
 
+def is_extracted(datasets_root: str | Path, descriptor: FileDescriptor) -> bool:
+    """Whether ``descriptor``'s dataset is already extracted under ``datasets_root``.
+
+    True only when the target ``<datasets_root>/<dataset_id>/<huc4>`` directory
+    exists *and* is non-empty — the exact condition :func:`extract_all` uses to
+    skip re-extraction.
+    """
+    target = Path(datasets_root) / descriptor.dataset_id / descriptor.huc4
+    return target.exists() and any(target.iterdir())
+
+
 def ensure_cached(
     descriptors: Iterable[FileDescriptor],
     cache: Cache,
     downloader: DownloaderLike,
     log=_noop,
+    datasets_root: str | Path | None = None,
 ) -> None:
-    """Download and cache any descriptors not already cached and verified."""
+    """Download and cache any descriptors not already cached and verified.
+
+    When ``datasets_root`` is given, a descriptor whose dataset is already
+    extracted there is skipped without downloading: :func:`extract_all` would
+    reuse the existing directory, so fetching the archive is pure waste (this is
+    what lets a build run offline from pre-extracted GDBs — no NAS/network).
+    """
     for descriptor in descriptors:
+        if datasets_root is not None and is_extracted(datasets_root, descriptor):
+            log(f"extracted (reuse) {descriptor.key}")
+            continue
         if cache.has(descriptor):
             log(f"cached {descriptor.key}")
             continue
@@ -160,7 +182,7 @@ def extract_all(
     extract_dirs: list[Path] = []
     for descriptor in descriptors:
         target = datasets_root / descriptor.dataset_id / descriptor.huc4
-        if target.exists() and any(target.iterdir()):
+        if is_extracted(datasets_root, descriptor):
             log(f"extracted (cached) {descriptor.key}")
         else:
             extract_archive(cache.path_for(descriptor), target)
@@ -183,5 +205,5 @@ def acquire(
     the extraction target already exists.
     """
     descriptors = tuple(descriptors)
-    ensure_cached(descriptors, cache, downloader, log)
+    ensure_cached(descriptors, cache, downloader, log, datasets_root=datasets_root)
     return extract_all(descriptors, cache, datasets_root, log)

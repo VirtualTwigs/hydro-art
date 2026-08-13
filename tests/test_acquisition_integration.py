@@ -78,6 +78,32 @@ def test_second_run_reuses_cache_no_redownload(tmp_path):
     assert downloader.calls == first  # nothing re-downloaded on the second run
 
 
+def test_pipeline_skips_download_when_datasets_already_extracted(tmp_path):
+    # Pre-stage every required dataset as already-extracted (non-empty dir). The
+    # download stage must reuse them and never fetch — this is what lets a build
+    # run offline from pre-extracted GDBs with no cached archive and no network.
+    settings = build_settings({"region": ["Oregon"]})
+    datasets = tmp_path / "datasets"
+    for descriptor in resolve_required_files(settings):
+        target = datasets / descriptor.dataset_id / descriptor.huc4
+        target.mkdir(parents=True)
+        (target / f"{descriptor.huc4}.gdb").write_text("geo")
+
+    downloader = CountingZipDownloader()
+    Pipeline(
+        console=Console(),
+        cache_dir=tmp_path / "cache",
+        datasets_dir=datasets,
+        output_dir=tmp_path / "output",
+        downloader=downloader,
+        loader=NullLayerLoader(),
+    ).run(settings)
+
+    assert downloader.calls == 0
+    # No archive cache was needed at all.
+    assert not (tmp_path / "cache" / "nhdplus_hr").exists()
+
+
 def test_metadata_index_persisted_after_run(tmp_path):
     settings = build_settings({"region": ["Oregon"]})
     _pipeline(tmp_path, CountingZipDownloader()).run(settings)
