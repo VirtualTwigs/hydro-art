@@ -1,9 +1,10 @@
 # Handoff — hydro-art
 
 _Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (committed `a0674c4`), the #22 animation/camera-paths
-slice (committed `d22a0d1`), the #22 web-delivery slice (which completed roadmap #22), plus a third
+slice (committed `d22a0d1`), the #22 web-delivery slice (which completed roadmap #22), the third
 #21 slice — the **package preflight planner** (`src/packaging.py` + `tools/package_cache.py`,
-implemented, commit pending)._
+committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acquisition entry point**
+(`acquire_dem_for_settings` in `src/dem.py`, implemented, commit pending)._
 
 ## Current state (2026-08-12)
 
@@ -45,7 +46,7 @@ implemented, commit pending)._
   **Deferred on #22:** web delivery (serving the hillshade image + camera-path animation), compositing
   hillshade under the river SVG in a `tools/` print renderer, and richer camera motion (easing /
   quaternion) beyond the linear first cut.
-- **#21 Regional scale & offline packaging — three offline slices (`f5997d8`, `0825475` committed; package preflight uncommitted).** #21 is `XL` and spans four concerns; per the user's scoping decision this pass
+- **#21 Regional scale & offline packaging — four offline slices (`f5997d8`, `0825475` committed; package preflight + DEM-acquisition wiring uncommitted).** #21 is `XL` and spans four concerns; per the user's scoping decision this pass
   delivers only the fully-offline **portable cache manifests**. New pure module
   `src/manifest.py` (spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging/`) turns
   a `Cache`'s recorded provenance into a deterministic, portable manifest: `build_manifest` /
@@ -69,10 +70,18 @@ implemented, commit pending)._
   `within_tile_budget` / `is_ready`, plus `format_plan` for a one-block summary. Driven by the thin
   non-offline `tools/package_cache.py` (`--region`/`--cache-dir`/`--config`/`--tile-count`; exits 0
   ready / 1 not). Imports only stdlib + `src.manifest`/`datasets`/`config`/`cache`; not in
-  `PIPELINE_STAGES`. Tested in `tests/test_packaging.py` (7 tests). Suite: **430 passing** (+7).
-  **Deferred on #21:** region expansion beyond OR/WA/CA (needs real WBD), wiring
-  `tile_budget` into a live DEM entry point, and a `write_manifest`-to-disk packaging CLI over a real
-  NAS cache.
+  `PIPELINE_STAGES`. Tested in `tests/test_packaging.py` (7 tests). A fourth (uncommitted) slice adds
+  a **settings-driven DEM acquisition entry point**: `src/dem.py`
+  `acquire_dem_for_settings(settings, *, boundary, cache, downloader)` reads
+  `elevation.tier`/`tile_budget`/`cache_policy` off the validated `Settings` and forwards to
+  `acquire_dem` — guarding on `enabled` (disabled → `ElevationError` before any discovery), mapping
+  `cache_policy=="refresh"` → `refresh=True`, and feeding `tile_budget` into the existing fail-fast
+  budget guard. This is the "wire `tile_budget` into a live DEM entry point" gap closed; new import
+  `from src.config import Settings` is cycle-free. Tested in `tests/test_dem.py` (+5). Suite:
+  **435 passing** (+5 over the packaging slice's 430).
+  **Deferred on #21:** region expansion beyond OR/WA/CA (needs real WBD), putting the DEM subsystem
+  into a real (non-offline) entry point / `PIPELINE_STAGES`, and a `write_manifest`-to-disk packaging
+  CLI over a real NAS cache.
 - **#20 Accuracy validation suite — committed (`43d1635`).** New pure module
   `src/accuracy.py` (spec `agent-os/specs/2026-08-12-accuracy-validation-suite/`),
   the first Epoch 5 item. Compares terrain/river vertices sampled from a DEM fixture

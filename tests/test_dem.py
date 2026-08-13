@@ -13,12 +13,14 @@ from pathlib import Path
 import pytest
 
 from src.cache import Cache
+from src.config import build_settings
 from src.datasets import FileDescriptor
 from src.dem import (
     TIER_PRODUCTS,
     DemAsset,
     ThreeDEPDiscoverer,
     acquire_dem,
+    acquire_dem_for_settings,
     count_tiles,
     geographic_cells,
 )
@@ -183,6 +185,90 @@ def test_acquire_dem_zero_budget_is_unlimited(tmp_path: Path) -> None:
         max_tiles=0,  # unlimited
     )
     assert len(assets) == 4 and len(downloader.calls) == 4
+
+
+# --- TG-W1: settings-driven acquisition entry point (tile-budget wiring) ----
+
+
+def _elev_settings(**elevation):
+    """Build Settings with an elevation block (enabled by default here)."""
+    elevation = {"enabled": True, "tier": "preview", **elevation}
+    return build_settings({"region": ["Oregon"], "elevation": elevation})
+
+
+def test_acquire_dem_for_settings_reads_tier_and_budget(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    settings = _elev_settings(tier="preview", tile_budget=1)
+    assets = acquire_dem_for_settings(
+        settings,
+        boundary=(-123.8, 44.2, -123.2, 44.8),  # single preview tile
+        cache=cache,
+        downloader=downloader,
+    )
+    assert len(assets) == 1 and len(downloader.calls) == 1
+    # Tier came from settings → 1 arc-second (preview) product at 30 m.
+    assert assets[0].tile.resolution_m == 30.0
+
+
+def test_acquire_dem_for_settings_over_budget_fails_fast(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    settings = _elev_settings(tier="preview", tile_budget=2)
+    with pytest.raises(ElevationError, match="tile budget"):
+        acquire_dem_for_settings(
+            settings,
+            boundary=(-123.5, 44.2, -122.5, 45.1),  # 4 tiles > budget 2
+            cache=cache,
+            downloader=downloader,
+        )
+    assert downloader.calls == []  # fail fast: nothing downloaded
+
+
+def test_acquire_dem_for_settings_zero_budget_is_unlimited(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    settings = _elev_settings(tier="preview")  # tile_budget defaults to 0
+    assert settings.elevation.tile_budget == 0
+    assets = acquire_dem_for_settings(
+        settings,
+        boundary=(-123.5, 44.2, -122.5, 45.1),  # 4 tiles
+        cache=cache,
+        downloader=downloader,
+    )
+    assert len(assets) == 4 and len(downloader.calls) == 4
+
+
+def test_acquire_dem_for_settings_disabled_raises_before_discovery(
+    tmp_path: Path,
+) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    settings = _elev_settings(enabled=False)
+    with pytest.raises(ElevationError, match="disabled"):
+        acquire_dem_for_settings(
+            settings,
+            boundary=(-123.8, 44.2, -123.2, 44.8),
+            cache=cache,
+            downloader=downloader,
+        )
+    assert downloader.calls == []  # nothing discovered or fetched
+
+
+def test_acquire_dem_for_settings_refresh_policy_redownloads(tmp_path: Path) -> None:
+    cache = Cache(tmp_path / "cache")
+    downloader = _FakeDownloader()
+    boundary = (-123.8, 44.2, -123.2, 44.8)
+    refresh = _elev_settings(cache_policy="refresh")
+    acquire_dem_for_settings(refresh, boundary=boundary, cache=cache, downloader=downloader)
+    acquire_dem_for_settings(refresh, boundary=boundary, cache=cache, downloader=downloader)
+    assert len(downloader.calls) == 2  # refresh policy re-downloads
+
+    # Default "reuse" policy → the second call is a pure cache hit.
+    reuse_dl = _FakeDownloader()
+    reuse = _elev_settings(cache_policy="reuse")
+    acquire_dem_for_settings(reuse, boundary=boundary, cache=cache, downloader=reuse_dl)
+    assert len(reuse_dl.calls) == 0  # already cached by the refresh run above
 
 
 def test_acquire_dem_is_deterministic(tmp_path: Path) -> None:

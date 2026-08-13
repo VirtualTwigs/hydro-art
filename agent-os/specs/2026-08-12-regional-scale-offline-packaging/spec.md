@@ -207,3 +207,50 @@ TG-P2: injected `tile_count` within/over budget, unlimited budget, and `None`;
 Computing the DEM tile count inside `src/` (kept injected/offline); region
 expansion beyond OR/WA/CA (needs real WBD); actually copying/zipping a cache into a
 shippable bundle (the planner reports readiness; bundling is a `tools/` follow-on).
+
+---
+
+# Spec — Settings-driven DEM acquisition entry point (roadmap #21, tile-budget wiring)
+
+## Summary
+
+Add `acquire_dem_for_settings` to `src/dem.py`: a thin, `Settings`-driven entry
+point over the existing `acquire_dem`. It reads the resolution tier, tile budget,
+and cache policy off `settings.elevation` and forwards them, so a caller passes one
+validated `Settings` instead of hand-threading `tier` / `max_tiles` / `refresh`.
+This closes the roadmap #21 "wire `tile_budget` into a live DEM entry point" gap
+while keeping the DEM subsystem offline-testable and out of `PIPELINE_STAGES`.
+
+## Behavior
+
+- `acquire_dem_for_settings(settings, *, boundary, cache, downloader,
+  discoverer=None, log=…, clock=…)` → `list[DemAsset]`.
+- Guards on `settings.elevation.enabled`: a disabled elevation config raises
+  `ElevationError` **before any discovery/fetch** (acquiring a DEM for a 2D build
+  is a caller error).
+- Maps `settings.elevation.cache_policy` (`"reuse"`|`"refresh"`) → `acquire_dem`'s
+  `refresh` bool — the mapping `acquire_dem`'s own docstring already names but
+  nothing wired.
+- Forwards `tier=settings.elevation.tier` and
+  `max_tiles=settings.elevation.tile_budget`, inheriting the existing fail-fast
+  budget guard (over budget → `ElevationError` before any download; `0` =
+  unlimited).
+
+## Constraints honored
+
+- `src/dem.py` gains `from src.config import Settings` — no import cycle
+  (`src.config` imports nothing from `src`; `dem` already depends on `datasets`
+  which depends on `config`).
+- Pure/deterministic/offline; injectable `discoverer`/`downloader` seams unchanged;
+  no numpy/GDAL. Not in `PIPELINE_STAGES`.
+
+## Tests (`tests/test_dem.py`)
+
+TG-W1: reads tier+budget and proceeds within budget; over-budget fails fast before
+any fetch; `tile_budget=0` unlimited; `enabled=False` raises before discovery;
+`cache_policy="refresh"` forces a redownload (vs. `"reuse"` cache hit).
+
+## Not in scope (this slice)
+
+Region expansion beyond OR/WA/CA (needs real WBD); putting the DEM subsystem into
+`PIPELINE_STAGES`; a real (non-offline) 3DEP run.

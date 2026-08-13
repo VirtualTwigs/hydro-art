@@ -129,13 +129,35 @@ follow-up note called for.
   cache → "NOT READY" exit 1 listing 8 missing files; populated cache → "READY"
   exit 0 with "DEM tiles: 5 (budget unlimited) — within budget".
 
+## Phase 4 — Settings-driven DEM acquisition entry point (fourth #21 slice)
+
+Closes the earlier "wire `tile_budget` into a live DEM entry point" follow-up. The
+budget guard and cache-policy semantics already existed on `acquire_dem`; what was
+missing was anything that read them off a validated `Settings`.
+
+- `src/dem.py` — new `acquire_dem_for_settings(settings, *, boundary, cache,
+  downloader, discoverer=None, log=…, clock=…)`. Reads `settings.elevation.tier`,
+  `.tile_budget`, and `.cache_policy`; guards on `.enabled` (disabled → `ElevationError`
+  before any discovery/fetch); maps `cache_policy == "refresh"` → `acquire_dem`'s
+  `refresh` flag (the mapping `acquire_dem`'s own docstring names but nothing wired);
+  forwards `max_tiles=tile_budget` into the existing fail-fast budget guard. Added to
+  `__all__`. New import `from src.config import Settings` — no cycle (`src.config`
+  imports nothing from `src`). Still pure/offline, not in `PIPELINE_STAGES`.
+- Tests: `tests/test_dem.py` (+5, TG-W1) — reads tier+budget and proceeds within
+  budget (tier honored → preview 30 m); over-budget fails fast (downloader never
+  called); `tile_budget=0` unlimited; `enabled=False` raises before discovery;
+  `cache_policy="refresh"` redownloads vs. `"reuse"` cache hit. Full suite:
+  **435 passed** (+5), no regressions.
+
 ## Not done / follow-ups (remain open on roadmap #21)
 
 - **Region expansion** beyond OR/WA/CA — needs real WBD to derive HUC4 coverage
   for more states (`tools/derive_state_huc4.py` against the national WBD GDB).
-- **Wiring the tile budget end-to-end** — `acquire_dem` accepts `max_tiles`, but
-  nothing calls it with `settings.elevation.tile_budget` yet (the DEM subsystem
-  isn't in `PIPELINE_STAGES`); the wiring lands when a real DEM entry point does.
+- **Wiring the tile budget** — done in Phase 4: `acquire_dem_for_settings` reads
+  `settings.elevation.tile_budget` (+ tier + cache policy) and forwards to
+  `acquire_dem`. The remaining step is putting the DEM subsystem into a real
+  (non-offline) entry point / `PIPELINE_STAGES` — a larger effort out of this
+  offline slice's scope.
 - A `tools/` packaging CLI shipped as `tools/package_cache.py` (Phase 3 above:
   `plan_package` + `format_plan` readiness check with an injected `--tile-count`
   preflight). A `write_manifest`-to-disk variant over a real NAS cache (emit a

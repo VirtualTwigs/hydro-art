@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.cache import Cache, DownloaderLike
+from src.config import Settings
 from src.datasets import FileDescriptor
 from src.elevation import (
     ElevationError,
@@ -57,6 +58,7 @@ __all__ = [
     "dem_descriptor",
     "count_tiles",
     "acquire_dem",
+    "acquire_dem_for_settings",
 ]
 
 #: The staged-products S3 bucket USGS publishes 3DEP COGs to (same host as the
@@ -316,3 +318,45 @@ def acquire_dem(
         )
         assets.append(DemAsset(tile=tile, path=path, provenance=provenance))
     return assets
+
+
+def acquire_dem_for_settings(
+    settings: Settings,
+    *,
+    boundary: Any,
+    cache: Cache,
+    downloader: DownloaderLike,
+    discoverer: ThreeDEPDiscoverer | None = None,
+    log: Callable[[str], None] = _noop,
+    clock: Callable[[], str] = lambda: date.today().isoformat(),
+) -> list[DemAsset]:
+    """Acquire a region's DEM tiles driven by a validated ``Settings`` (roadmap #21).
+
+    A thin, settings-driven entry point over :func:`acquire_dem`: it reads the
+    resolution tier, tile budget, and cache policy off ``settings.elevation`` and
+    forwards them, so callers pass one validated ``Settings`` instead of threading
+    ``tier`` / ``max_tiles`` / ``refresh`` by hand. This is the wiring that feeds
+    ``settings.elevation.tile_budget`` into the fail-fast budget guard and maps the
+    ``reuse`` / ``refresh`` cache policy onto :func:`acquire_dem`'s ``refresh`` flag.
+
+    Raises:
+        ElevationError: If elevation is disabled (a caller error — no DEM is needed
+            for a 2D build), or, via :func:`acquire_dem`, if the tier is unsupported
+            or the discovered tile count exceeds ``elevation.tile_budget``.
+    """
+    elevation = settings.elevation
+    if not elevation.enabled:
+        raise ElevationError(
+            "elevation is disabled; set elevation.enabled to acquire DEM tiles."
+        )
+    return acquire_dem(
+        boundary=boundary,
+        tier=elevation.tier,
+        cache=cache,
+        downloader=downloader,
+        discoverer=discoverer,
+        refresh=elevation.cache_policy == "refresh",
+        max_tiles=elevation.tile_budget,
+        log=log,
+        clock=clock,
+    )

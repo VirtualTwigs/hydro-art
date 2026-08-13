@@ -177,8 +177,14 @@ Also a **package preflight planner**: `src/packaging.py` `plan_package`/`Package
 `tile_budget` into one "is this cache ready to ship?" verdict (present/missing/corrupt +
 injected-tile-count preflight → `is_ready`), driven by `tools/package_cache.py`
 (`--region`/`--cache-dir`/`--tile-count`); tests in `tests/test_packaging.py` (7 tests).
-**Left:** region expansion beyond OR/WA/CA (needs real WBD), wiring `tile_budget` into a live DEM entry
-point, and a `write_manifest`-to-disk packaging CLI over a real NAS cache.)
+Also a **settings-driven DEM acquisition entry point**: `src/dem.py`
+`acquire_dem_for_settings(settings, *, boundary, cache, downloader)` reads
+`elevation.tier`/`tile_budget`/`cache_policy` and forwards to `acquire_dem` (guards on
+`enabled`; maps `refresh` policy; feeds the fail-fast budget guard) — the `tile_budget`
+wiring, tested offline in `tests/test_dem.py` (+5).
+**Left:** region expansion beyond OR/WA/CA (needs real WBD), putting the DEM subsystem into a real
+(non-offline) entry point / `PIPELINE_STAGES`, and a `write_manifest`-to-disk packaging CLI over a
+real NAS cache.)
 22. [x] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 (All three concerns shipped across three offline slices. **(1) Terrain-aware 2D hillshade**:

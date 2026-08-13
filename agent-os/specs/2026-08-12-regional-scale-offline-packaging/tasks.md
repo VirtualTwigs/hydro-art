@@ -104,3 +104,30 @@
 - [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`.
 - [x] Update the roadmap #21 note, `HANDOFF.md`, and the `CLAUDE.md` module map.
       Report; STOP.
+
+---
+
+# Tasks — Settings-driven DEM acquisition entry point (roadmap #21, tile-budget wiring)
+
+## TG-W1 — `acquire_dem_for_settings`
+
+- [x] Write tests first (`tests/test_dem.py`): `acquire_dem_for_settings(settings,
+      *, boundary, cache, downloader)` reads `settings.elevation.tier` +
+      `.tile_budget` + `.cache_policy` and forwards to `acquire_dem` — within budget
+      it proceeds (assets returned, downloader called); an over-budget region raises
+      `ElevationError` **before any fetch** (fake downloader never called);
+      `tile_budget=0` is unlimited; `enabled=False` raises `ElevationError` before
+      discovery (nothing fetched); `cache_policy="refresh"` forces a redownload on a
+      second call (vs. default `"reuse"` → cache hit). (5 tests, green.)
+- [x] `src/dem.py`: add `acquire_dem_for_settings` — guard on `elevation.enabled`,
+      map `cache_policy == "refresh"` → `refresh=True`, pass
+      `max_tiles=elevation.tile_budget` + `tier=elevation.tier`; add to `__all__`.
+      Imports `Settings` from `src.config` (no cycle: `config` imports nothing from
+      `src`). Pure/offline; the DEM subsystem stays out of `PIPELINE_STAGES`.
+- [x] Run ONLY the new tests; green.
+
+## TG-W2 — verify + docs
+
+- [x] Full Python suite (regression check): **435 passed** (+5).
+- [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; update the
+      roadmap #21 note, `HANDOFF.md`, and the `CLAUDE.md` module map. Report; STOP.
