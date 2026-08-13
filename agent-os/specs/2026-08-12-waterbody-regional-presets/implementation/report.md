@@ -55,10 +55,31 @@ explicit `--waterbody-stroke-width` beats it; YAML `preset` honored and CLI-over
   `--waterbody-preset poster` → argparse exit 2.
 - `ruff` not installed in this `.venv`; code follows repo conventions.
 
+## Real-data QA — Clark County, WA (executed 2026-08-12)
+
+The Census cb_2023 cartographic-boundary shapefiles were staged locally
+(`/tmp/states_shp/`, `/tmp/counties_shp/`), unblocking the county-level run.
+`tools/waterbody_qa.py` clipped to the real Clark County polygon against HUC4
+1708 (already local):
+
+| Thresholds | Selected | Breakdown |
+| --- | --- | --- |
+| screen (0 / 0 m²) | **830** | 809 lakes, 21 reservoirs |
+| print (100k / 250k m²) | **24** | 22 lakes, 2 reservoirs |
+
+6,416 real candidate polygons; every selected feature source-traceable; coastal
+fragments and duplicate geometries handled (0 spurious); shared-edge pairs
+detected and flagged. The classification + selection code is correct on real
+NHD data.
+
+**Art-direction signal:** the provisional `print` thresholds drop 97% of Clark's
+waterbodies (830 → 24). Those numbers were guessed for *state*-scale renders; at
+*county* scale they're almost certainly too aggressive. The `print` inland
+threshold likely wants to be well under 100k m² for county output.
+
 ## Not done / follow-ups (remain open on roadmap W4)
 
-- **Final preset values** — the numbers here are provisional; the print/screen
-  thresholds await human art-direction after reviewing real Oregon/Washington/
-  Clark-County output. Tune them in `WATERBODY_PRESETS`.
-- **Clark County run** — the county-level QA harness (`tools/waterbody_qa.py`)
-  still needs the Census county shapefile mounted; not runnable in this offline env.
+- **Final preset values** — still provisional. The Clark run above gives real
+  evidence to tune against (esp. the too-aggressive county-scale `print`
+  thresholds), but choosing the numbers remains a human art-direction call in
+  `WATERBODY_PRESETS`.

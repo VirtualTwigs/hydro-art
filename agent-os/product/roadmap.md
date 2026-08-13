@@ -62,11 +62,14 @@ now ships (spec `agent-os/specs/2026-08-12-waterbody-regional-presets`): `WATERB
 (provisional `screen`/`print` bundles) + `SUPPORTED_WATERBODY_PRESETS` in `src/config.py`, expanded in
 `_coerce_waterbodies` with `defaults < preset < explicit` precedence, and a `--waterbody-preset`
 CLI flag (unknown → argparse exit 2); `preset` is consumed at config time so a no-preset build stays
-byte-identical (tests in `tests/test_waterbody_config.py`, +8). **Left:** (1) the Clark County, WA
-county-level run (harness supports it, but the Census county shapefile isn't mounted locally), and
-(2) the actual print/screen **preset values** — an art-direction decision on stroke/size/detail
-thresholds, pending human review of the real-region output (the mechanism is done; only the numbers
-in `WATERBODY_PRESETS` await tuning).)
+byte-identical (tests in `tests/test_waterbody_config.py`, +8). The Clark County, WA county-level run
+executed 2026-08-12 (Census cb_2023 county shapefile now staged at `/tmp/counties_shp/`): clipped to
+the real Clark polygon against HUC4 1708, 6,416 candidates → **830 selected** (809 lakes, 21
+reservoirs) at screen thresholds, all source-traceable, coastal/duplicate/shared-edge QA clean. **Left:**
+the actual print/screen **preset values** — an art-direction decision, now with real evidence: the
+provisional `print` thresholds (100k/250k m²) drop 97% of Clark's waterbodies (830 → 24), which is
+almost certainly too aggressive at *county* scale (they were guessed for state-scale renders). The
+mechanism is done; only the numbers in `WATERBODY_PRESETS` await tuning.)
 
 Epoch gate: a build can produce original, source-traceable outlines for lakes, large ponds,
 bays, and inlets without filling or incorrectly closing coastal water.
