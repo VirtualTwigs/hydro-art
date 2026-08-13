@@ -47,6 +47,8 @@ __all__ = [
     "read_manifest",
     "verify_manifest",
     "diff_manifests",
+    "format_verification",
+    "format_diff",
 ]
 
 MANIFEST_VERSION = "1"
@@ -318,3 +320,45 @@ def diff_manifests(old: CacheManifest, new: CacheManifest) -> ManifestDiff:
         else:
             unchanged.append(key)
     return ManifestDiff(tuple(added), tuple(removed), tuple(changed), tuple(unchanged))
+
+
+def _format_key_group(label: str, keys: tuple[str, ...]) -> list[str]:
+    lines = [f"  {label} ({len(keys)}):"]
+    lines.extend(f"    - {key}" for key in keys)
+    return lines
+
+
+def format_verification(verification: ManifestVerification) -> str:
+    """Render a :class:`ManifestVerification` as a human-readable summary.
+
+    The first line states COMPLETE/INCOMPLETE and the ``ok``/total count; any
+    ``missing`` or ``mismatched`` keys are then listed under their own heading.
+    """
+    total = len(verification.ok) + len(verification.missing) + len(verification.mismatched)
+    status = "COMPLETE" if verification.is_complete else "INCOMPLETE"
+    lines = [f"Manifest verification: {status} ({len(verification.ok)}/{total} ok)"]
+    if verification.missing:
+        lines.extend(_format_key_group("missing", verification.missing))
+    if verification.mismatched:
+        lines.extend(_format_key_group("mismatched", verification.mismatched))
+    return "\n".join(lines)
+
+
+def format_diff(diff: ManifestDiff) -> str:
+    """Render a :class:`ManifestDiff` as a human-readable summary.
+
+    A synced diff collapses to one line; otherwise each non-empty
+    added/removed/changed group is listed, followed by the unchanged count.
+    """
+    if diff.is_synced:
+        return f"Manifests in sync ({len(diff.unchanged)} unchanged)."
+    lines = ["Manifest diff:"]
+    for label, keys in (
+        ("added", diff.added),
+        ("removed", diff.removed),
+        ("changed", diff.changed),
+    ):
+        if keys:
+            lines.extend(_format_key_group(label, keys))
+    lines.append(f"  unchanged: {len(diff.unchanged)}")
+    return "\n".join(lines)

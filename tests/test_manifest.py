@@ -14,10 +14,14 @@ from src.config import build_settings
 from src.datasets import FileDescriptor, resolve_required_files
 from src.manifest import (
     CacheManifest,
+    ManifestDiff,
     ManifestEntry,
     ManifestError,
+    ManifestVerification,
     build_manifest,
     diff_manifests,
+    format_diff,
+    format_verification,
     manifest_for_settings,
     manifest_from_dict,
     manifest_to_dict,
@@ -195,3 +199,47 @@ def test_diff_synced_when_identical(tmp_path):
     diff = diff_manifests(m, m)
     assert diff.is_synced is True
     assert diff.unchanged == (d.key,)
+
+
+# ---- format_verification -----------------------------------------------------
+
+def test_format_verification_complete():
+    v = ManifestVerification(ok=("a/1/x.zip", "a/1/y.zip"), missing=(), mismatched=())
+    text = format_verification(v)
+    assert "COMPLETE" in text
+    assert "2/2" in text  # ok / total
+    # nothing to list when complete
+    assert "missing" not in text and "mismatched" not in text
+
+
+def test_format_verification_incomplete_lists_problem_keys():
+    v = ManifestVerification(
+        ok=("a/1/ok.zip",), missing=("a/1/gone.zip",), mismatched=("a/1/bad.zip",)
+    )
+    text = format_verification(v)
+    assert "INCOMPLETE" in text
+    assert "missing" in text and "a/1/gone.zip" in text
+    assert "mismatched" in text and "a/1/bad.zip" in text
+
+
+# ---- format_diff -------------------------------------------------------------
+
+def test_format_diff_in_sync():
+    diff = ManifestDiff(added=(), removed=(), changed=(), unchanged=("a/1/x.zip",))
+    text = format_diff(diff)
+    assert "sync" in text.lower()
+    assert "1" in text  # unchanged count
+
+
+def test_format_diff_lists_each_change_group():
+    diff = ManifestDiff(
+        added=("a/1/new.zip",),
+        removed=("a/1/old.zip",),
+        changed=("a/1/edit.zip",),
+        unchanged=("a/1/same.zip",),
+    )
+    text = format_diff(diff)
+    assert "added" in text and "a/1/new.zip" in text
+    assert "removed" in text and "a/1/old.zip" in text
+    assert "changed" in text and "a/1/edit.zip" in text
+    assert "unchanged" in text

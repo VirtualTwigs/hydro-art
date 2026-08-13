@@ -131,3 +131,44 @@
 - [x] Full Python suite (regression check): **435 passed** (+5).
 - [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; update the
       roadmap #21 note, `HANDOFF.md`, and the `CLAUDE.md` module map. Report; STOP.
+
+---
+
+# Tasks — Manifest packaging CLI (roadmap #21, offline-packaging slice)
+
+Closes the "`write_manifest`-to-disk packaging CLI over a real NAS cache" gap. The
+serialization primitives (`write_manifest`/`read_manifest`) already exist; this slice
+adds human-readable output formatters (the genuinely new, tested `src/` logic) and a
+thin `tools/` CLI that drives build/write/verify/diff over a real cache.
+
+## TG-M1 — manifest output formatters (TDD)
+
+- [x] Write tests first (`tests/test_manifest.py`): `format_verification` on a
+      complete result mentions COMPLETE + the ok count and lists nothing; on a
+      result with missing + mismatched keys says INCOMPLETE and lists both key
+      groups. `format_diff` on a synced diff says "in sync"; on a diff with
+      added/removed/changed keys lists each group and the unchanged count. (4 tests.)
+- [x] `src/manifest.py`: `format_verification(ManifestVerification) -> str` and
+      `format_diff(ManifestDiff) -> str`; add both to `__all__`. Pure, offline.
+- [x] Run ONLY the new tests; green (4 passed).
+
+## TG-M2 — `tools/cache_manifest.py` CLI
+
+- [x] Add a thin CLI over `src.manifest` with three subcommands:
+      `write --region … --cache-dir … [--out manifest.json] [--config …] [--strict]`
+      (build `manifest_for_settings` → `write_manifest`; print entry count + bytes;
+      `--strict` → non-zero when a required file lacks cached metadata),
+      `verify MANIFEST --cache-dir …` (`read_manifest` → `verify_manifest` →
+      `format_verification`; exit 0 iff complete), and `diff OLD NEW`
+      (`read_manifest` ×2 → `diff_manifests` → `format_diff`; exit 0 iff synced).
+      Mirrors `tools/package_cache.py`; reads a real cache, so it is not in the
+      offline suite. Smoke-tested `main()` offline against a fabricated Oregon tmp
+      cache: write (exit 0), verify complete (0) / missing (1), diff synced (0) /
+      changed (1), `--strict` on an empty cache (1) — all correct.
+
+## TG-M3 — verify + docs
+
+- [x] Run the full Python suite (regression check): **456 passed** (+4).
+- [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; update the
+      roadmap #21 "Left" note, `HANDOFF.md`, and the `CLAUDE.md` module map (both
+      `src/manifest.py` formatters and the new tool). Report; STOP.

@@ -192,9 +192,13 @@ Also a **settings-driven DEM acquisition entry point**: `src/dem.py`
 `elevation.tier`/`tile_budget`/`cache_policy` and forwards to `acquire_dem` (guards on
 `enabled`; maps `refresh` policy; feeds the fail-fast budget guard) — the `tile_budget`
 wiring, tested offline in `tests/test_dem.py` (+5).
-**Left:** region expansion beyond OR/WA/CA (needs real WBD), putting the DEM subsystem into a real
-(non-offline) entry point / `PIPELINE_STAGES`, and a `write_manifest`-to-disk packaging CLI over a
-real NAS cache.)
+Also a **manifest packaging CLI**: `src/manifest.py` gains pure `format_verification`/`format_diff`
+(tested) and a thin `tools/cache_manifest.py` with `write`/`verify`/`diff` subcommands over a real
+(e.g. NAS) cache — build a portable manifest to disk, verify a moved cache against it, and reconcile
+two manifests (exit codes reflect completeness/sync); not in the offline suite (reads a real cache),
+tests in `tests/test_manifest.py` (+4).
+**Left:** region expansion beyond OR/WA/CA (needs real WBD) and putting the DEM subsystem into a real
+(non-offline) entry point / `PIPELINE_STAGES`.)
 22. [x] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 (All three concerns shipped across three offline slices. **(1) Terrain-aware 2D hillshade**:

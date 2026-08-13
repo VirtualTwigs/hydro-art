@@ -163,3 +163,33 @@ missing was anything that read them off a validated `Settings`.
   preflight). A `write_manifest`-to-disk variant over a real NAS cache (emit a
   portable manifest alongside the packaged files; `verify_manifest` on the
   transferred copy) remains a small non-offline follow-on.
+
+## Addendum — Manifest packaging CLI (2026-08-13)
+
+Closes the "`write_manifest`-to-disk packaging CLI over a real NAS cache" follow-on
+noted just above. The serialization primitives already existed; this slice adds the
+missing human-facing pieces.
+
+**`src/manifest.py` (new, tested):** two pure formatters —
+`format_verification(ManifestVerification) -> str` (COMPLETE/INCOMPLETE + `ok`/total,
+then lists any `missing`/`mismatched` keys) and `format_diff(ManifestDiff) -> str`
+(collapses to one "in sync" line, else lists non-empty added/removed/changed groups +
+the unchanged count). Added to `__all__`. Tested in `tests/test_manifest.py` (+4:
+complete/incomplete verification, synced/changed diff).
+
+**`tools/cache_manifest.py` (new, thin CLI, not in the offline suite):** three
+subcommands over a real (e.g. NAS) `Cache`, mirroring `tools/package_cache.py`'s
+shape — `write` (`manifest_for_settings` → `write_manifest`; prints entry count +
+bytes; `--strict` makes an un-recorded required file a hard error → exit 1),
+`verify MANIFEST --cache-dir` (`read_manifest` → `verify_manifest` →
+`format_verification`; exit 0 iff complete), and `diff OLD NEW`
+(`read_manifest` ×2 → `diff_manifests` → `format_diff`; exit 0 iff synced).
+
+**Verification:** smoke-tested `main()` offline against a fabricated Oregon tmp cache
+(8 recorded files) — write exit 0 and file written; verify complete → 0, verify after
+deleting a file → 1 (lists the missing key); diff identical → 0, diff with a changed
+payload → 1 (lists the changed key); `--strict` on an empty cache → 1. Full Python
+suite: **456 passed** (+4), no regressions.
+
+**Still open on #21:** region expansion beyond OR/WA/CA (needs real WBD) and putting
+the DEM subsystem into a real (non-offline) entry point / `PIPELINE_STAGES`.

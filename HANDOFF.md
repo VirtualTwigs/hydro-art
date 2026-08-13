@@ -8,7 +8,22 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
 
 ## Current state (2026-08-12)
 
-- **#27 Run-pipeline reconcile — implemented, commit pending.** The served
+- **#21 Manifest packaging CLI — implemented, commit pending.** Closes the last
+  small offline-packaging gap on #21: a CLI that writes/verifies/diffs a portable
+  cache manifest over a real (e.g. NAS) cache. `src/manifest.py` gains two pure,
+  tested formatters — `format_verification` (COMPLETE/INCOMPLETE + `ok`/total, then
+  lists any missing/mismatched keys) and `format_diff` (one "in sync" line, else the
+  non-empty added/removed/changed groups + unchanged count). New thin
+  `tools/cache_manifest.py` (mirrors `tools/package_cache.py`; reads a real cache, so
+  not in the offline suite) has three subcommands: `write --region … --cache-dir …
+  [--out] [--strict]` (`manifest_for_settings` → `write_manifest`; `--strict` → exit 1
+  on an un-recorded required file), `verify MANIFEST --cache-dir …` (exit 0 iff
+  complete), `diff OLD NEW` (exit 0 iff synced). Smoke-tested `main()` offline against
+  a fabricated Oregon tmp cache — all exit codes correct. Tests: `tests/test_manifest.py`
+  (+4). Suite: **456 passing** (+4), no regressions. **Left on #21:** region expansion
+  beyond OR/WA/CA (needs real WBD) and wiring the DEM subsystem into a real
+  (non-offline) entry point / `PIPELINE_STAGES`.
+- **#27 Run-pipeline reconcile — committed (`5dc8ebf`; roadmap note `c5a6b2d`).** The served
   "Run pipeline" button now actually completes a real render offline. Two root
   causes fixed: (1) `_download_stage` unconditionally fetched archives even when
   the extracted GDBs already exist — `extract_all` would skip them, so the fetch
