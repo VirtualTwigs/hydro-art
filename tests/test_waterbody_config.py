@@ -99,24 +99,43 @@ def test_screen_preset_applies_its_bundle():
         assert _wb_fields(wb)[field] == value
 
 
-def test_print_preset_bolder_stroke_and_area_thresholds():
-    wb = build_settings({**DEFAULTS, "waterbodies": {"preset": "print"}}).waterbodies
-    # The print preset is meant to declutter + survive ink: bolder stroke, and it
-    # drops tiny ponds via positive area thresholds.
-    assert wb.stroke_width == WATERBODY_PRESETS["print"]["stroke_width"]
+def test_print_state_preset_bolder_stroke_and_area_thresholds():
+    wb = build_settings(
+        {**DEFAULTS, "waterbodies": {"preset": "print-state"}}
+    ).waterbodies
+    # The print presets declutter + survive ink: bolder stroke, and they drop tiny
+    # ponds via positive area thresholds.
+    assert wb.stroke_width == WATERBODY_PRESETS["print-state"]["stroke_width"]
     assert wb.stroke_width > DEFAULTS["waterbodies"]["stroke_width"]
     assert wb.min_inland_area_m2 > 0.0
     assert wb.min_coastal_area_m2 > 0.0
 
 
+def test_print_county_preset_less_aggressive_than_state():
+    county = build_settings(
+        {**DEFAULTS, "waterbodies": {"preset": "print-county"}}
+    ).waterbodies
+    state = build_settings(
+        {**DEFAULTS, "waterbodies": {"preset": "print-state"}}
+    ).waterbodies
+    # County-scale print keeps the bold stroke but uses smaller area thresholds so
+    # a single county still reads as a hydrographic scene (state thresholds
+    # over-prune at that zoom — Clark County evidence, 2026-08-12).
+    assert county.stroke_width == state.stroke_width
+    assert 0.0 < county.min_inland_area_m2 < state.min_inland_area_m2
+    assert 0.0 < county.min_coastal_area_m2 < state.min_coastal_area_m2
+
+
 def test_explicit_field_overrides_preset_but_keeps_the_rest():
     wb = build_settings(
-        {**DEFAULTS, "waterbodies": {"preset": "print", "stroke_width": 0.5}}
+        {**DEFAULTS, "waterbodies": {"preset": "print-state", "stroke_width": 0.5}}
     ).waterbodies
     # Explicit sub-key wins over the preset...
     assert wb.stroke_width == 0.5
     # ...but the preset's other fields remain.
-    assert wb.min_inland_area_m2 == WATERBODY_PRESETS["print"]["min_inland_area_m2"]
+    assert (
+        wb.min_inland_area_m2 == WATERBODY_PRESETS["print-state"]["min_inland_area_m2"]
+    )
 
 
 def test_unknown_preset_raises():
@@ -140,28 +159,34 @@ def test_no_preset_keeps_defaults_byte_identical():
 
 
 def test_cli_waterbody_preset_print_applies():
-    settings = resolve_settings(["--waterbody-preset", "print"])
-    assert settings.waterbodies.stroke_width == WATERBODY_PRESETS["print"]["stroke_width"]
+    settings = resolve_settings(["--waterbody-preset", "print-state"])
+    assert (
+        settings.waterbodies.stroke_width
+        == WATERBODY_PRESETS["print-state"]["stroke_width"]
+    )
     assert settings.waterbodies.min_inland_area_m2 > 0.0
 
 
 def test_cli_explicit_stroke_beats_preset():
     settings = resolve_settings(
-        ["--waterbody-preset", "print", "--waterbody-stroke-width", "0.5"]
+        ["--waterbody-preset", "print-state", "--waterbody-stroke-width", "0.5"]
     )
     # Explicit CLI flag wins over the preset...
     assert settings.waterbodies.stroke_width == 0.5
     # ...while the preset's other fields still apply.
     assert (
         settings.waterbodies.min_inland_area_m2
-        == WATERBODY_PRESETS["print"]["min_inland_area_m2"]
+        == WATERBODY_PRESETS["print-state"]["min_inland_area_m2"]
     )
 
 
 def test_yaml_preset_honored_and_cli_overrides(tmp_path):
-    path = _write(tmp_path, "waterbodies:\n  preset: print\n")
+    path = _write(tmp_path, "waterbodies:\n  preset: print-county\n")
     yaml_only = resolve_settings(["--config", path])
-    assert yaml_only.waterbodies.stroke_width == WATERBODY_PRESETS["print"]["stroke_width"]
+    assert (
+        yaml_only.waterbodies.stroke_width
+        == WATERBODY_PRESETS["print-county"]["stroke_width"]
+    )
     # CLI preset overrides the YAML one.
     overridden = resolve_settings(["--config", path, "--waterbody-preset", "screen"])
     assert (

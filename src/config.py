@@ -116,13 +116,17 @@ SUPPORTED_RENDER_ORDERS: tuple[str, ...] = ("below", "above")
 #: directive: naming one in the ``waterbodies`` block expands to this bundle of
 #: existing ``WaterbodySettings`` fields (precedence ``defaults < preset <
 #: explicit``), inventing no new render behavior. ``screen`` mirrors the default
-#: on-screen build; ``print`` uses a bolder stroke and positive area thresholds to
-#: declutter tiny ponds so outlines survive ink / large-format rasterization.
+#: on-screen build; the two ``print-*`` presets use a bolder stroke and positive
+#: area thresholds to declutter tiny ponds so outlines survive ink / large-format
+#: rasterization.
 #:
-#: NOTE: these values are **provisional placeholders**. Roadmap W4 defers the final
-#: print/screen thresholds to human art-direction pending review of real Oregon/
-#: Washington/Clark-County output; tune them here once that review happens. The
-#: *mechanism* (naming, precedence, CLI/YAML wiring) is what this slice fixes.
+#: The print thresholds are **scale-specific** because one global value cannot serve
+#: both zooms: ``print-state`` (100k/250k m²) is tuned for a whole-state / wall-sized
+#: sheet, where it keeps ~46k Oregon outlines; ``print-county`` (25k/50k m²) is tuned
+#: for a single-county sheet, where the state thresholds over-prune (Clark County, WA
+#: evidence 2026-08-12: 100k m² drops 97% of waterbodies to 24, while 25k m² keeps a
+#: readable ~62). Values remain human-tunable here; the ratios are art direction, not
+#: a hard contract.
 WATERBODY_PRESETS: dict[str, dict[str, Any]] = {
     "screen": {
         "color": "#2ec4ff",
@@ -132,11 +136,19 @@ WATERBODY_PRESETS: dict[str, dict[str, Any]] = {
         "coastal_mode": "conservative",
         "render_order": "below",
     },
-    "print": {
+    "print-state": {
         "color": "#2ec4ff",
         "stroke_width": 0.9,
-        "min_inland_area_m2": 100_000.0,  # ~0.1 km²: drop tiny ponds for legibility
+        "min_inland_area_m2": 100_000.0,  # ~0.1 km²: state / large-format legibility
         "min_coastal_area_m2": 250_000.0,
+        "coastal_mode": "conservative",
+        "render_order": "below",
+    },
+    "print-county": {
+        "color": "#2ec4ff",
+        "stroke_width": 0.9,
+        "min_inland_area_m2": 25_000.0,  # ~2.5 ha: county-scale declutter (keeps ponds)
+        "min_coastal_area_m2": 50_000.0,
         "coastal_mode": "conservative",
         "render_order": "below",
     },

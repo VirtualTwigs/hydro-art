@@ -97,21 +97,21 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
 - **Roadmap bookkeeping (committed `c254d47`).** An audit found four items fully
   implemented but never ticked: **W1/W2/W3** (waterbody taxonomy/selection/rendering) and
   **#11** (elevation settings + provenance) — all marked `[x]` with evidence notes;
-  Epoch 2 is now complete. **W4** stays `[ ]`: OR/WA real-region QA passed, but the Clark
-  County run (Census shapefile not mounted) and print/screen preset **values**
-  (art-direction) remain.
-- **W4 waterbody preset *mechanism* — uncommitted (offline slice).** Closes the W4 "establish
-  print and screen presets" plumbing while leaving the *values* human-tunable (spec
-  `agent-os/specs/2026-08-12-waterbody-regional-presets/`). `src/config.py` gains `WATERBODY_PRESETS`
-  (provisional `screen`/`print` bundles, marked as placeholders pending human review) +
-  `SUPPORTED_WATERBODY_PRESETS`; `_coerce_waterbodies` pops a `preset` directive and layers
-  `defaults < preset < explicit` (unknown → `ConfigError`), consuming `preset` so it never lands on
-  the frozen `WaterbodySettings` (no-preset builds byte-identical). `src/cli.py` adds
-  `--waterbody-preset {screen,print}` and — critically — changes the nested `waterbodies` merge base
-  from `dict(DEFAULTS["waterbodies"])` to `{}` (behavior-preserving, since `_coerce_waterbodies` fills
-  defaults) so a preset isn't shadowed by pre-seeded default values. Tests in
-  `tests/test_waterbody_config.py` (+8). Suite: **443 passing** (+8). **Still deferred on W4:** the
-  final tuned preset numbers (art-direction) and the Clark County run (mounted Census data).
+  Epoch 2 is now complete. **W4** stays `[ ]`: OR/WA + Clark County real-region QA all passed;
+  what remains is optional further tuning of the print preset **values** (art-direction).
+- **W4 waterbody preset *mechanism + scale-split values* — uncommitted.** Closes the W4 "establish
+  print and screen presets" plumbing (spec `agent-os/specs/2026-08-12-waterbody-regional-presets/`).
+  `src/config.py` `WATERBODY_PRESETS` now holds three bundles: `screen` (default on-screen), plus
+  scale-specific print presets — `print-state` (100k/250k m², whole-state/large-format) and
+  `print-county` (25k/50k m², single-county). The split is backed by real evidence: at county zoom the
+  state thresholds over-prune (Clark County, WA: 100k m² keeps only 24 of 830 waterbodies; 25k m² keeps
+  a readable ~62). `_coerce_waterbodies` pops a `preset` directive and layers `defaults < preset <
+  explicit` (unknown → `ConfigError`), consuming `preset` so it never lands on the frozen
+  `WaterbodySettings` (no-preset builds byte-identical). `src/cli.py` `--waterbody-preset`
+  (`choices=SUPPORTED_WATERBODY_PRESETS`, auto-derived) and — critically — a nested `waterbodies` merge
+  base of `{}` (not `dict(DEFAULTS["waterbodies"])`) so a preset isn't shadowed by pre-seeded defaults.
+  Tests in `tests/test_waterbody_config.py` (17 passing). **Optional follow-up:** further art-direction
+  tuning of the numbers; the mechanism + a defensible per-scale default are in place.
 - **#28 Presets & shareable render recipes — committed (`b80296d`).**
   Added a **recipe** layer to the control surface (spec
   `agent-os/specs/2026-08-12-presets-and-recipes/`). All logic is pure and lives
