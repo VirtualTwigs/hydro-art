@@ -214,3 +214,50 @@ fetches on demand.
 - [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; update the
       roadmap #21 note, `HANDOFF.md`, and the `CLAUDE.md`/module-map region references.
       Report; STOP.
+
+---
+
+# Tasks — Real (non-offline) DEM acquisition entry point (roadmap #21, closes the "Left" gap)
+
+Closes the last #21 "Left" note: giving the DEM subsystem a real, non-offline entry
+point. `acquire_dem_for_settings` already existed but nothing outside the test suite
+called it. This slice adds the genuinely-new tested `src/` primitive it needed (a
+region → lon/lat boundary lookup) and a thin `tools/` CLI that drives it against a
+real 3DEP S3 + NAS cache. The DEM subsystem stays **out** of `PIPELINE_STAGES` by
+design (CLAUDE.md) — that integration is a deliberate non-goal, not part of this slice.
+
+## TG-D1 — `region_bounds` helper (TDD)
+
+- [x] Write tests first (`tests/test_dem.py`): `region_bounds("Oregon")` returns the
+      expected EPSG:4326 envelope (coast/Idaho-border/CA-border/Columbia sanity
+      bounds); an unknown region raises `ElevationError`; `REGION_BOUNDS` keys ==
+      `SUPPORTED_REGIONS` (drift guard); `count_tiles(region_bounds("Oregon"),
+      "preview")` is a deterministic positive count matching `geographic_cells` over
+      those bounds. (4 tests.)
+- [x] `src/dem.py`: `REGION_BOUNDS` (Census per-region EPSG:4326 extents) +
+      `region_bounds(region) -> (min_lon, min_lat, max_lon, max_lat)`; add both to
+      `__all__`. Pure/offline.
+- [x] Run ONLY the new tests; green (4 passed).
+
+## TG-D2 — `tools/acquire_dem.py` CLI
+
+- [x] Add a thin CLI over `src.dem`: `--region` (nargs +), `--cache-dir` (required),
+      `--config`, `--tier`, `--tile-budget`, `--refresh`, `--dry-run`. Per region:
+      `region_bounds` → boundary, force-enable elevation via `dataclasses.replace`
+      (honoring the tier/budget/refresh overrides), then `--dry-run` →
+      `count_tiles` + budget check (no network) or a real `Downloader(UrllibFetcher())`
+      + `acquire_dem_for_settings` printing each asset (tile id, cache path, checksum).
+      Non-zero exit on over-budget / `ConfigError` / `ElevationError`. Reads+writes a
+      real cache (+ network without `--dry-run`), so it is not in the offline suite.
+      Smoke-tested `main()` offline: `--dry-run` Oregon (54 preview tiles, OK),
+      state-tier budget 5 (OVER, exit 1), Oregon+Washington budget 200 (OK), unknown
+      region (exit 1); and the real-acquire path with a fake downloader (Idaho state
+      tier: writes+records tiles, second run is a reuse cache hit) — all correct.
+
+## TG-D3 — verify + docs
+
+- [x] Run the full Python suite (regression check): **462 passed** (+4).
+- [x] Extend `spec.md`/`implementation/report.md`; tick this `tasks.md`; mark roadmap
+      #21 done (real-entry-point gap closed; `PIPELINE_STAGES` a deliberate non-goal),
+      update `HANDOFF.md` and the `CLAUDE.md` module map (`dem.py` `region_bounds` +
+      the new tool). Report; STOP.

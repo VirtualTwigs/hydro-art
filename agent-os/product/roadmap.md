@@ -170,7 +170,7 @@ residuals, nodata/uncovered points skipped — never zero-filled), `coverage_rep
 and `AccuracyReport` + `validate_against_sampler` over the injected `ElevationSampler` seam
 with a `within_tolerance` verdict. Spec `agent-os/specs/2026-08-12-accuracy-validation-suite`;
 tested in `tests/test_accuracy.py` (19 tests). Real-3DEP harness deferred (needs the GIS stack).)
-21. [ ] Regional scale & offline packaging — Expand from Oregon/Washington to additional U.S.
+21. [x] Regional scale & offline packaging — Expand from Oregon/Washington to additional U.S.
 states, with tile-budget controls, resumable jobs, and portable cache manifests. `XL`
 (Partial — **portable cache manifests** shipped: `src/manifest.py` (pure, offline, numpy/GDAL-free)
 turns `Cache` provenance into a deterministic, portable manifest — `build_manifest`/
@@ -204,7 +204,15 @@ all HU2 17; SE Bear-River corner in HU2 16 omitted like CA's desert fringes), wi
 `tools/render_common.STATE_HUC4` mirror; tested in `tests/test_config.py`/`test_datasets.py`/
 `test_counties.py`. Acquisition/config plumbing — a full render also fetches the region-17 NHDPlus HR
 archives on demand.
-**Left:** putting the DEM subsystem into a real (non-offline) entry point / `PIPELINE_STAGES`.)
+Finally, a **real (non-offline) DEM entry point**: `src/dem.py` gains a pure, offline
+`REGION_BOUNDS` + `region_bounds(region)` (EPSG:4326 per-region envelope, the DEM counterpart to
+`REGION_HUC4`, drift-guarded against `SUPPORTED_REGIONS`; tests in `tests/test_dem.py` +4) that turns
+a region name into the lon/lat box `count_tiles`/`acquire_dem` discover over, and a thin
+`tools/acquire_dem.py` CLI that drives `acquire_dem_for_settings` against a real 3DEP S3 + NAS cache
+(`--region`/`--cache-dir`, force-enabling elevation, honoring `--tier`/`--tile-budget`/`--refresh`,
+with a network-free `--dry-run` tile-count/budget preflight); not in the offline suite (reads/writes a
+real cache + network). The DEM subsystem keeps its own entry points and stays **out** of
+`PIPELINE_STAGES` by design (CLAUDE.md) — that integration is a deliberate non-goal, not a gap.)
 22. [x] Print/experience modes — Add terrain-aware 2D hillshade, animation/camera paths, and
 web delivery without compromising the canonical data model or reproducibility. `XL`
 (All three concerns shipped across three offline slices. **(1) Terrain-aware 2D hillshade**:

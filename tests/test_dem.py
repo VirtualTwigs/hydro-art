@@ -13,9 +13,10 @@ from pathlib import Path
 import pytest
 
 from src.cache import Cache
-from src.config import build_settings
+from src.config import SUPPORTED_REGIONS, build_settings
 from src.datasets import FileDescriptor
 from src.dem import (
+    REGION_BOUNDS,
     TIER_PRODUCTS,
     DemAsset,
     ThreeDEPDiscoverer,
@@ -23,6 +24,7 @@ from src.dem import (
     acquire_dem_for_settings,
     count_tiles,
     geographic_cells,
+    region_bounds,
 )
 from src.elevation import ElevationError, TileRef
 
@@ -269,6 +271,42 @@ def test_acquire_dem_for_settings_refresh_policy_redownloads(tmp_path: Path) -> 
     reuse = _elev_settings(cache_policy="reuse")
     acquire_dem_for_settings(reuse, boundary=boundary, cache=cache, downloader=reuse_dl)
     assert len(reuse_dl.calls) == 0  # already cached by the refresh run above
+
+
+# --- TG-D1: region -> DEM lon/lat boundary helper ---------------------------
+
+
+def test_region_bounds_returns_epsg4326_extent() -> None:
+    bounds = region_bounds("Oregon")
+    min_lon, min_lat, max_lon, max_lat = bounds
+    # Oregon's published extent: western Pacific coast to the Idaho border,
+    # California border up to the Columbia. Sanity-check the envelope.
+    assert min_lon < max_lon and min_lat < max_lat
+    assert -125.0 < min_lon < -124.0  # Pacific coast
+    assert -117.0 < max_lon < -116.0  # Idaho border
+    assert 41.0 < min_lat < 42.5  # California border
+    assert 46.0 < max_lat < 46.5  # Columbia
+
+
+def test_region_bounds_unknown_region_raises() -> None:
+    with pytest.raises(ElevationError, match="Nevada"):
+        region_bounds("Nevada")
+
+
+def test_region_bounds_covers_every_supported_region() -> None:
+    # Drift guard: every supported region must have a DEM boundary, and no
+    # stray entries (so a new region can't silently ship without one).
+    assert set(REGION_BOUNDS) == set(SUPPORTED_REGIONS)
+
+
+def test_count_tiles_over_region_bounds_is_deterministic() -> None:
+    # region_bounds feeds count_tiles/acquire_dem: a deterministic, positive
+    # preview-tier tile count over the whole state, with no network.
+    count = count_tiles(region_bounds("Oregon"), "preview")
+    assert count > 0
+    assert count == count_tiles(region_bounds("Oregon"), "preview")
+    # Matches discovery over the same bounds directly.
+    assert count == len(geographic_cells(*region_bounds("Oregon")))
 
 
 def test_acquire_dem_is_deterministic(tmp_path: Path) -> None:

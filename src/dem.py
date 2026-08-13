@@ -59,6 +59,8 @@ __all__ = [
     "count_tiles",
     "acquire_dem",
     "acquire_dem_for_settings",
+    "REGION_BOUNDS",
+    "region_bounds",
 ]
 
 #: The staged-products S3 bucket USGS publishes 3DEP COGs to (same host as the
@@ -105,6 +107,43 @@ TIER_PRODUCTS: dict[str, DemProduct] = {
     "preview": DemProduct("preview", "1", "USGS 3DEP 1 arc-second DEM", 30.0),
     "state": DemProduct("state", "13", "USGS 3DEP 1/3 arc-second DEM", 10.0),
 }
+
+
+#: Published EPSG:4326 ``(min_lon, min_lat, max_lon, max_lat)`` extents per
+#: supported region. These seed deterministic 1-degree DEM tile discovery
+#: (:func:`count_tiles` / :func:`acquire_dem`) without loading a GDAL boundary
+#: polygon — discovery floors/ceils each edge to whole-degree cells, so a
+#: full-state envelope is all that's needed. Values are the U.S. Census
+#: cartographic-boundary state extents, matching ``REGION_HUC4``'s whole-state
+#: scope in ``datasets.py``. Keep the keys in sync with ``SUPPORTED_REGIONS``.
+REGION_BOUNDS: dict[str, tuple[float, float, float, float]] = {
+    "Oregon": (-124.57, 41.99, -116.46, 46.30),
+    "Washington": (-124.85, 45.54, -116.92, 49.00),
+    "California": (-124.48, 32.53, -114.13, 42.01),
+    "Idaho": (-117.24, 41.99, -111.04, 49.00),
+}
+
+
+def region_bounds(region: str) -> tuple[float, float, float, float]:
+    """Return the EPSG:4326 ``(min_lon, min_lat, max_lon, max_lat)`` for a region.
+
+    A pure, offline lookup that turns a region name into the lon/lat bounding box
+    :func:`count_tiles` / :func:`acquire_dem` discover DEM tiles over — the
+    settings-driven (non-offline) DEM entry point's counterpart to ``REGION_HUC4``
+    for the 2D pipeline. The 2D pipeline clips to WBD basin polygons; DEM discovery
+    only needs a whole-degree envelope, so a static per-region box suffices.
+
+    Raises:
+        ElevationError: If ``region`` has no defined DEM boundary.
+    """
+    try:
+        return REGION_BOUNDS[region]
+    except KeyError:
+        supported = ", ".join(sorted(REGION_BOUNDS))
+        raise ElevationError(
+            f"No DEM boundary defined for region {region!r}; "
+            f"supported regions: {supported}."
+        ) from None
 
 
 @dataclass(frozen=True)

@@ -229,3 +229,42 @@ pipeline fetches on demand.
 
 **Still open on #21:** wiring the DEM subsystem into a real (non-offline) entry point
 / `PIPELINE_STAGES`.
+
+---
+
+## Addendum — Real (non-offline) DEM acquisition entry point (2026-08-13)
+
+Closes the final #21 "Left" gap. `src/dem.py` already had `acquire_dem_for_settings`,
+the settings-driven acquisition function, but nothing outside the test suite called
+it, so the DEM subsystem had no real entry point. This slice supplies the one tested
+`src/` primitive that was missing and a thin `tools/` CLI over it.
+
+**Changes.**
+- `src/dem.py`: `REGION_BOUNDS` (per-region EPSG:4326 `(min_lon, min_lat, max_lon,
+  max_lat)` envelopes — Census cartographic state extents, the DEM counterpart to
+  `datasets.REGION_HUC4`) + `region_bounds(region)`, both added to `__all__`. Pure,
+  offline; discovery floors each edge to whole-degree cells so a state envelope is
+  precise enough, and the 2D pipeline's WBD-basin clip is untouched.
+- `tools/acquire_dem.py` (new, untested per the tools convention): a thin CLI that,
+  per region, turns `region_bounds` into a boundary, force-enables elevation via
+  `dataclasses.replace` (honoring `--tier`/`--tile-budget`/`--refresh`), and either
+  `--dry-run` counts tiles + checks the budget (no network) or drives
+  `acquire_dem_for_settings` with a real `Downloader(UrllibFetcher())`, printing each
+  asset's tile id, cache path, and checksum. Non-zero exit on over-budget / config /
+  boundary errors. Reads+writes a real (possibly NAS) cache and the network.
+
+**Tests (TDD).** `tests/test_dem.py` +4: `region_bounds` envelope, unknown-region
+`ElevationError`, `REGION_BOUNDS`-vs-`SUPPORTED_REGIONS` drift guard, and a
+deterministic `count_tiles(region_bounds(...))` count.
+
+**Verification.** New tests green; full suite **462 passed** (+4). CLI smoke-tested
+offline: `--dry-run` (Oregon 54 preview tiles OK; state-tier budget 5 OVER → exit 1;
+Oregon+Washington budget 200 OK; unknown region → exit 1) and the real-acquire path
+with a fake downloader (Idaho state tier writes+records tiles; a second run is a reuse
+cache hit) — all correct.
+
+**Deliberate non-goal.** The DEM subsystem stays out of `PIPELINE_STAGES` by design
+(CLAUDE.md: a parallel data model with its own entry points). This CLI *is* that entry
+point; forcing DEM into the core 12-stage ordered pipeline was explicitly not pursued.
+With this, every #21 concern — additional states (CA, Idaho), tile-budget controls,
+resumable jobs, portable cache manifests, and a real acquisition entry point — is met.

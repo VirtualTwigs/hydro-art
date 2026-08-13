@@ -6,8 +6,27 @@ slice (committed `d22a0d1`), the #22 web-delivery slice (which completed roadmap
 committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acquisition entry point**
 (`acquire_dem_for_settings` in `src/dem.py`, implemented, commit pending)._
 
-## Current state (2026-08-12)
+## Current state (2026-08-13)
 
+- **#21 DONE — real (non-offline) DEM acquisition entry point — implemented, commit
+  pending.** Closes #21's final "Left" gap, so **roadmap #21 is now marked `[x]`**.
+  `src/dem.py` already had `acquire_dem_for_settings` (settings-driven acquisition)
+  but nothing outside the tests called it. This slice adds the one tested `src/`
+  primitive that was missing — pure/offline `REGION_BOUNDS` + `region_bounds(region)`,
+  the EPSG:4326 per-region envelope (Census state extents; DEM counterpart to
+  `datasets.REGION_HUC4`, drift-guarded against `SUPPORTED_REGIONS`) that feeds
+  `count_tiles`/`acquire_dem` — and a thin, untested `tools/acquire_dem.py` CLI over
+  `acquire_dem_for_settings`: per `--region` it turns `region_bounds` into a boundary,
+  force-enables elevation (honoring `--tier`/`--tile-budget`/`--refresh`), and either
+  `--dry-run` counts tiles + checks the budget (no network) or downloads/caches the
+  3DEP COG tiles via a real `Downloader(UrllibFetcher())`, printing each tile's
+  id/cache-path/checksum (non-zero exit on over-budget/config/boundary errors). TDD:
+  `tests/test_dem.py` +4. Suite: **462 passing** (+4). Smoke-tested offline (dry-run
+  budget checks + fake-downloader acquire with a reuse cache hit). **The DEM subsystem
+  stays out of `PIPELINE_STAGES` by design (CLAUDE.md) — that integration is a
+  deliberate non-goal, not a gap; this CLI *is* the real entry point.** With this,
+  every #21 concern (CA+Idaho states, tile-budget, resumable jobs, portable manifests,
+  real acquisition entry point) is met.
 - **#21 Region expansion → Idaho — implemented, commit pending.** Adds Idaho as a
   fourth supported region (the first of #21's two remaining directions). HUC4 basins
   derived from local WBD via `tools/derive_state_huc4.py Idaho --min-overlap-frac 0.01`
@@ -22,8 +41,9 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
   `test_counties.py`, `test_build.py`). Suite: **458 passing** (+2). This is
   acquisition/config plumbing — a full Idaho render additionally fetches the region-17
   NHDPlus HR archives (1704/1705/1706) on demand via the download-skip-aware pipeline.
-  **Left on #21:** wiring the DEM subsystem into a real (non-offline) entry point /
-  `PIPELINE_STAGES`.
+  **Left on #21 (at the time):** a real (non-offline) DEM entry point — since closed
+  by the `tools/acquire_dem.py` slice above; `PIPELINE_STAGES` integration was a
+  deliberate non-goal.
 - **#21 Manifest packaging CLI — committed (`14a2107`).** Closes the last
   small offline-packaging gap on #21: a CLI that writes/verifies/diffs a portable
   cache manifest over a real (e.g. NAS) cache. `src/manifest.py` gains two pure,
