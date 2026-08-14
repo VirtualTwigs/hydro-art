@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hydrographic Vector Art Generator — User Guide</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #11161f;
+    --panel-2: #161d29;
+    --edge: #223047;
+    --text: #cdd6e4;
+    --muted: #8593a8;
+    --neon: #2ec4ff;
+    --neon-2: #00ffcc;
+    --accent: #ff5cf0;
+    --warn: #ffcc4d;
+    --danger: #ff6b6b;
+    --code-bg: #0d1219;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--neon); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, kbd {
+    font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--edge);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.86em;
+    color: var(--neon-2);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--edge);
+    border-left: 3px solid var(--neon);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  pre code { background: none; border: none; padding: 0; color: var(--text); }
+  .layout { display: flex; max-width: 1240px; margin: 0 auto; }
+  nav.toc {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    width: 280px;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 18px 60px 24px;
+    border-right: 1px solid var(--edge);
+    background: linear-gradient(180deg, #0b1119, #0a0e14);
+    flex-shrink: 0;
+  }
+  nav.toc .brand {
+    font-weight: 700;
+    letter-spacing: .3px;
+    font-size: 1.02rem;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  nav.toc .brand span { color: var(--neon); }
+  nav.toc .tagline { color: var(--muted); font-size: .78rem; margin-bottom: 20px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: item; }
+  nav.toc li { margin: 1px 0; }
+  nav.toc a {
+    display: block;
+    padding: 5px 10px;
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: .85rem;
+    border-left: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
+  nav.toc a.active { color: var(--neon); border-left-color: var(--neon); background: rgba(46,196,255,.08); }
+  main {
+    flex: 1;
+    min-width: 0;
+    padding: 40px 48px 120px;
+  }
+  header.hero {
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    padding: 34px 34px 28px;
+    margin-bottom: 40px;
+    background:
+      radial-gradient(1200px 300px at 15% -40%, rgba(46,196,255,.18), transparent),
+      radial-gradient(900px 260px at 90% -30%, rgba(255,92,240,.12), transparent),
+      var(--panel);
+  }
+  header.hero h1 { margin: 0 0 6px; font-size: 2rem; color: #fff; letter-spacing: .2px; }
+  header.hero p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+  header.hero .pill {
+    display: inline-block; margin-top: 16px; margin-right: 8px;
+    font-size: .72rem; color: var(--neon-2);
+    border: 1px solid var(--edge); border-radius: 20px; padding: 3px 11px;
+    background: var(--code-bg);
+  }
+  section { margin: 0 0 52px; scroll-margin-top: 24px; }
+  h2 {
+    font-size: 1.5rem; color: #fff; margin: 0 0 4px;
+    padding-bottom: 10px; border-bottom: 1px solid var(--edge);
+  }
+  h2 .num { color: var(--neon); font-size: .95rem; margin-right: 10px; font-weight: 600; }
+  h3 { font-size: 1.12rem; color: var(--neon-2); margin: 30px 0 8px; }
+  h4 { font-size: .98rem; color: #fff; margin: 22px 0 6px; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: .87rem; background: var(--panel); border-radius: var(--radius); overflow: hidden;
+  }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  th { background: var(--panel-2); color: #fff; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  .note, .warn, .tip {
+    border-radius: var(--radius); padding: 12px 16px; margin: 16px 0;
+    border: 1px solid var(--edge); background: var(--panel-2);
+  }
+  .note { border-left: 3px solid var(--neon); }
+  .tip { border-left: 3px solid var(--neon-2); }
+  .warn { border-left: 3px solid var(--warn); }
+  .note strong, .tip strong, .warn strong { color: #fff; }
+  .lead { font-size: 1.05rem; color: var(--text); }
+  .kbd { background: var(--panel-2); border: 1px solid var(--edge); border-bottom-width: 2px; border-radius: 5px; padding: 1px 7px; font-size: .8rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .card { border: 1px solid var(--edge); border-radius: var(--radius); padding: 16px 18px; background: var(--panel); }
+  .card h4 { margin-top: 0; }
+  .muted { color: var(--muted); }
+  .default-tag { color: var(--neon-2); font-size: .78rem; border: 1px solid var(--edge); border-radius: 4px; padding: 0 5px; margin-left: 6px; }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--edge); padding-top: 20px; margin-top: 40px; }
+  hr.soft { border: none; border-top: 1px dashed var(--edge); margin: 26px 0; }
+  @media (max-width: 900px) {
+    nav.toc { display: none; }
+    main { padding: 24px 20px 80px; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <div class="brand">hydro<span>·</span>art</div>
+    <div class="tagline">Hydrographic Vector Art Generator</div>
+    <ol>
+      <li><a href="#overview">1. Overview</a></li>
+      <li><a href="#install">2. Requirements &amp; install</a></li>
+      <li><a href="#quickstart">3. Quick start</a></li>
+      <li><a href="#pipeline">4. How the pipeline works</a></li>
+      <li><a href="#cli">5. CLI reference</a></li>
+      <li><a href="#config">6. Configuration file</a></li>
+      <li><a href="#regions">7. Regions &amp; data</a></li>
+      <li><a href="#artdirection">8. Art direction</a></li>
+      <li><a href="#waterbodies">9. Waterbodies</a></li>
+      <li><a href="#time">10. Time &amp; monthly flow</a></li>
+      <li><a href="#scope">11. County scope</a></li>
+      <li><a href="#outputs">12. Output formats</a></li>
+      <li><a href="#elevation">13. Elevation &amp; 3D</a></li>
+      <li><a href="#packaging">14. Caching &amp; offline packaging</a></li>
+      <li><a href="#web">15. Web control surface</a></li>
+      <li><a href="#tools">16. Ad-hoc tools</a></li>
+      <li><a href="#reproducibility">17. Reproducibility</a></li>
+      <li><a href="#troubleshooting">18. Troubleshooting</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <h1>Hydrographic Vector Art Generator</h1>
+      <p>A deterministic Python command-line pipeline that turns public USGS hydrography
+      (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. One command in,
+      editable vector art out — identical inputs always produce identical output.</p>
+      <div>
+        <span class="pill">Python 3.12+</span>
+        <span class="pill">GIS → SVG</span>
+        <span class="pill">Deterministic</span>
+        <span class="pill">Oregon · Washington · California · Idaho</span>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section id="overview">
+      <h2><span class="num">01</span>Overview</h2>
+      <p class="lead">Hydro-art reads authoritative hydrography for a U.S. state (or a single
+      county), builds a directed river network, groups it into watersheds, assigns a
+      high-contrast palette, and renders layered SVG — with optional glow, waterbody
+      outlines, flow-scaled line widths, and PNG/PDF export.</p>
+
+      <h3>What it produces</h3>
+      <ul>
+        <li><strong>Layered SVG</strong> — the primary deliverable. Every watershed is its own
+          <code>&lt;g&gt;</code> group with stable IDs, so the art is fully editable in any vector tool.</li>
+        <li><strong>Optional raster / vector exports</strong> — PNG, PDF, TIFF, EPS derived from the SVG.</li>
+        <li><strong>A reproducibility record</strong> — the same settings and datasets always yield
+          byte-identical output (no randomness anywhere in the pipeline).</li>
+      </ul>
+
+      <h3>Two data models under one roof</h3>
+      <div class="grid2">
+        <div class="card">
+          <h4>The 2D pipeline</h4>
+          <p class="muted">The 12-stage <code>build.py</code> pipeline. This is what most users run:
+          flowlines &rarr; graph &rarr; watersheds &rarr; colored, layered SVG. Covered by sections 3–12.</p>
+        </div>
+        <div class="card">
+          <h4>The elevation / 3D subsystem</h4>
+          <p class="muted">A parallel set of modules for DEM-backed terrain, hillshade, 3D scenes,
+          and export. It is <em>not</em> part of the 2D pipeline and has its own entry points
+          (section 13).</p>
+        </div>
+      </div>
+
+      <div class="note"><strong>Determinism is a first-class guarantee.</strong> There is no
+      random seed, no timestamp baked into geometry, and no network dependence at render time.
+      This makes the art reproducible and auditable.</div>
+    </section>
+
+    <!-- 2 -->
+    <section id="install">
+      <h2><span class="num">02</span>Requirements &amp; installation</h2>
+      <h3>Prerequisites</h3>
+      <ul>
+        <li><strong>Python 3.12 or newer.</strong></li>
+        <li>A project virtual environment at <code>.venv/</code> (the interpreter used throughout this guide).</li>
+        <li>Optional external CLI tools that unlock extra output but degrade gracefully when absent:
+          <ul>
+            <li><code>svgo</code> — SVG optimization pass.</li>
+            <li><code>rsvg-convert</code> — PNG / PDF / raster export.</li>
+          </ul>
+        </li>
+      </ul>
+
+      <div class="note"><strong>Two dependency tiers, on purpose.</strong>
+        <code>pyproject.toml</code> lists only the always-imported core deps (<code>pyyaml</code>,
+        <code>rich</code>). The heavy GIS stack (<code>shapely</code>, <code>geopandas</code>,
+        <code>pyogrio</code>, <code>numpy</code>, <code>networkx</code>) lives in
+        <code>requirements.txt</code> because it is lazy-imported behind injectable seams. The
+        minimal core set is what keeps the test suite importable without GDAL.</div>
+
+      <h3>Install</h3>
+      <pre><code># From the project root, install the full GIS stack into the venv
+.venv/bin/pip install -r requirements.txt</code></pre>
+
+      <h3>Verify the install</h3>
+      <pre><code># Run the full offline test suite — no GDAL, no network, no real datasets needed
+.venv/bin/python -m pytest -q</code></pre>
+      <p>A green suite confirms the core install is healthy. A real <em>build</em> additionally
+      needs the GIS stack and access to the datasets (see sections 7 and 14).</p>
+    </section>
+
+    <!-- 3 -->
+    <section id="quickstart">
+      <h2><span class="num">03</span>Quick start</h2>
+      <p>The single entry point for art generation is <code>build.py</code>. With no flags it uses
+      the built-in defaults (Oregon + Washington, neon palette, SVG output).</p>
+
+      <pre><code># Default build: Oregon + Washington, neon, SVG only
+.venv/bin/python build.py
+
+# One state, with glow, exporting SVG and PDF
+.venv/bin/python build.py --region Washington --glow --output svg pdf
+
+# California, single cyan color, flow-scaled widths, PNG at 8192px
+.venv/bin/python build.py --region California \
+    --color-by single --single-color "#00ffff" \
+    --width-by flow --output svg png --png-size 8192</code></pre>
+
+      <div class="tip"><strong>There is no separate build step.</strong> <code>build.py</code> is a
+      script; run it directly. Configuration precedence is
+      <code>defaults &lt; config.yaml &lt; CLI flags</code> — an unset flag never clobbers a YAML value.</div>
+
+      <h4>Exit codes</h4>
+      <table>
+        <tr><th>Code</th><th>Meaning</th></tr>
+        <tr><td><code>0</code></td><td>Success.</td></tr>
+        <tr><td><code>1</code></td><td>Configuration error (bad region, palette, format, etc.) — a clear message is printed.</td></tr>
+        <tr><td><code>2</code></td><td>Acquisition error (a required dataset could not be fetched or read).</td></tr>
+      </table>
+    </section>
+
+    <!-- 4 -->
+    <section id="pipeline">
+      <h2><span class="num">04</span>How the pipeline works</h2>
+      <p>A build is a fixed, ordered sequence of 12 stages. Each stage reads the artifacts prior
+      stages produced and writes its own; there is no global state.</p>
+
+      <pre><code>download → extract → validate → repair_geometries → reproject →
+clip_to_region → build_graph → compute_watersheds → assign_colors →
+generate_svg → optimize_svg → export</code></pre>
+
+      <table>
+        <tr><th>Stage</th><th>What it does</th></tr>
+        <tr><td><code>download</code></td><td>Fetch the required USGS archives (skipped entirely when the datasets are already extracted).</td></tr>
+        <tr><td><code>extract</code></td><td>Unzip archives into <code>datasets/</code> with a path-traversal guard.</td></tr>
+        <tr><td><code>validate</code></td><td>Load flowline layers (and waterbody layers when enabled).</td></tr>
+        <tr><td><code>repair_geometries</code></td><td>Repair invalid geometries and record repair stats.</td></tr>
+        <tr><td><code>reproject</code></td><td>Reproject to the working CRS (EPSG:5070 by default).</td></tr>
+        <tr><td><code>clip_to_region</code></td><td>Clip to the region's watershed boundary (or a county polygon).</td></tr>
+        <tr><td><code>build_graph</code></td><td>Assemble the directed river network (NetworkX).</td></tr>
+        <tr><td><code>compute_watersheds</code></td><td>Assign stream order and group flowlines into HUC watersheds.</td></tr>
+        <tr><td><code>assign_colors</code></td><td>Assign a deterministic high-contrast color per watershed / mode.</td></tr>
+        <tr><td><code>generate_svg</code></td><td>Emit layered SVG (one group per watershed), optional glow &amp; waterbody outlines.</td></tr>
+        <tr><td><code>optimize_svg</code></td><td>Optional <code>svgo</code> pass (skipped with a warning if <code>svgo</code> is missing).</td></tr>
+        <tr><td><code>export</code></td><td>Write the SVG plus any requested PNG/PDF/etc. and a SHA-256 of each.</td></tr>
+      </table>
+
+      <div class="note"><strong>Runtime output directories</strong> — <code>datasets/</code>,
+      <code>cache/</code>, <code>output/</code>, and <code>logs/</code> are large and
+      git-ignored (all regenerable). Finished art lands in <code>output/</code>.</div>
+    </section>
+
+    <!-- 5 -->
+    <section id="cli">
+      <h2><span class="num">05</span>CLI reference</h2>
+      <p>All flags below belong to <code>build.py</code>. Every flag defaults to "not provided" so
+      it only overrides when you pass it explicitly.</p>
+
+      <h3>Scope &amp; input</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--config</code></td><td>path</td><td>YAML config file <span class="default-tag">config.yaml</span></td></tr>
+        <tr><td><code>--region</code></td><td>Oregon · Washington · California · Idaho</td><td>One or more regions <span class="default-tag">Oregon Washington</span></td></tr>
+        <tr><td><code>--county</code></td><td>county name (e.g. Clark)</td><td>Scope to one Census county; requires exactly one <code>--region</code></td></tr>
+        <tr><td><code>--months</code></td><td><code>annual</code> · <code>7</code>/<code>jul</code> · <code>5-9</code> · <code>nov-feb</code></td><td>Annual mean, a single month, or a (wrapping) range <span class="default-tag">annual</span></td></tr>
+      </table>
+
+      <h3>Color art direction</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--palette</code></td><td><code>neon</code></td><td>Named palette <span class="default-tag">neon</span></td></tr>
+        <tr><td><code>--color-by</code></td><td><code>watershed</code> · <code>single</code> · <code>elevation</code></td><td>Coloring mode <span class="default-tag">watershed</span></td></tr>
+        <tr><td><code>--single-color</code></td><td>hex (e.g. <code>#00ffff</code>)</td><td>Stroke color for <code>--color-by single</code> <span class="default-tag">#00ffff</span></td></tr>
+      </table>
+
+      <h3>Line-width art direction</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--width-by</code></td><td><code>uniform</code> · <code>flow</code></td><td>Uniform stroke or flow-scaled taper <span class="default-tag">uniform</span></td></tr>
+        <tr><td><code>--width-min</code></td><td>positive number</td><td>Min stroke for <code>flow</code> <span class="default-tag">0.35</span></td></tr>
+        <tr><td><code>--width-max</code></td><td>&ge; <code>--width-min</code></td><td>Max stroke for <code>flow</code> <span class="default-tag">2.0</span></td></tr>
+        <tr><td><code>--width-gamma</code></td><td>positive number</td><td>Shaping exponent for the flow&rarr;width ramp <span class="default-tag">1.0</span></td></tr>
+      </table>
+
+      <h3>Network hierarchy</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--stream-method</code></td><td><code>strahler</code> · <code>shreve</code> · <code>hack</code> · <code>custom</code></td><td>Stream-order method <span class="default-tag">strahler</span></td></tr>
+        <tr><td><code>--huc-level</code></td><td><code>HUC2</code>…<code>HUC12</code></td><td>Watershed grouping level <span class="default-tag">HUC4</span></td></tr>
+      </table>
+
+      <h3>Glow</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--glow</code></td><td>flag</td><td>Enable the glow effect <span class="default-tag">off</span></td></tr>
+        <tr><td><code>--glow-mode</code></td><td><code>vector</code> · <code>blur</code></td><td>Halo style <span class="default-tag">blur</span></td></tr>
+        <tr><td><code>--glow-radius</code></td><td>positive number</td><td>Radius in SVG user units <span class="default-tag">2.0</span></td></tr>
+      </table>
+
+      <h3>Waterbodies</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--waterbodies</code> / <code>--no-waterbodies</code></td><td>flag</td><td>Render lake/reservoir/bay outlines <span class="default-tag">on</span></td></tr>
+        <tr><td><code>--waterbody-color</code></td><td>hex</td><td>Outline stroke color <span class="default-tag">#2ec4ff</span></td></tr>
+        <tr><td><code>--waterbody-stroke-width</code></td><td>positive number</td><td>Outline stroke width <span class="default-tag">0.45</span></td></tr>
+        <tr><td><code>--waterbody-preset</code></td><td><code>screen</code> · <code>print-state</code> · <code>print-county</code></td><td>Art-direction bundle (explicit flags still win)</td></tr>
+      </table>
+
+      <h3>Output</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--output</code></td><td><code>svg</code> · <code>pdf</code> · <code>png</code> · <code>tiff</code> · <code>eps</code></td><td>One or more formats <span class="default-tag">svg</span></td></tr>
+        <tr><td><code>--png-size</code></td><td><code>4096</code> · <code>8192</code> · <code>16384</code> · <code>32768</code> · <code>65536</code></td><td>Raster export size in px <span class="default-tag">4096</span></td></tr>
+      </table>
+
+      <h3>Elevation (advanced — see section 13)</h3>
+      <table>
+        <tr><th>Flag</th><th>Values</th><th>Notes</th></tr>
+        <tr><td><code>--elevation</code> / <code>--no-elevation</code></td><td>flag</td><td>Request DEM-backed elevation <span class="default-tag">off</span></td></tr>
+        <tr><td><code>--elevation-source</code></td><td><code>3dep</code></td><td>DEM source <span class="default-tag">3dep</span></td></tr>
+        <tr><td><code>--elevation-tier</code></td><td><code>preview</code> · <code>state</code> · <code>local</code></td><td>Resolution tier <span class="default-tag">preview</span></td></tr>
+        <tr><td><code>--vertical-exaggeration</code></td><td>positive number</td><td>Display-only multiplier <span class="default-tag">1.0</span></td></tr>
+        <tr><td><code>--cache-policy</code></td><td><code>reuse</code> · <code>refresh</code></td><td>Elevation asset cache policy <span class="default-tag">reuse</span></td></tr>
+      </table>
+    </section>
+
+    <!-- 6 -->
+    <section id="config">
+      <h2><span class="num">06</span>Configuration file</h2>
+      <p>Anything you can pass on the command line can also live in <code>config.yaml</code>. The
+      precedence is <strong>built-in defaults &lt; YAML &lt; CLI flags</strong>, evaluated
+      per key (so a single CLI flag never wipes the rest of your YAML).</p>
+
+      <h3>A fully-annotated example</h3>
+      <pre><code>region: [Oregon]              # list of regions
+county: null                  # or e.g. "Clark" (needs a single region)
+months: annual                # annual | 7 | jul | 5-9 | nov-feb
+
+projection: EPSG:5070         # EPSG:5070 | EPSG:4326 | EPSG:3857
+stream_order: all
+stream_method: strahler       # strahler | shreve | hack | custom
+huc_level: HUC4               # HUC2 | HUC4 | HUC6 | HUC8 | HUC10 | HUC12
+
+background: "#000000"
+line_width: 0.35
+palette: neon
+
+color_by: watershed           # watershed | single | elevation
+single_color: "#00ffff"
+
+width_by: uniform             # uniform | flow
+width_min: 0.35
+width_max: 2.0
+width_gamma: 1.0
+
+glow: false
+glow_mode: blur               # vector | blur
+glow_radius: 2.0
+
+png_size: 4096                # 4096 | 8192 | 16384 | 32768 | 65536
+output: { svg: true, png: false, pdf: false }
+
+waterbodies:
+  enabled: true
+  color: "#2ec4ff"
+  stroke_width: 0.45
+  min_inland_area_m2: 0.0
+  min_coastal_area_m2: 0.0
+  coastal_mode: conservative  # conservative | permissive
+  render_order: below         # below | above
+
+elevation:
+  enabled: false
+  source: 3dep
+  tier: preview               # preview | state | local
+  vertical_exaggeration: 1.0
+  cache_policy: reuse         # reuse | refresh
+  tile_budget: 0              # 0 = unlimited</code></pre>
+
+      <div class="note"><strong>Validation happens at the boundary.</strong> Every value is checked
+      against an allowlist when settings are built; an invalid region, palette, format, or level
+      produces a clear <code>ConfigError</code> and a non-zero exit before any work begins.</div>
+    </section>
+
+    <!-- 7 -->
+    <section id="regions">
+      <h2><span class="num">07</span>Regions &amp; data</h2>
+      <p>The generator draws on three public USGS hydrography products: <strong>NHDPlus HR</strong>
+      (flowlines with flow attributes), <strong>NHD</strong> (waterbodies), and <strong>WBD</strong>
+      (watershed boundaries). Each supported region resolves to a fixed set of HUC4 basins.</p>
+
+      <table>
+        <tr><th>Region</th><th>Notes</th></tr>
+        <tr><td>Oregon</td><td>Original release region.</td></tr>
+        <tr><td>Washington</td><td>Original release region.</td></tr>
+        <tr><td>California</td><td>Desert-fringe basins outside the local WBD are omitted (documented caveat).</td></tr>
+        <tr><td>Idaho</td><td>Snake system + panhandle (HUC4 1701/1704/1705/1706). The SE Bear-River corner is omitted, mirroring California's caveat.</td></tr>
+      </table>
+
+      <div class="tip"><strong>Adding a region</strong> is a matter of extending the single-source
+      allowlists (<code>SUPPORTED_REGIONS</code>, <code>REGION_HUC4</code>, and the county /
+      tools mirrors). It is an intentional, small, tested change — not a schema migration.</div>
+
+      <h4>Where the data lives</h4>
+      <p>Large hydrography archives are staged on a NAS share rather than local disk (see section 14).
+      When the datasets are already extracted under <code>datasets/</code>, a build performs
+      <strong>zero downloads</strong> — no NAS mount and no network are required at render time.</p>
+    </section>
+
+    <!-- 8 -->
+    <section id="artdirection">
+      <h2><span class="num">08</span>Art direction</h2>
+
+      <h3>Coloring modes (<code>--color-by</code>)</h3>
+      <ul>
+        <li><strong>watershed</strong> <span class="default-tag">default</span> — a deterministic,
+          high-contrast palette color per HUC group. Neighboring basins never collide.</li>
+        <li><strong>single</strong> — one <code>--single-color</code> for every flowline. Clean,
+          monochrome-neon look.</li>
+        <li><strong>elevation</strong> — a hypsometric tint (white summits &rarr; deep-blue sea)
+          derived from NHDPlus smoothed elevation. <span class="muted">See the caveat below.</span></li>
+      </ul>
+
+      <h3>Width modes (<code>--width-by</code>)</h3>
+      <ul>
+        <li><strong>uniform</strong> <span class="default-tag">default</span> — every stroke uses the base <code>line_width</code>.</li>
+        <li><strong>flow</strong> — channel width scales with flow, mapped into
+          <code>[width_min, width_max]</code> and shaped by <code>width_gamma</code>. Mainstems
+          widen and headwaters taper, so the network reads at a glance.</li>
+      </ul>
+
+      <h3>Glow</h3>
+      <p>Enable with <code>--glow</code>. <code>blur</code> mode uses an SVG Gaussian-blur filter;
+      <code>vector</code> mode builds a pure-vector halo (better for editors that rasterize filters).
+      Glow degrades gracefully and never changes the underlying geometry.</p>
+
+      <div class="warn"><strong>Caveat — <code>color-by elevation</code>.</strong> This mode is a
+      real, shipped flag, but it needs the elevation subsystem and is <em>not</em> produced by the
+      2D pipeline. Running it through <code>build.py</code> fails fast with a message pointing to
+      <code>tools/render_state_mono.py</code>. Use that tool for the hypsometric render.</div>
+    </section>
+
+    <!-- 9 -->
+    <section id="waterbodies">
+      <h2><span class="num">09</span>Waterbodies</h2>
+      <p>Waterbody outlines (lakes, reservoirs, ponds, bays, inlets, coastal water) render as
+      closed, fill-free SVG outlines in their own layer with stable IDs. They are <strong>on by
+      default</strong>; disable with <code>--no-waterbodies</code>.</p>
+
+      <h3>Presets</h3>
+      <p>A preset is a convenience bundle of waterbody fields expanded at config time
+      (<code>defaults &lt; preset &lt; explicit</code>). No-preset builds stay byte-identical.</p>
+      <table>
+        <tr><th>Preset</th><th>Stroke</th><th>Inland / coastal min area</th><th>Best for</th></tr>
+        <tr><td><code>screen</code></td><td>0.45</td><td>0 / 0 m²</td><td>On-screen builds (matches the default).</td></tr>
+        <tr><td><code>print-state</code></td><td>0.9</td><td>100k / 250k m²</td><td>Whole-state / large-format sheets.</td></tr>
+        <tr><td><code>print-county</code></td><td>0.9</td><td>25k / 50k m²</td><td>Single-county sheets (state thresholds over-prune at county zoom).</td></tr>
+      </table>
+      <p>Coastal handling is controlled by <code>coastal_mode</code>: <code>conservative</code>
+      excludes truncated coastal fragments (avoids portraying open sea as a closed shape);
+      <code>permissive</code> treats coastal like inland water.</p>
+    </section>
+
+    <!-- 10 -->
+    <section id="time">
+      <h2><span class="num">10</span>Time &amp; monthly flow</h2>
+      <p>The <code>--months</code> option selects how flow is represented in time:</p>
+      <table>
+        <tr><th>Value</th><th>Meaning</th></tr>
+        <tr><td><code>annual</code> <span class="default-tag">default</span></td><td>Annual-mean discharge (QAMA).</td></tr>
+        <tr><td><code>7</code>, <code>jul</code>, <code>july</code></td><td>A single month.</td></tr>
+        <tr><td><code>5-9</code>, <code>may-sep</code></td><td>A month range (one frame per month).</td></tr>
+        <tr><td><code>nov-feb</code></td><td>Ranges wrap across the year boundary.</td></tr>
+      </table>
+      <div class="warn"><strong>Caveat — non-annual months.</strong> Like <code>color-by elevation</code>,
+      non-annual month selection is a shipped flag that the 2D pipeline does not render directly; it
+      fails fast pointing to <code>tools/render_monthly.py</code>, which produces the animated,
+      month-by-month flow frames (with a fixed year-max width scale so seasonal swell is visible).</div>
+    </section>
+
+    <!-- 11 -->
+    <section id="scope">
+      <h2><span class="num">11</span>County scope</h2>
+      <p>Add <code>--county</code> to clip a build to a single Census county polygon within the
+      selected state. It requires exactly one <code>--region</code>.</p>
+      <pre><code>.venv/bin/python build.py --region Washington --county Clark \
+    --waterbody-preset print-county --output svg png</code></pre>
+      <p>The county clip is validated against the selected state, so a mismatched county name is
+      rejected with a clear error rather than producing an empty map.</p>
+    </section>
+
+    <!-- 12 -->
+    <section id="outputs">
+      <h2><span class="num">12</span>Output formats</h2>
+      <p>SVG is always produced; the rest are derived from it. Request any combination with
+      <code>--output</code>.</p>
+      <table>
+        <tr><th>Format</th><th>Requires</th><th>Notes</th></tr>
+        <tr><td><code>svg</code></td><td>—</td><td>Primary, editable, layered output. Always available.</td></tr>
+        <tr><td><code>png</code></td><td><code>rsvg-convert</code></td><td>Raster at <code>--png-size</code> (up to 65536px, tile-rendered).</td></tr>
+        <tr><td><code>pdf</code></td><td><code>rsvg-convert</code></td><td>Vector PDF.</td></tr>
+        <tr><td><code>tiff</code>, <code>eps</code></td><td><code>rsvg-convert</code></td><td>Additional derived formats.</td></tr>
+      </table>
+      <div class="note"><strong>Very large SVGs.</strong> Documents that exceed the ~1M-node cap of
+      librsvg/resvg can be rasterized layer-by-layer with <code>tools/rasterize_layered.py</code>,
+      which splits by watershed group, rasterizes each with <code>resvg</code>, and composites.</div>
+    </section>
+
+    <!-- 13 -->
+    <section id="elevation">
+      <h2><span class="num">13</span>Elevation &amp; 3D subsystem</h2>
+      <p>The elevation/DEM/terrain/3D modules are a <strong>parallel</strong> subsystem: pure,
+      deterministic, offline, and <em>not</em> part of the 2D <code>build.py</code> pipeline. They
+      share the projection conventions but have their own entry points (the <code>tools/</code> 3D
+      scripts, preview-asset generation, and the DEM acquisition CLI).</p>
+
+      <h3>What it covers</h3>
+      <ul>
+        <li><strong>DEM acquisition</strong> — deterministic USGS 3DEP Cloud-Optimized GeoTIFF tile
+          discovery and caching from S3.</li>
+        <li><strong>Terrain &amp; hydrography Z</strong> — bilinear DEM sampling, river-vertex
+          elevation attribution, inversion QA, and error-bounded terrain meshes.</li>
+        <li><strong>3D scenes &amp; export</strong> — assembled scenes (terrain, Z-rivers, materials,
+          camera presets) with GLB / OBJ export and provenance manifests.</li>
+        <li><strong>Print / experience modes</strong> — terrain-aware 2D hillshade, camera-path
+          interpolation, and a JSON "experience document" for the web viewer.</li>
+      </ul>
+
+      <h3>Acquiring a DEM</h3>
+      <p><code>tools/acquire_dem.py</code> is the real (non-offline) entry point. It discovers the
+      3DEP tiles for a region and downloads/caches them, or just counts them with
+      <code>--dry-run</code> (no network).</p>
+      <pre><code># Count the tiles a region needs and check the budget — no download
+PYTHONPATH=. .venv/bin/python tools/acquire_dem.py \
+    --region Oregon --cache-dir ./cache --dry-run
+
+# Real acquisition (elevation is force-enabled for this tool)
+PYTHONPATH=. .venv/bin/python tools/acquire_dem.py \
+    --region Oregon --cache-dir /Volumes/home/data/incoming \
+    --tier state --tile-budget 200</code></pre>
+      <table>
+        <tr><th>Flag</th><th>Notes</th></tr>
+        <tr><td><code>--region</code></td><td>One or more regions.</td></tr>
+        <tr><td><code>--cache-dir</code></td><td>Cache root (may be a NAS mount). Required.</td></tr>
+        <tr><td><code>--tier</code></td><td>Override the resolution tier (<code>preview</code>/<code>state</code>).</td></tr>
+        <tr><td><code>--tile-budget</code></td><td>Fail fast before any download if the region exceeds this count (0 = unlimited).</td></tr>
+        <tr><td><code>--refresh</code></td><td>Redownload already-cached tiles.</td></tr>
+        <tr><td><code>--dry-run</code></td><td>Count tiles + check the budget without touching the network.</td></tr>
+      </table>
+      <div class="note"><strong>Vertical exaggeration is display-only</strong> and never overwrites
+      source Z. "Accurate" always means values sampled from a documented bare-earth DEM with stated
+      horizontal and vertical CRS/units.</div>
+    </section>
+
+    <!-- 14 -->
+    <section id="packaging">
+      <h2><span class="num">14</span>Caching &amp; offline packaging</h2>
+
+      <h3>The NAS cache</h3>
+      <p>Large hydrography archives are staged on a Synology NAS share at
+      <code>/Volumes/home/data/incoming</code> so the GDB zips are cached off-machine and reused.
+      The download stage <strong>skips fetching entirely</strong> when a dataset is already
+      extracted, so a build can run with no NAS and no network off pre-extracted
+      <code>datasets/</code>.</p>
+
+      <h3>Portable cache manifests</h3>
+      <p><code>tools/cache_manifest.py</code> turns a cache into a deterministic, portable JSON
+      manifest so a cache can be moved to an offline machine and verified.</p>
+      <pre><code># Build a manifest for a region's required files
+PYTHONPATH=. .venv/bin/python tools/cache_manifest.py \
+    write --region Oregon --cache-dir ./cache --out oregon.json
+
+# Verify a (possibly moved) cache against the saved manifest
+PYTHONPATH=. .venv/bin/python tools/cache_manifest.py \
+    verify oregon.json --cache-dir ./cache
+
+# Reconcile two manifests (exit 0 iff in sync)
+PYTHONPATH=. .venv/bin/python tools/cache_manifest.py diff old.json new.json</code></pre>
+
+      <h3>Package preflight</h3>
+      <p><code>tools/package_cache.py</code> answers "is this cache ready to ship offline?" — it
+      composes required-file coverage, manifest verification, and the DEM tile budget into one
+      verdict. Exit code <code>0</code> means ready, <code>1</code> means not.</p>
+      <pre><code>PYTHONPATH=. .venv/bin/python tools/package_cache.py \
+    --region Oregon --cache-dir /Volumes/home/data/incoming --tile-count 42</code></pre>
+    </section>
+
+    <!-- 15 -->
+    <section id="web">
+      <h2><span class="num">15</span>Web control surface</h2>
+      <p>The canonical GUI is <code>web/studio.html</code> — a dense studio panel with a live
+      client-side preview that maps your selections to a ready-to-run command / config. It works two
+      ways:</p>
+
+      <h4>Mapping-only (open over <code>file://</code>)</h4>
+      <p>Double-click <code>web/studio.html</code>. Pick a state, drill to a county or keep the whole
+      state, choose a month/range/annual, and set coloring and line thickness. The page shows a live
+      preview and emits the exact <code>build.py</code> command + <code>config.yaml</code> your
+      selections map to. The "Run pipeline" button is disabled in this mode.</p>
+
+      <h4>Live pipeline (served)</h4>
+      <p>Run the local job runner to make the "Run pipeline" button execute the real pipeline and
+      return the produced SVG for preview and download:</p>
+      <pre><code>.venv/bin/python serve.py            # http://127.0.0.1:8765/
+.venv/bin/python serve.py --port 9000
+.venv/bin/python serve.py --cache-dir ./cache</code></pre>
+      <table>
+        <tr><th>Flag</th><th>Default</th></tr>
+        <tr><td><code>--host</code></td><td><code>127.0.0.1</code></td></tr>
+        <tr><td><code>--port</code></td><td><code>8765</code></td></tr>
+        <tr><td><code>--cache-dir</code></td><td>NAS share when mounted, else local <code>cache/</code></td></tr>
+      </table>
+      <div class="tip"><strong>Shareable recipes.</strong> The studio can encode your full selection
+      into a share link (the recipe is written into the URL hash). Opening that link restores the
+      exact look. Named presets are available too.</div>
+
+      <h4>Other web pages</h4>
+      <ul>
+        <li><code>web/experience.html</code> — print/experience viewer: paints a hillshade relief to a
+          canvas and plays a camera track from an exported experience document.</li>
+        <li><code>web/3d.html</code> — WebGL "3D Terrain Lab" that orbits the DEM-backed terrain-and-rivers model.</li>
+        <li><code>web/proto-b-guided.html</code>, <code>web/proto-c-canvas.html</code> — alternate UX explorations.</li>
+      </ul>
+    </section>
+
+    <!-- 16 -->
+    <section id="tools">
+      <h2><span class="num">16</span>Ad-hoc tools reference</h2>
+      <p>Scripts under <code>tools/</code> run directly (<code>python tools/&lt;name&gt;.py</code>),
+      outside the pipeline and the test suite. They import the heavy GIS stack eagerly and read real
+      datasets, so they only work in a full (non-offline) environment. Many need
+      <code>PYTHONPATH=.</code> so they can import <code>src/</code>.</p>
+
+      <h4>2D clip / rasterize</h4>
+      <table>
+        <tr><th>Tool</th><th>Purpose</th></tr>
+        <tr><td><code>render_region_clip.py</code></td><td>Clip flowlines to a real political (state) boundary, with a Strahler <code>--min-order</code> filter.</td></tr>
+        <tr><td><code>render_county_clip.py</code></td><td>County-granularity sibling; colors by HUC4 basin, overlays the county outline.</td></tr>
+        <tr><td><code>render_state_svg.py</code></td><td>Whole-state SVG render.</td></tr>
+        <tr><td><code>render_state_mono.py</code></td><td>Hypsometric elevation tint (the <code>color-by elevation</code> renderer).</td></tr>
+        <tr><td><code>rasterize_layered.py</code></td><td>Split + rasterize + composite SVGs that exceed the librsvg/resvg node cap.</td></tr>
+        <tr><td><code>overlay_facilities.py</code></td><td>Overlay point facilities.</td></tr>
+      </table>
+
+      <h4>Time / "year in motion"</h4>
+      <table>
+        <tr><th>Tool</th><th>Purpose</th></tr>
+        <tr><td><code>monthly_flow.py</code></td><td>Data-prep: disaggregate annual EROM discharge into a 12-month series from real climatology.</td></tr>
+        <tr><td><code>render_monthly.py</code></td><td>Render a 12-frame GIF where channel width tracks monthly flow (fixed width scale).</td></tr>
+        <tr><td><code>render_infographic.py</code> / <code>_year.py</code></td><td>Still / animated infographic (river map + season, precip, moon-phase panels).</td></tr>
+      </table>
+
+      <h4>Stylized 3D &amp; QA</h4>
+      <table>
+        <tr><th>Tool</th><th>Purpose</th></tr>
+        <tr><td><code>render_county_3d.py</code> / <code>render_state_3d.py</code></td><td>Tilted, glowing pseudo-3D where height derives from stream order (stylized, not surveyed DEM).</td></tr>
+        <tr><td><code>waterbody_qa.py</code></td><td>Waterbody QA / validation helper.</td></tr>
+      </table>
+
+      <h4>Elevation &amp; offline packaging</h4>
+      <table>
+        <tr><th>Tool</th><th>Purpose</th></tr>
+        <tr><td><code>acquire_dem.py</code></td><td>Real DEM acquisition CLI (section 13).</td></tr>
+        <tr><td><code>package_cache.py</code></td><td>Offline-package preflight (section 14).</td></tr>
+        <tr><td><code>cache_manifest.py</code></td><td>Portable manifest write / verify / diff (section 14).</td></tr>
+      </table>
+
+      <div class="tip"><strong>Shared recipe.</strong> Every 2D clip renderer calls
+      <code>tools/render_common.py</code> — the single "art-quality" recipe (flow-scaled strokes,
+      HUC-N coloring, neon glow, high-res rasterization). Prefer extending it over duplicating render
+      logic in a new tool.</div>
+    </section>
+
+    <!-- 17 -->
+    <section id="reproducibility">
+      <h2><span class="num">17</span>Reproducibility</h2>
+      <ul>
+        <li><strong>No randomness.</strong> Identical inputs (settings + datasets) always produce
+          byte-identical SVG. Colors are assigned by a deterministic function, not a random seed.</li>
+        <li><strong>Config precedence is explicit and per-key.</strong>
+          <code>defaults &lt; config.yaml &lt; CLI</code>, so results are traceable to their source.</li>
+        <li><strong>Checksums.</strong> The export stage records a SHA-256 of each artifact.</li>
+        <li><strong>Provenance.</strong> DEM assets carry immutable provenance (source product, date,
+          horizontal + vertical CRS/datum, units, resolution, checksum, processing parameters).</li>
+        <li><strong>Offline verification.</strong> Portable manifests let you confirm a moved cache is
+          bit-for-bit the one you built with.</li>
+      </ul>
+    </section>
+
+    <!-- 18 -->
+    <section id="troubleshooting">
+      <h2><span class="num">18</span>Troubleshooting</h2>
+      <table>
+        <tr><th>Symptom</th><th>Cause &amp; fix</th></tr>
+        <tr><td><code>Configuration error:</code> and exit 1</td><td>An invalid value (region, palette, format, HUC level, hex color, …). The message names the field and the valid options.</td></tr>
+        <tr><td><code>Acquisition error:</code> and exit 2</td><td>A required dataset could not be fetched or read. Confirm the NAS is mounted or that <code>datasets/</code> is pre-extracted.</td></tr>
+        <tr><td><code>'svgo' not found; skipping SVG optimization</code></td><td>Harmless warning — SVG still ships. Install <code>svgo</code> to enable the optimization pass.</td></tr>
+        <tr><td>PNG/PDF not produced</td><td><code>rsvg-convert</code> is not installed. SVG still ships; install it to unlock raster/vector export.</td></tr>
+        <tr><td><code>color-by elevation</code> fails fast</td><td>By design — use <code>tools/render_state_mono.py</code> (section 8).</td></tr>
+        <tr><td>Non-annual <code>--months</code> fails fast</td><td>By design — use <code>tools/render_monthly.py</code> (section 10).</td></tr>
+        <tr><td><code>ModuleNotFoundError: No module named 'tools'</code></td><td>Prefix a tool invocation with <code>PYTHONPATH=.</code> so it can import <code>src/</code>.</td></tr>
+        <tr><td>Studio "Run pipeline" button disabled</td><td>You opened the page over <code>file://</code>. Serve it with <code>serve.py</code> for live runs (section 15).</td></tr>
+        <tr><td>Huge SVG won't rasterize</td><td>It exceeds the ~1M-node cap. Use <code>tools/rasterize_layered.py</code> (section 12).</td></tr>
+        <tr><td>DEM acquisition over budget</td><td>Raise <code>--tile-budget</code> (0 = unlimited), narrow the region, or choose a coarser tier. Use <code>--dry-run</code> to preview the count.</td></tr>
+      </table>
+
+      <hr class="soft">
+      <p class="muted">Getting help: run the full offline test suite
+      (<code>.venv/bin/python -m pytest -q</code>) to confirm the core install; use
+      <code>--dry-run</code> on DEM acquisition to preview work without side effects; and remember
+      that <code>--config</code> lets you keep a stable base and override only what changes on the
+      command line.</p>
+    </section>
+
+    <footer>
+      <p>Hydrographic Vector Art Generator — user guide. Built from public USGS hydrography
+      (NHDPlus HR / NHD / WBD). All output is deterministic: identical inputs yield identical art.</p>
+      <p class="muted">For the full technical spec see <code>docs/PRD.md</code>; for current
+      implementation status see <code>HANDOFF.md</code> and <code>agent-os/product/roadmap.md</code>.</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+  // Highlight the current section in the sidebar as you scroll.
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+    var sections = links
+      .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+      .filter(Boolean);
+    function onScroll() {
+      var pos = window.scrollY + 120;
+      var current = sections[0];
+      for (var i = 0; i < sections.length; i++) {
+        if (sections[i].offsetTop <= pos) current = sections[i];
+      }
+      links.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + current.id);
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+</body>
+</html>
