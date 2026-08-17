@@ -286,6 +286,34 @@ Epoch gate: a user can, from one screen, select state → county/whole-state, a 
 coloring, and line thickness, see a faithful live preview, and produce the identical deterministic
 artifact the CLI would.
 
+## Epoch 7 — external storage & data operations
+
+Move the large files a build reads and writes off the size-limited local disk (~35 GB free) onto an
+external drive, and make the pipeline reference them there. The "database" files (extracted NHDPlus
+HR / WBD `.gdb` datasets and their downloaded archives) and the rendered image outputs (SVG/PNG/PDF)
+are the bulk consumers of disk. This builds on Epoch 5 #21, which staged only the *downloaded
+archives* on the NAS (`NAS_CACHE_DIR`): this epoch generalizes storage so the *datasets* and *output*
+roots can also live on the external drive, migrates existing local output onto it, and keeps a build
+resilient when the drive is unmounted (mount-aware fallback to local, mirroring
+`serve.py:_resolve_cache_dir`). Storage location never affects the rendered bytes, so `Settings` and
+determinism are untouched.
+
+**Phase 7.1 — External storage layout & migration**
+
+29. [ ] External-storage layout & output migration — Resolve the cache, datasets, and output roots to
+a configurable external-drive location (env var + CLI, mount-aware with a local fallback and an
+optional local working copy during generation), and provide a one-time migration that moves existing
+local output onto the drive and leaves the local path referencing it (directory symlink). Pure,
+deterministic path/plan resolution in `src/storage.py` (stdlib-only, offline-testable, not in
+`PIPELINE_STAGES`) with a thin `tools/migrate_storage.py` executor over real drives; wire `build.py`
+and `serve.py` to the resolver. Defaults keep current on-disk behavior byte-identical when no external
+root is configured. `M`
+
+Epoch gate: with an external drive configured, a build reads its GDB datasets and writes its rendered
+images on the external drive (not local disk), existing output has been migrated there and still
+resolves through the local path, and a build with the drive unmounted falls back cleanly to local
+paths without crashing.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
