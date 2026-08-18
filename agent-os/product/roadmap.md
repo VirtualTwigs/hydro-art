@@ -51,10 +51,10 @@ Tested in `tests/test_waterbody_config.py`, `test_waterbody_rendering.py`, `test
 
 **Phase 1.5.4 — Validation & art direction**
 
-W4. [ ] Waterbody QA and regional presets — Validate fixture and real Oregon/Washington/Clark
+W4. [x] Waterbody QA and regional presets — Validate fixture and real Oregon/Washington/Clark
 County outputs for holes, multipolygons, coastal boundaries, duplicate edges, and size/detail
 thresholds; establish print and screen presets. `L`
-(Mostly done: offline fixture QA in `tests/test_waterbody_qa.py` (holes/multipolygons/coastal/
+(Done: offline fixture QA in `tests/test_waterbody_qa.py` (holes/multipolygons/coastal/
 shared-edge) + a real-region harness `tools/waterbody_qa.py` executed 2026-07-30 against Oregon
 (46,844 selected, 0 untraceable) and Washington (42,304 selected, 0 untraceable) — holes,
 multipolygons, coastal boundaries, duplicate edges, traceability all pass. The **preset *mechanism***
@@ -70,7 +70,10 @@ all source-traceable, coastal/duplicate/shared-edge QA clean. That run drove the
 a single global print threshold can't serve both zooms — the old 100k/250k value dropped 97% of Clark's
 waterbodies (830 → 24) at county scale, so `print-state` keeps it for large-format while `print-county`
 uses 25k/50k (keeps a readable ~62). The mechanism + defensible per-scale defaults are in place; the
-numbers stay human-tunable in `WATERBODY_PRESETS`.)
+numbers stay human-tunable in `WATERBODY_PRESETS`. **Closed 2026-08-17:** every W4 deliverable —
+fixture QA, real Oregon/Washington/Clark County validation, and the screen/`print-state`/`print-county`
+preset mechanism — has shipped and its 22 QA/config tests pass; the per-scale thresholds are finalized
+as tunable defaults, so the item is complete. This closes Epoch 1.5.)
 
 Epoch gate: a build can produce original, source-traceable outlines for lakes, large ponds,
 bays, and inlets without filling or incorrectly closing coastal water.
