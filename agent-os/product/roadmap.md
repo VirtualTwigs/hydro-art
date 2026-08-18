@@ -365,6 +365,31 @@ shaded-relief background and adds the real-DEM wiring. Needs the full GIS/DEM en
 `tools/` entry point, so — like the other real-DEM tools — the executor sits outside the offline suite
 while the compositing math stays pure and tested.)
 
+**Phase 8.2 — Concrete DEM reader (unblocks the epoch gate)**
+
+31. [ ] 3DEP COG reader & reprojector — Implement the missing concrete `RasterReader` /
+`RasterReprojector` seams so cached 3DEP COG tiles become a normalized `RasterGrid`, closing the gap
+that keeps #30 from auto-acquiring real relief. Add a rasterio-backed reader that opens a `DemAsset`'s
+cached COG (`asset.path`) and returns a north-up `RasterGrid` (values + `GridTransform` + source CRS +
+nodata, provenance carried through), and a warp-backed `reproject(grid, dst_crs)` to EPSG:5070 — the
+two collaborators `src.raster.normalize_dem(assets, boundary, reader, reprojector, …)` already expects.
+Follow the project's injectable-seam rule: rasterio is a **new optional dependency, lazy-imported
+behind the seam** (in `requirements.txt`, never at module import of `src/`), so the offline suite stays
+GDAL/rasterio-free — the reader is exercised offline against a tiny hand-written GeoTIFF fixture (or a
+fake asset), and end-to-end against real 3DEP tiles only in the non-offline tools. Then wire
+`tools/render_terrain_print.py` (and a `tools/acquire_dem.py` follow-through) to go
+`acquire_dem_for_settings` → `normalize_dem` (with the new reader/reprojector) → `hillshade` →
+`src.compositing`, so `--region` alone produces a terrain-backed print with **no `--dem` grid**, the
+relief clipped to the flowlines' EPSG:5070 extent. Determinism: identical cached tiles → identical
+`RasterGrid` values and identical composited bytes. `L`
+(Follow-on isolated during #30: `src.raster.RasterReader.read(asset) -> RasterGrid` and
+`RasterReprojector.reproject(grid, dst_crs)` are Protocol-only with no implementation, and `rasterio`
+is not a dependency, so nothing turns the COG tiles `acquire_dem_for_settings` caches into a grid.
+`normalize_dem`, `DemAsset(tile, path, provenance)`, tile discovery/caching, tile-budget, and the pure
+`hillshade`/`compositing` seams all already exist — this item supplies only the two concrete GDAL/
+rasterio-backed collaborators and the real-DEM wiring, after which #30 meets the epoch gate. Vertical
+CRS/units are recorded verbatim in provenance; the reader never invents nodata.)
+
 Epoch gate: a state or county print image shows the neon river network composited over accurate,
 source-traceable bare-earth shaded relief in the same EPSG:5070 frame, produced deterministically from
 a documented DEM; the vector pipeline and its byte-for-byte default output are unchanged.
