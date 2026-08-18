@@ -2,6 +2,8 @@
 datasets/
 cache/
 output/
+# also ignore `output` when migrated onto external storage (a symlink, not a dir)
+output
 logs/
 
 # Python
