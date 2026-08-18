@@ -400,6 +400,34 @@ is not a dependency, so nothing turns the COG tiles `acquire_dem_for_settings` c
 rasterio-backed collaborators and the real-DEM wiring, after which #30 meets the epoch gate. Vertical
 CRS/units are recorded verbatim in provenance; the reader never invents nodata.)
 
+**Phase 8.3 — Real-tile validation (produce the gate artifact)**
+
+32. [ ] Terrain-print real-tile closeout — Produce and record the *demonstrable artifact* the Epoch 8
+gate names. #30 and #31 are code-complete and fully covered by the **offline** suite, but that suite
+proves the seam behavior against hand-built grids and **injected fakes** — no terrain-backed print has
+ever been rendered from real cached 3DEP COG tiles with `rasterio` actually installed. Per the epoch
+rule ("gated by a demonstrable artifact, not calendar dates"), the gate is not truly met until that
+image exists. This item runs the auto-acquire path end-to-end in the full GIS/DEM environment,
+verifies it, and captures the evidence — it adds **no new `src/` capability** (only bug-fixes if the
+real run surfaces one); its deliverable is the artifact + a short validation report. `S`
+(Scope: (1) install the GIS/DEM stack incl. `rasterio`/GDAL into `.venv` (already listed in
+`requirements.txt`); (2) run `tools/render_terrain_print.py --state <region>` with **no `--dem`** so it
+auto-acquires — `acquire_dem_for_settings` over the NAS/local cache → `normalize_dem`
+(`RasterioRasterReader`/`RasterioReprojector`) → `hillshade` → `src.compositing` → a real PNG for at
+least one whole-state and one `--county` scope; (3) **verify the gate claims**: the shaded relief
+aligns to the flowlines' EPSG:5070 frame/extent, nodata reads transparent (no invented terrain), the
+neon network reads over the relief, and each tile's provenance is recorded; (4) **determinism**: render
+twice → byte-identical composited PNG (identical cached tiles → identical `RasterGrid` → identical
+bytes), and confirm the canonical 2D vector pipeline's default output is still byte-identical (no
+regression); (5) record the artifact, the source tile ids/checksums/provenance, and any integration
+wrinkles the offline fakes could not surface. **Highest-risk untested path:** real 3DEP 1/3" COGs are
+delivered in EPSG:4269 (NAD83 geographic), *not* EPSG:5070 — so `RasterioReprojector`'s **non-identity
+`_default_warp` branch** (`rasterio.warp.reproject`) fires for the first time in a real run; the
+offline suite only exercises the identity short-circuit and an injected warp spy, so watch the warped
+grid's transform/nodata/extent and the resvg node cap at print resolution here. Non-offline and
+environment-dependent by nature, so — like the other real-DEM tools — it lives outside the offline
+suite; its closeout is the recorded artifact + report, not a test.)
+
 Epoch gate: a state or county print image shows the neon river network composited over accurate,
 source-traceable bare-earth shaded relief in the same EPSG:5070 frame, produced deterministically from
 a documented DEM; the vector pipeline and its byte-for-byte default output are unchanged.
