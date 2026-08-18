@@ -32,6 +32,20 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
   `test_export_pipeline.py` (+1 staging). Suite: **488 passing** (+26), no regressions.
   Smoke: dry-run reported the real `output/` (352 files, 2.3 GiB); missing-root and
   unmounted-drive exit 1. Spec `agent-os/specs/2026-08-17-external-storage-layout/`.
+  **Real NAS migration DONE (2026-08-17):** both `output/` (352 files) and
+  `datasets/` (6796 files, 18.8 GiB) migrated onto the Synology NAS
+  (`/Volumes/home/data/hydro-art/{output,datasets}`); local paths are now directory
+  symlinks. Required a fix (`3d90f4e`): `shutil.move`'s cross-device `copy2` fallback
+  calls `os.chflags`, which the SMB share rejects with `OSError(EINVAL)`, aborting the
+  move — replaced with `move_file` (copyfile + best-effort copymode, no flags). Gotcha:
+  a stray `.DS_Store` left in a source dir blocks the auto-symlink (source not fully
+  drained); remove it and re-run to finish the symlink step. **Verified end-to-end** via
+  a full `build.py --region Oregon`: read all GDBs through the `datasets` symlink
+  (`datasets/nhdplus_hr/1801/…`, `datasets/wbd/{17,18}/…`), download+extract stages
+  short-circuited (**zero downloads/network**, first stage to log was `validate`),
+  rendered 1.77M segments, and wrote `output/oregon.svg` (1,062,115,316 B) back through
+  the `output` symlink onto the NAS — exit 0. `.gitignore` gained slash-less `output`
+  and `datasets` entries so the symlinks aren't shown as untracked (`25af46e`,`34a5bea`).
 - **#21 DONE — real (non-offline) DEM acquisition entry point — implemented, commit
   pending.** Closes #21's final "Left" gap, so **roadmap #21 is now marked `[x]`**.
   `src/dem.py` already had `acquire_dem_for_settings` (settings-driven acquisition)
