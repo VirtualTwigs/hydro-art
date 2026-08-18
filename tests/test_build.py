@@ -6,8 +6,17 @@ from pathlib import Path
 
 from rich.console import Console
 
-from build import main
+from build import NAS_CACHE_DIR, _storage_roots, main
+from src.cli import build_parser
 from src.pipeline import PIPELINE_STAGES, Pipeline
+from src.storage import EXTERNAL_ROOT_ENV
+
+_ALWAYS = lambda _p: True  # noqa: E731
+_NEVER = lambda _p: False  # noqa: E731
+
+
+def _args(argv):
+    return build_parser().parse_args(argv)
 
 
 class FakeZipDownloader:
@@ -58,3 +67,45 @@ def test_pipeline_stage_order_matches_prd_section_8():
     assert Pipeline().stage_names == tuple(s.name for s in PIPELINE_STAGES)
     assert Pipeline().stage_names[0] == "download"
     assert Pipeline().stage_names[-1] == "export"
+
+
+# --- storage wiring (roadmap #29) -------------------------------------------
+
+
+def test_storage_defaults_local_when_nas_unmounted(monkeypatch):
+    monkeypatch.delenv(EXTERNAL_ROOT_ENV, raising=False)
+    roots = _storage_roots(_args([]), available=_NEVER)
+    assert roots.cache == Path("cache")
+    assert roots.datasets == Path("datasets")
+    assert roots.output == Path("output")
+    assert roots.using_external is False
+
+
+def test_storage_cache_defaults_to_nas_when_mounted(monkeypatch):
+    monkeypatch.delenv(EXTERNAL_ROOT_ENV, raising=False)
+    roots = _storage_roots(_args([]), available=_ALWAYS)
+    # No external root: cache keeps today's NAS default, datasets/output local.
+    assert roots.cache == Path(NAS_CACHE_DIR)
+    assert roots.datasets == Path("datasets")
+    assert roots.output == Path("output")
+
+
+def test_storage_external_root_expands_all_kinds(monkeypatch):
+    monkeypatch.delenv(EXTERNAL_ROOT_ENV, raising=False)
+    roots = _storage_roots(
+        _args(["--external-root", "/Volumes/Pro/hydro"]), available=_ALWAYS
+    )
+    assert roots.cache == Path("/Volumes/Pro/hydro/cache")
+    assert roots.datasets == Path("/Volumes/Pro/hydro/datasets")
+    assert roots.output == Path("/Volumes/Pro/hydro/output")
+    assert roots.using_external is True
+
+
+def test_storage_explicit_dir_overrides_external(monkeypatch):
+    monkeypatch.delenv(EXTERNAL_ROOT_ENV, raising=False)
+    roots = _storage_roots(
+        _args(["--external-root", "/Volumes/Pro", "--output-dir", "/tmp/o"]),
+        available=_ALWAYS,
+    )
+    assert roots.output == Path("/tmp/o")
+    assert roots.datasets == Path("/Volumes/Pro/datasets")

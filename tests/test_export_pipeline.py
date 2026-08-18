@@ -53,7 +53,7 @@ class WritingExporter:
         return dest
 
 
-def _pipeline(tmp_path, exporter=None, output_sub="output"):
+def _pipeline(tmp_path, exporter=None, output_sub="output", staging_dir=None):
     return Pipeline(
         console=Console(),
         cache_dir=tmp_path / "cache",
@@ -62,6 +62,7 @@ def _pipeline(tmp_path, exporter=None, output_sub="output"):
         downloader=FakeZipDownloader(),
         loader=NetworkLoader(),
         exporter=exporter or WritingExporter(),
+        staging_dir=staging_dir,
     )
 
 
@@ -95,6 +96,21 @@ def test_identical_inputs_produce_byte_identical_svg(tmp_path):
     b = second.artifacts["export_paths"]["svg"].read_bytes()
     assert a == b
     assert first.artifacts["svg_sha256"] == second.artifacts["svg_sha256"]
+
+
+def test_staging_writes_locally_then_moves_to_output(tmp_path):
+    # With a staging dir, the export writes into staging first and moves the
+    # finished file to the resolved output dir; export_paths report the final
+    # output location and the staging dir is left empty.
+    staging = tmp_path / "staging"
+    settings = build_settings({"region": ["Oregon"], "output": ["svg"]})
+    context = _pipeline(tmp_path, staging_dir=staging).run(settings)
+
+    paths = context.artifacts["export_paths"]
+    assert paths["svg"] == tmp_path / "output" / "oregon.svg"
+    assert paths["svg"].read_text(encoding="utf-8") == context.artifacts["optimized_svg"]
+    # Nothing left behind in staging.
+    assert not (staging / "oregon.svg").exists()
 
 
 def test_default_exporter_degrades_for_nonsvg_without_tool(tmp_path):

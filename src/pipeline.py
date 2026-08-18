@@ -10,6 +10,7 @@ shares results through ``context.artifacts``; there is no global state.
 from __future__ import annotations
 
 import hashlib
+import shutil
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
@@ -61,6 +62,10 @@ class RunContext:
         exporter: Injected exporter used by the export stage.
         county_provider: Injected county-boundary provider used by the clip
             stage when ``settings.county`` is set (roadmap #24).
+        staging_dir: Optional local working directory (roadmap #29). When set, the
+            export stage writes each artifact here and moves the finished file to
+            ``output_dir``; when ``None`` (the default) it writes straight to
+            ``output_dir`` — byte-identical to the pre-staging behavior.
         artifacts: Mutable bag of results passed between stages.
     """
 
@@ -74,6 +79,7 @@ class RunContext:
     optimizer: SvgOptimizer
     exporter: Exporter
     county_provider: CountyBoundaryProvider | None = None
+    staging_dir: Path | None = None
     artifacts: dict[str, Any] = field(default_factory=dict)
 
     def log(self, message: str) -> None:
@@ -426,11 +432,22 @@ def _export_stage(ctx: RunContext) -> None:
     if ctx.settings.county:
         county_slug = "-".join(ctx.settings.county.lower().split())
         stem = f"{stem}-{county_slug}"
+    # When a local staging dir is configured, render into it and move the
+    # finished file to the resolved output dir (e.g. keep a fast local working
+    # copy while output lives on an external drive); otherwise write directly.
+    write_dir = ctx.staging_dir if ctx.staging_dir is not None else ctx.output_dir
     export_paths: dict[str, Path] = {}
     for fmt in sorted(ctx.settings.outputs):
-        dest = ctx.output_dir / f"{stem}.{fmt}"
+        dest = write_dir / f"{stem}.{fmt}"
         written = ctx.exporter.export(svg, dest, fmt, png_size=ctx.settings.png_size)
-        if written is not None:
+        if written is None:
+            continue
+        if ctx.staging_dir is not None:
+            final = ctx.output_dir / f"{stem}.{fmt}"
+            final.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(written), str(final))
+            export_paths[fmt] = final
+        else:
             export_paths[fmt] = written
 
     digest = hashlib.sha256(svg.encode("utf-8")).hexdigest()
@@ -494,6 +511,7 @@ class Pipeline:
         optimizer: SvgOptimizer | None = None,
         exporter: Exporter | None = None,
         county_provider: CountyBoundaryProvider | None = None,
+        staging_dir: str | Path | None = None,
     ) -> None:
         self._stages = stages
         self._console = console or Console()
@@ -505,6 +523,7 @@ class Pipeline:
         self._optimizer = optimizer
         self._exporter = exporter
         self._county_provider = county_provider
+        self._staging_dir = Path(staging_dir) if staging_dir is not None else None
 
     @property
     def stage_names(self) -> tuple[str, ...]:
@@ -524,6 +543,7 @@ class Pipeline:
             optimizer=self._optimizer or SvgoOptimizer(),
             exporter=self._exporter or FileExporter(),
             county_provider=self._county_provider,
+            staging_dir=self._staging_dir,
         )
         for stage in self._stages:
             stage.run(context)

@@ -22,7 +22,13 @@ from src.config import (
     load_yaml,
 )
 
-__all__ = ["build_parser", "cli_overrides", "merge_values", "resolve_settings"]
+__all__ = [
+    "build_parser",
+    "cli_overrides",
+    "merge_values",
+    "resolve_settings",
+    "settings_from_args",
+]
 
 DEFAULT_CONFIG_PATH = "config.yaml"
 
@@ -190,6 +196,39 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Elevation asset cache policy: reuse refresh.",
     )
+
+    # Storage layout (roadmap #29). These select *where* large files live and do
+    # not affect the rendered bytes, so they are resolved by build.py through
+    # src.storage.resolve_storage and are deliberately excluded from
+    # cli_overrides — they never leak into the deterministic Settings.
+    parser.add_argument(
+        "--external-root",
+        default=None,
+        help="External drive root; expands to <root>/cache, /datasets, /output "
+        f"(or the {'$' + 'HYDRO_ART_EXTERNAL_ROOT'} env var). Used only when the "
+        "drive is mounted, else local paths.",
+    )
+    parser.add_argument(
+        "--cache-dir",
+        default=None,
+        help="Explicit downloaded-archive cache dir (wins over --external-root).",
+    )
+    parser.add_argument(
+        "--datasets-dir",
+        default=None,
+        help="Explicit extracted-datasets dir (wins over --external-root).",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="Explicit rendered-output dir (wins over --external-root).",
+    )
+    parser.add_argument(
+        "--staging",
+        default=None,
+        help="Optional local working dir; render output here then move the "
+        "finished file to the resolved output dir.",
+    )
     return parser
 
 
@@ -287,7 +326,16 @@ def resolve_settings(argv: Sequence[str] | None = None) -> Settings:
     Raises:
         ConfigError: If the config file is malformed or any value is invalid.
     """
-    args = build_parser().parse_args(argv)
+    return settings_from_args(build_parser().parse_args(argv))
+
+
+def settings_from_args(args: argparse.Namespace) -> Settings:
+    """Build validated :class:`Settings` from already-parsed arguments.
+
+    Split out from :func:`resolve_settings` so an entry point that also reads the
+    non-``Settings`` storage flags (``--external-root`` etc.) off the same
+    namespace can parse ``argv`` once.
+    """
     yaml_values = load_yaml(args.config)
     overrides = cli_overrides(args)
     merged = merge_values(dict(DEFAULTS), yaml_values, overrides)

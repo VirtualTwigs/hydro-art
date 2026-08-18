@@ -6,8 +6,32 @@ slice (committed `d22a0d1`), the #22 web-delivery slice (which completed roadmap
 committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acquisition entry point**
 (`acquire_dem_for_settings` in `src/dem.py`, implemented, commit pending)._
 
-## Current state (2026-08-13)
+## Current state (2026-08-17)
 
+- **#29 DONE — external-storage layout & output migration — implemented, commit
+  pending.** Opens Epoch 7. Puts the large files a build reads/writes (extracted
+  GDB datasets, the archive cache, rendered output) on a configurable external
+  drive instead of local disk. New pure/offline `src/storage.py` (stdlib-only, not
+  in `PIPELINE_STAGES`): `resolve_storage(...)` maps one `--external-root` (or
+  `$HYDRO_ART_EXTERNAL_ROOT`) into `cache`/`datasets`/`output` subdirs with per-kind
+  explicit overrides and a **mount-aware** local fallback (`drive_available` = root
+  or its parent/mount-point exists) so an unmounted drive never crashes a build;
+  `plan_migration`/`apply_migration` move an existing local tree (default `output/`)
+  onto the drive and leave a directory **symlink** behind so old paths keep
+  resolving (idempotent/resumable; mount guard → `StorageError` before any move).
+  Wired into `build.py` (new `--external-root`/`--datasets-dir`/`--output-dir`/
+  `--staging`; NAS cache default preserved when no external root) and `serve.py`
+  (`_serve_roots`, keeps its NAS-when-mounted cache default). Optional `--staging`
+  local working copy threaded through `_export_stage` (render locally, move finished
+  file to output; `None` = byte-identical). New thin `tools/migrate_storage.py`
+  (`python -m tools.migrate_storage --external-root … [--kind output|datasets]
+  [--dry-run] [--no-symlink]`; drive-mounted check → non-zero + StorageError). Storage
+  location is **not** in `Settings` and never affects rendered bytes; a no-flag/no-env
+  build is byte-identical. TDD: `tests/test_storage.py` (+14), `test_build.py` (+4),
+  `test_serve.py` (+3), `test_migrate_storage.py` (+4, stdlib-only → offline),
+  `test_export_pipeline.py` (+1 staging). Suite: **488 passing** (+26), no regressions.
+  Smoke: dry-run reported the real `output/` (352 files, 2.3 GiB); missing-root and
+  unmounted-drive exit 1. Spec `agent-os/specs/2026-08-17-external-storage-layout/`.
 - **#21 DONE — real (non-offline) DEM acquisition entry point — implemented, commit
   pending.** Closes #21's final "Left" gap, so **roadmap #21 is now marked `[x]`**.
   `src/dem.py` already had `acquire_dem_for_settings` (settings-driven acquisition)

@@ -15,16 +15,25 @@ Usage examples::
 
 from __future__ import annotations
 
+import argparse
+import os
 import sys
-from typing import Sequence
+from pathlib import Path
+from typing import Callable, Sequence
 
 from rich.console import Console
 from rich.table import Table
 
-from src.cli import resolve_settings
+from src.cli import build_parser, settings_from_args
 from src.config import ConfigError, Settings
 from src.datasets import AcquisitionError
 from src.pipeline import Pipeline
+from src.storage import (
+    EXTERNAL_ROOT_ENV,
+    StorageRoots,
+    drive_available,
+    resolve_storage,
+)
 
 #: Downloaded-archive cache root. Points at the NAS share so the large
 #: hydrography GDB zips are staged and reused off-machine rather than locally.
@@ -50,24 +59,83 @@ def _render_settings(settings: Settings, console: Console) -> None:
     console.print(table)
 
 
+def _default_cache_dir(available: Callable[[Path], bool]) -> Path:
+    """Today's cache default: the NAS share when mounted, else local ``cache``.
+
+    Mirrors ``serve._resolve_cache_dir`` so a build never dies trying to write
+    under an unmounted ``/Volumes`` mount point.
+    """
+    nas = Path(NAS_CACHE_DIR)
+    return nas if available(nas) else Path("cache")
+
+
+def _storage_roots(
+    args: argparse.Namespace,
+    *,
+    available: Callable[[Path], bool] = drive_available,
+) -> StorageRoots:
+    """Resolve the cache/datasets/output roots from the parsed storage flags.
+
+    Precedence follows :func:`src.storage.resolve_storage` (explicit dir >
+    external-drive subdir when mounted > local default). To preserve today's
+    behavior, when **no** external root is configured the cache falls back to the
+    NAS share (when mounted) rather than local ``cache`` — the external root, when
+    given and mounted, supplies ``<root>/cache`` instead.
+    """
+    overrides: dict[str, str] = {}
+    if args.cache_dir:
+        overrides["cache"] = args.cache_dir
+    if args.datasets_dir:
+        overrides["datasets"] = args.datasets_dir
+    if args.output_dir:
+        overrides["output"] = args.output_dir
+
+    external = args.external_root or os.environ.get(EXTERNAL_ROOT_ENV)
+    if "cache" not in overrides and not external:
+        overrides["cache"] = str(_default_cache_dir(available))
+
+    return resolve_storage(
+        external_root=args.external_root,
+        overrides=overrides,
+        staging=args.staging,
+        available=available,
+    )
+
+
 def main(argv: Sequence[str] | None = None, pipeline: Pipeline | None = None) -> int:
     """Run the CLI. Returns a process exit code.
 
     Args:
         argv: Argument vector (defaults to ``sys.argv[1:]``).
         pipeline: Optional pipeline to run (injected in tests to avoid real
-            network access). Defaults to a real :class:`Pipeline`.
+            network access). Defaults to a real :class:`Pipeline` whose storage
+            roots come from :func:`_storage_roots`.
     """
     console = Console()
+    args = build_parser().parse_args(argv)
     try:
-        settings = resolve_settings(argv)
+        settings = settings_from_args(args)
     except ConfigError as exc:
         Console(stderr=True).print(f"[bold red]Configuration error:[/] {exc}")
         return 1
 
     _render_settings(settings, console)
+    if pipeline is None:
+        roots = _storage_roots(args)
+        console.print(
+            f"[dim]storage:[/] cache={roots.cache} datasets={roots.datasets} "
+            f"output={roots.output}"
+            + (" [green](external drive)[/]" if roots.using_external else "")
+        )
+        pipeline = Pipeline(
+            console=console,
+            cache_dir=roots.cache,
+            datasets_dir=roots.datasets,
+            output_dir=roots.output,
+            staging_dir=roots.staging,
+        )
     try:
-        (pipeline or Pipeline(console=console, cache_dir=NAS_CACHE_DIR)).run(settings)
+        pipeline.run(settings)
     except AcquisitionError as exc:
         Console(stderr=True).print(f"[bold red]Acquisition error:[/] {exc}")
         return 2

@@ -300,14 +300,16 @@ determinism are untouched.
 
 **Phase 7.1 — External storage layout & migration**
 
-29. [ ] External-storage layout & output migration — Resolve the cache, datasets, and output roots to
+29. [x] External-storage layout & output migration — Resolve the cache, datasets, and output roots to
 a configurable external-drive location (env var + CLI, mount-aware with a local fallback and an
 optional local working copy during generation), and provide a one-time migration that moves existing
 local output onto the drive and leaves the local path referencing it (directory symlink). Pure,
 deterministic path/plan resolution in `src/storage.py` (stdlib-only, offline-testable, not in
 `PIPELINE_STAGES`) with a thin `tools/migrate_storage.py` executor over real drives; wire `build.py`
 and `serve.py` to the resolver. Defaults keep current on-disk behavior byte-identical when no external
-root is configured. `M`
+root is configured. `M` — Done: `src/storage.py` (`resolve_storage` + `plan_migration`/`apply_migration`),
+`tools/migrate_storage.py`, `build.py`/`serve.py` wiring + optional `--staging` local working copy;
+488 tests pass (spec `2026-08-17-external-storage-layout`).
 
 Epoch gate: with an external drive configured, a build reads its GDB datasets and writes its rendered
 images on the external drive (not local disk), existing output has been migrated there and still
