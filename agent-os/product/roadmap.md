@@ -342,7 +342,21 @@ wires the real DEM (`src.dem.acquire_dem_for_settings` → `src.raster.normalize
 the shared render recipe (`tools/render_common.py`) so state/county print output gains terrain relief;
 the DEM background must align to the same EPSG:5070 frame/extent as the flowlines. Defaults keep the
 existing flat-black print output byte-identical when no DEM background is supplied. `L`
-(Deferred from #22, whose closing note listed "compositing the hillshade under the river SVG in a
+(**In progress — compositing seam shipped, tested; real-3DEP wiring blocked.** `src/compositing.py`
+(pure, offline, numpy-only) turns a hillshade `RasterGrid` into a tinted RGBA relief background
+(`shade_to_background`: grayscale/tint, opacity, nodata→transparent) and folds the rasterized river
+layers over a *supplied* background (`solid_canvas`/`alpha_over`/`composite_over_background`),
+generalising `tools/rasterize_layered.py`'s flat-black base; `CompositingError` boundary validation;
+`tests/test_compositing.py` (13, offline). `tools/render_terrain_print.py` (non-offline) wires it:
+clip flowlines (`render_common`) → art SVG → per-layer resvg → transparent RGBA, DEM grid →
+`src.hillshade` → relief → composite → PNG. **Not yet gating-complete:** the DEM→`RasterGrid` read
+path does not exist — `RasterReader`/`RasterReprojector` are Protocol-only, `rasterio` isn't a
+dependency, and nothing turns cached 3DEP COG tiles into a grid — so the tool takes a *supplied* DEM
+(`--dem` .npy/image) instead of auto-acquiring via `acquire_dem_for_settings`→`normalize_dem`. A
+concrete COG reader (separate, larger, non-offline) is the follow-on needed to meet the epoch gate.
+Spec `agent-os/specs/2026-08-17-hillshade-print-compositing/`; suite 502 passing (+13). Smoke:
+synthetic DEM→hillshade→relief→composite over synthetic river layers → a real PNG.
+Deferred from #22, whose closing note listed "compositing the hillshade under the river SVG in a
 `tools/` print renderer" as an explicit non-gating follow-on. The primitive already exists —
 `src/hillshade.py` (`hillshade(grid, *, azimuth_deg, altitude_deg, z_factor, nodata)` → 0-255
 `RasterGrid`) — and `tools/rasterize_layered.py` already splits the river SVG into per-layer PNGs and
