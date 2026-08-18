@@ -319,6 +319,42 @@ images on the external drive (not local disk), existing output has been migrated
 resolves through the local path, and a build with the drive unmounted falls back cleanly to local
 paths without crashing.
 
+## Epoch 8 — terrain-aware print output
+
+Bring the DEM subsystem's shaded relief into the printed river art. Epoch 5 #22 shipped the pure
+hillshade primitive (`src/hillshade.py`) and a web viewer (`web/experience.html`), but the shaded
+relief has never been placed *under* the neon flowlines in a rendered image — today's print path
+(`tools/rasterize_layered.py`) alpha-composites the river layers over a flat black canvas. This epoch
+adds a terrain background: compute hillshade from a region's real DEM, tint it, and composite the
+existing river SVG art over it so mountains and valleys read behind the network — without touching the
+canonical 2D pipeline, the vector art's determinism, or the offline test posture.
+
+**Phase 8.1 — Shaded-relief compositing**
+
+30. [ ] Hillshade print compositing — Composite the river-art SVG over a DEM-derived shaded-relief
+background in a print renderer. Add a **pure, offline** compositing seam in `src/` that turns a
+hillshade `RasterGrid` (from `src.hillshade.hillshade`) into an RGB(A) background raster — optional
+hypsometric/relief tint, configurable opacity and blend, nodata → transparent — and alpha-composites
+the rasterized river layers over it (generalizing today's flat-black base in
+`tools/rasterize_layered.py` into a supplied background). Deterministic and numpy-only so it stays in
+the offline suite with hand-built `RasterGrid`s. A thin non-offline `tools/render_terrain_print.py`
+wires the real DEM (`src.dem.acquire_dem_for_settings` → `src.raster.normalize_dem` → `hillshade`) to
+the shared render recipe (`tools/render_common.py`) so state/county print output gains terrain relief;
+the DEM background must align to the same EPSG:5070 frame/extent as the flowlines. Defaults keep the
+existing flat-black print output byte-identical when no DEM background is supplied. `L`
+(Deferred from #22, whose closing note listed "compositing the hillshade under the river SVG in a
+`tools/` print renderer" as an explicit non-gating follow-on. The primitive already exists —
+`src/hillshade.py` (`hillshade(grid, *, azimuth_deg, altitude_deg, z_factor, nodata)` → 0-255
+`RasterGrid`) — and `tools/rasterize_layered.py` already splits the river SVG into per-layer PNGs and
+alpha-composites them over a black canvas; this item swaps that fixed black base for a tinted
+shaded-relief background and adds the real-DEM wiring. Needs the full GIS/DEM environment for the
+`tools/` entry point, so — like the other real-DEM tools — the executor sits outside the offline suite
+while the compositing math stays pure and tested.)
+
+Epoch gate: a state or county print image shows the neon river network composited over accurate,
+source-traceable bare-earth shaded relief in the same EPSG:5070 frame, produced deterministically from
+a documented DEM; the vector pipeline and its byte-for-byte default output are unchanged.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
