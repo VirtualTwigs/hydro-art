@@ -8,6 +8,7 @@ the offline suite.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,7 @@ from src.storage import (
     StorageError,
     apply_migration,
     drive_available,
+    move_file,
     plan_migration,
     resolve_storage,
 )
@@ -199,3 +201,26 @@ def test_apply_is_resumable_after_partial_move(tmp_path):
     assert result.bytes_moved == 2  # only b.svg moved this run
     assert src.is_symlink()
     assert (src / "a.svg").read_bytes() == b"aaaa"
+
+
+def test_move_file_falls_back_to_copy_when_rename_fails(tmp_path, monkeypatch):
+    # Simulates a cross-device destination (e.g. an SMB share): os.rename raises
+    # EXDEV, so move_file must copy the bytes and unlink the source rather than
+    # abort. Guards the regression where shutil.move's copy2 fallback called
+    # os.chflags and was rejected (EINVAL) by a Synology SMB mount.
+    src = tmp_path / "a.svg"
+    src.write_bytes(b"<svg/>")
+    dest = tmp_path / "drive" / "a.svg"
+    dest.parent.mkdir(parents=True)
+
+    real_rename = os.rename
+
+    def _cross_device(s, d):
+        raise OSError(18, "Cross-device link")
+
+    monkeypatch.setattr(os, "rename", _cross_device)
+    move_file(str(src), str(dest))
+    monkeypatch.setattr(os, "rename", real_rename)
+
+    assert dest.read_bytes() == b"<svg/>"
+    assert not src.exists()  # source removed after a successful copy

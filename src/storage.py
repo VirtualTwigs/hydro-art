@@ -41,6 +41,7 @@ __all__ = [
     "StorageRoots",
     "apply_migration",
     "drive_available",
+    "move_file",
     "plan_migration",
     "resolve_storage",
 ]
@@ -231,11 +232,36 @@ def plan_migration(source_dir: str | Path, dest_dir: str | Path) -> MigrationPla
     )
 
 
+def move_file(source: str, destination: str) -> None:
+    """Move one file, tolerating cross-device and network-share filesystems.
+
+    ``shutil.move`` falls back to :func:`shutil.copy2` when the source and
+    destination are on different filesystems (always the case migrating onto an
+    external drive), and ``copy2`` preserves BSD file flags via ``os.chflags`` —
+    which some network shares (notably SMB/Synology) reject with
+    ``OSError(EINVAL)``, aborting the move. Copy the bytes and best-effort the
+    mode instead, skipping the flag/timestamp metadata the share may refuse, then
+    remove the source. A same-device move still short-circuits to a fast
+    ``os.rename``.
+    """
+    try:
+        os.rename(source, destination)
+        return
+    except OSError:
+        pass  # Cross-device (or otherwise un-renamable): fall back to copy.
+    shutil.copyfile(source, destination)
+    try:
+        shutil.copymode(source, destination)
+    except OSError:
+        pass  # The share may also reject chmod; the bytes are what matter.
+    os.unlink(source)
+
+
 def apply_migration(
     plan: MigrationPlan,
     *,
     symlink: bool = True,
-    mover: Callable[[str, str], object] = shutil.move,
+    mover: Callable[[str, str], object] = move_file,
     require_mounted: bool = True,
 ) -> MigrationResult:
     """Execute a :class:`MigrationPlan`, moving files onto the destination drive.
@@ -243,10 +269,10 @@ def apply_migration(
     When ``require_mounted`` (the default), the destination drive must be
     available (:func:`drive_available`) or a :class:`StorageError` is raised
     **before any file is moved**. Each file is moved with ``mover`` (default
-    :func:`shutil.move`) after its destination parent is created. When
-    ``symlink`` and the source directory holds no remaining real files, the
-    source directory is replaced by a symlink to the destination so paths that
-    referenced the old location keep resolving.
+    :func:`move_file`, which tolerates cross-device and SMB destinations) after
+    its destination parent is created. When ``symlink`` and the source directory
+    holds no remaining real files, the source directory is replaced by a symlink
+    to the destination so paths that referenced the old location keep resolving.
     """
     if require_mounted and not drive_available(plan.dest_dir):
         raise StorageError(
