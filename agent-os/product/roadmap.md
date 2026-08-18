@@ -331,8 +331,10 @@ canonical 2D pipeline, the vector art's determinism, or the offline test posture
 
 **Phase 8.1 — Shaded-relief compositing**
 
-30. [ ] Hillshade print compositing — Composite the river-art SVG over a DEM-derived shaded-relief
-background in a print renderer. Add a **pure, offline** compositing seam in `src/` that turns a
+30. [x] Hillshade print compositing — **Shipped 2026-08-17** (`src/compositing.py` seam +
+`tools/render_terrain_print.py`); the Epoch 8 gate (print over accurate 3DEP relief) was closed by the
+#31 real-DEM read path, so the earlier progress caveat is resolved. — Composite the river-art SVG over
+a DEM-derived shaded-relief background in a print renderer. Add a **pure, offline** compositing seam in `src/` that turns a
 hillshade `RasterGrid` (from `src.hillshade.hillshade`) into an RGB(A) background raster — optional
 hypsometric/relief tint, configurable opacity and blend, nodata → transparent — and alpha-composites
 the rasterized river layers over it (generalizing today's flat-black base in
@@ -367,7 +369,15 @@ while the compositing math stays pure and tested.)
 
 **Phase 8.2 — Concrete DEM reader (unblocks the epoch gate)**
 
-31. [ ] 3DEP COG reader & reprojector — Implement the missing concrete `RasterReader` /
+31. [x] 3DEP COG reader & reprojector — **Shipped 2026-08-17** (`src/raster_io.py`:
+`grid_from_arrays` + `RasterioRasterReader(opener=…)` + `RasterioReprojector(warp=…)` with an
+identity short-circuit, `RasterIOError`; `rasterio` added to `requirements.txt` as an optional,
+lazy-imported dep; `tools/render_terrain_print.py` now auto-acquires 3DEP relief from
+`--region-dem`/`--state` when no `--dem` is given, clipped to the flowlines' EPSG:5070 extent). Ten
+offline tests (`tests/test_raster_io.py`) cover the pure affine mapping + validation, the reader over a
+fake opener, the reprojector identity/injected-warp paths, and the full `normalize_dem` → `hillshade`
+chain — all with no rasterio installed. This closes the #30 gap: the Epoch 8 gate (print over accurate
+3DEP relief) is now met. Original scope below. — Implement the missing concrete `RasterReader` /
 `RasterReprojector` seams so cached 3DEP COG tiles become a normalized `RasterGrid`, closing the gap
 that keeps #30 from auto-acquiring real relief. Add a rasterio-backed reader that opens a `DemAsset`'s
 cached COG (`asset.path`) and returns a north-up `RasterGrid` (values + `GridTransform` + source CRS +

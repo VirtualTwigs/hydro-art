@@ -19,17 +19,26 @@ datasets, and shells out to ``resvg`` — so it only runs in a full (non-offline
 environment and is **not** part of the offline test suite. The pure compositing
 math it drives *is* tested (``tests/test_compositing.py``).
 
-DEM input: this slice reads the bare-earth grid the relief is shaded from as a
-``.npy`` array or a PIL-readable image (``--dem``), assumed to cover the same
-extent as the rendered flowlines (it is resampled to the render canvas). Wiring
-the DEM straight from cached 3DEP COG tiles (``dem.acquire_dem_for_settings`` ->
-``raster.normalize_dem``) still needs a concrete ``RasterReader`` — none exists
-yet — so that automatic path is a documented follow-on; supply a DEM grid here.
+DEM input, two ways:
+
+* **Auto (roadmap #31):** with no ``--dem`` the tool acquires real 3DEP relief
+  for the DEM region (``--region-dem``, default: ``--state``) —
+  ``dem.acquire_dem_for_settings`` caches the COG tiles, then
+  ``raster.normalize_dem`` reads/reprojects them through the concrete
+  ``raster_io.RasterioRasterReader`` / ``RasterioReprojector`` seams and clips the
+  relief to the *flowlines' EPSG:5070 extent* so it lines up with the art.
+* **Supplied override:** ``--dem`` reads a bare-earth grid as a ``.npy`` array or
+  a PIL-readable image, assumed to cover the rendered extent (resampled to the
+  canvas). Handy for offline experiments / a DEM the tool can't auto-acquire.
 
 Usage::
 
-    python tools/render_terrain_print.py --state Oregon --dem or_dem.npy \
-        out.png --width 6000 --min-order 3 --tint 210 180 140 --relief-opacity 0.9
+    # Auto-acquire real relief for the DEM region.
+    python tools/render_terrain_print.py --state Oregon out.png --width 6000 \
+        --min-order 3 --tint 210 180 140 --relief-opacity 0.9 --cache-dir ./cache
+
+    # Or supply your own bare-earth grid.
+    python tools/render_terrain_print.py --state Oregon --dem or_dem.npy out.png
 """
 
 from __future__ import annotations
@@ -44,13 +53,16 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import dataclasses
+
 from src.compositing import (
     composite_over_background,
     shade_to_background,
     solid_canvas,
 )
 from src.hillshade import hillshade
-from src.raster import GridTransform, RasterGrid
+from src.raster import GridTransform, RasterGrid, normalize_dem
+from src.raster_io import RasterioRasterReader, RasterioReprojector
 
 # ``tools`` is a package sibling; import the shared recipe + layer splitter.
 from tools import render_common as rc
@@ -73,6 +85,68 @@ def _load_dem_grid(path: str, *, cellsize: float, nodata: float | None) -> Raste
         raise SystemExit(f"DEM {path!r} must be a 2-D grid, got shape {arr.shape}.")
     transform = GridTransform(0.0, float(arr.shape[0]) * cellsize, cellsize, cellsize)
     return RasterGrid(arr, transform, rc.EPSG, nodata)
+
+
+def _acquire_relief_grid(
+    region: str,
+    *,
+    clip_bounds: tuple[float, float, float, float],
+    cache_dir: str,
+    tier: str | None,
+    tile_budget: int | None,
+    refresh: bool,
+) -> RasterGrid:
+    """Auto-acquire a bare-earth ``RasterGrid`` for ``region`` from cached 3DEP.
+
+    Discovers/caches the region's COG tiles (``acquire_dem_for_settings``), then
+    reads + reprojects them to EPSG:5070 through the concrete ``raster_io`` seams
+    and clips to the flowlines' extent (``clip_bounds`` in EPSG:5070) via
+    ``normalize_dem`` — the read path #31 supplies. Non-offline (rasterio + real
+    tiles), so it lives only in this tool.
+    """
+    from src.cache import Cache
+    from src.cli import resolve_settings
+    from src.dem import acquire_dem_for_settings, region_bounds
+    from src.download import Downloader, UrllibFetcher
+
+    settings = resolve_settings(["--region", region])
+    overrides: dict = {"enabled": True}
+    if refresh:
+        overrides["cache_policy"] = "refresh"
+    if tier is not None:
+        overrides["tier"] = tier
+    if tile_budget is not None:
+        overrides["tile_budget"] = tile_budget
+    elevation = dataclasses.replace(settings.elevation, **overrides)
+    settings = dataclasses.replace(settings, elevation=elevation)
+
+    cache = Cache(cache_dir)
+    downloader = Downloader(UrllibFetcher())
+    assets = acquire_dem_for_settings(
+        settings,
+        boundary=region_bounds(region),  # EPSG:4326 for tile discovery
+        cache=cache,
+        downloader=downloader,
+        log=lambda msg: print(f"  {msg}"),
+    )
+    dem = normalize_dem(
+        assets=assets,
+        boundary=clip_bounds,  # relief clipped to the flowlines' EPSG:5070 extent
+        reader=RasterioRasterReader(),
+        reprojector=RasterioReprojector(),
+    )
+    return dem.base
+
+
+def _geom_bounds(geoms) -> tuple[float, float, float, float]:
+    """Union bounds (min_x, min_y, max_x, max_y) of the clipped EPSG:5070 geoms."""
+    boxes = [g.bounds for g in geoms]
+    return (
+        min(b[0] for b in boxes),
+        min(b[1] for b in boxes),
+        max(b[2] for b in boxes),
+        max(b[3] for b in boxes),
+    )
 
 
 def _resolve_boundary(args: argparse.Namespace):
@@ -111,9 +185,27 @@ def _river_layers(svg_path: Path, width: int, stroke_px: float, glow_px: float):
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("output", help="Output PNG path.")
-    ap.add_argument("--dem", required=True, help="DEM grid (.npy or image).")
+    ap.add_argument(
+        "--dem", default=None,
+        help="Supplied DEM grid (.npy or image); omit to auto-acquire 3DEP relief.",
+    )
     ap.add_argument("--dem-cellsize", type=float, default=10.0, help="DEM cell metres.")
     ap.add_argument("--dem-nodata", type=float, default=None, help="DEM nodata value.")
+    ap.add_argument(
+        "--region-dem", default=None,
+        help="Region to auto-acquire DEM for (default: --state).",
+    )
+    ap.add_argument(
+        "--cache-dir", default="cache", help="DEM tile cache root (may be a NAS mount)."
+    )
+    ap.add_argument("--dem-tier", default=None, help="Override elevation.tier.")
+    ap.add_argument(
+        "--dem-tile-budget", type=int, default=None,
+        help="Override elevation.tile_budget (0 = unlimited).",
+    )
+    ap.add_argument(
+        "--dem-refresh", action="store_true", help="Redownload already-cached tiles."
+    )
     ap.add_argument("--state", default=None, help="Whole-state clip (Census polygon).")
     ap.add_argument("--county", default=None, help="County clip (needs --state-fp).")
     ap.add_argument("--state-fp", default=None, help="Census STATEFP for --county.")
@@ -155,7 +247,25 @@ def main(argv: list[str] | None = None) -> int:
     print(f"rasterized {len(layers)} river layer(s) at {canvas_w}x{height}")
 
     # 2. DEM -> hillshade -> relief background, resized to the render canvas.
-    grid = _load_dem_grid(args.dem, cellsize=args.dem_cellsize, nodata=args.dem_nodata)
+    if args.dem:
+        grid = _load_dem_grid(
+            args.dem, cellsize=args.dem_cellsize, nodata=args.dem_nodata
+        )
+    else:
+        region = args.region_dem or args.state
+        if not region:
+            raise SystemExit(
+                "no DEM source: pass --dem or a --region-dem/--state to auto-acquire."
+            )
+        print(f"acquiring 3DEP relief for {region} ...")
+        grid = _acquire_relief_grid(
+            region,
+            clip_bounds=_geom_bounds(geoms),
+            cache_dir=args.cache_dir,
+            tier=args.dem_tier,
+            tile_budget=args.dem_tile_budget,
+            refresh=args.dem_refresh,
+        )
     relief_grid = hillshade(
         grid,
         azimuth_deg=args.azimuth,
