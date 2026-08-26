@@ -432,6 +432,66 @@ Epoch gate: a state or county print image shows the neon river network composite
 source-traceable bare-earth shaded relief in the same EPSG:5070 frame, produced deterministically from
 a documented DEM; the vector pipeline and its byte-for-byte default output are unchanged.
 
+## Epoch 9 — Codebase health & maintainability
+
+**No new product capability.** Every item is a refactor, test, or housekeeping fix surfaced by the
+2026-08-25 codebase audit (duplication, coverage gaps, uncommitted noise, missing feedback loop). The
+hard invariant for the whole epoch: **the offline suite stays green and the 2D pipeline's default
+output stays byte-identical** (these are pure internal cleanups, not behavior changes).
+
+**Phase 9.1 — De-duplication (make the "single recipe" claim true)**
+
+33. [ ] De-duplicate the `clip_flowlines` render recipe — The GDB-iteration + VAA/EROM join + Strahler
+filter + shapely-clip loop is copy-pasted three times: the canonical `tools/render_common.clip_flowlines`,
+`tools/render_state_mono.clip_flowlines_elev` (admits "Mirrors …"), and
+`tools/render_state_mono_peak.clip_flowlines_elev_ids` (admits "Mirrors …"). Give the canonical
+`clip_flowlines` an optional `extra_vaa_cols` (and id-passthrough) parameter and delete both mirror
+copies, so the two mono renderers call the shared recipe. `S`
+(These are `tools/` scripts outside the offline suite; the closeout is a smoke-render, not a test. Fix
+before `render_state_mono_peak.py` is committed as a permanent third copy.)
+
+34. [ ] Canonicalize the internal-CRS constant — `src/raster.py` defines `INTERNAL_CRS = "EPSG:5070"`,
+but `src/config.py`, `src/mesh.py`, `src/hydro_z.py`, and `src/waterbody_selection.py` hardcode the raw
+`"EPSG:5070"` string instead of importing it. Introduce one canonical constant (a small `src/crs.py` or
+re-export) and have every internal-CRS reference import it. `XS`
+(Pure rename/import change; a test asserts `config`/`mesh` reference the shared constant. Default output
+byte-identical.)
+
+35. [ ] Derive `STATE_HUC4` from `REGION_HUC4` — `tools/render_common.STATE_HUC4` is a hand-maintained
+mirror of `src/datasets.REGION_HUC4` (Washington intentionally adds `1707`). Make `render_common` import
+`REGION_HUC4` and extend it, killing the drift hazard where updating one silently diverges from the
+other. `XS`
+
+**Phase 9.2 — Web view-helper extraction**
+
+36. [ ] Extract duplicated `web/` view helpers into `hydro-ux.js` — `drawSwatches`, `buildTimeline`,
+`paintTimeline`, `fillCounties`, `bindRange`, and `seg` are duplicated (several character-for-character)
+across `studio.html`, `proto-b-guided.html`, and `proto-c-canvas.html`, contradicting CLAUDE.md's "view
+logic lives only in `hydro-ux.js`" rule. Move them into `web/shared/hydro-ux.js` as exported helpers over
+the existing `H.PALETTES`/`H.COUNTIES`/`H.MONTH_ABBR` and have each page call them. `S`
+(Covered by the existing headless `tests/test_recipe_roundtrip.cjs` harness pattern where practical.)
+
+**Phase 9.3 — Coverage & housekeeping**
+
+37. [ ] Pipeline orchestrator unit tests — `src/pipeline.py` (the 12-stage orchestrator, ~550 LOC) has
+no `tests/test_pipeline.py`; it is exercised only indirectly through the `test_*_pipeline.py` integration
+files. Add direct unit coverage for the structural contracts: canonical stage order, "no stubs remain"
+(every `PIPELINE_STAGES` entry has a real `_STAGE_FUNCS` function), `_stub` no-op behavior, `Stage`
+immutability, `Pipeline.stage_names`, and that `Pipeline.run` threads a single `RunContext` through the
+stages in order sharing `artifacts`. `XS`
+(This item's deliverable **is** the test — it ships in the planning commit, green against existing
+behavior, and requires no source change.)
+
+38. [ ] Housekeeping & retrospective practice — (1) revert the accidental `/com` corruption in
+`web/proto-b-guided.html:7`; (2) add the missing invocations to CLAUDE.md's Commands (`ruff check .`,
+`node tests/test_recipe_roundtrip.cjs`) and a short "known debt / gotchas" note pointing at the
+`pipeline.py` gap and the de-dup items; (3) start a lightweight `agent-os/retrospectives/` practice (the
+audit found zero retro/lessons docs) with an epoch-closeout entry. `XS`
+
+Epoch gate: the offline suite is green, the 2D pipeline's default output is byte-for-byte unchanged, no
+duplicated copy of `clip_flowlines` or the named `web/` view helpers remains, `src/pipeline.py` has
+direct unit coverage, and a retrospective note exists for a closed epoch.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
