@@ -30,7 +30,10 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
   mosaicking the tiles in their shared source CRS first, then warping the single mosaic
   once; `_require_aligned` now compares pixel sizes with a relative tolerance (last-float-
   digit warp drift mosaics, a genuine tier change still rejected). Bug-fix only, no new
-  `src/` capability; 12 raster tests green (`0954c69`).
+  `src/` capability; 12 raster tests green (`0954c69`). Retrospective:
+  `agent-os/retrospectives/2026-08-25-epoch-8-terrain-print.md` (`d44dad1`) — the lesson
+  is that injected-fake offline coverage exercised only the reprojector's identity
+  short-circuit, so the real-tile run first fired the EPSG:4269→5070 warp branch.
 - **#29 DONE — external-storage layout & output migration — implemented, commit
   pending.** Opens Epoch 7. Puts the large files a build reads/writes (extracted
   GDB datasets, the archive cache, rendered output) on a configurable external
