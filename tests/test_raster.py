@@ -96,6 +96,17 @@ def test_mosaic_rejects_mismatched_resolution() -> None:
         mosaic([a, b])
 
 
+def test_mosaic_tolerates_float_noise_pixel_sizes() -> None:
+    # Warping adjacent 3DEP tiles to EPSG:5070 independently yields pixel sizes
+    # that differ in the last float digits (~1e-13); they are the same
+    # resolution and must still mosaic (regression: real WA statewide run).
+    eps = 2e-13
+    left = _grid([[10, 20], [30, 40]], origin_x=0.0, px=1.0, py=1.0)
+    right = _grid([[50, 60], [70, 80]], origin_x=2.0, px=1.0 + eps, py=1.0 + eps)
+    merged = mosaic([left, right])
+    assert merged.values.tolist() == [[10, 20, 50, 60], [30, 40, 70, 80]]
+
+
 def test_clip_selects_the_covering_window() -> None:
     merged = _grid([[10, 20, 50, 60], [30, 40, 70, 80]])  # 2x4, x[0,4] y[0,2]
     clipped = clip_grid(merged, (1.0, 0.0, 3.0, 2.0))
@@ -169,7 +180,9 @@ def test_normalize_dem_reprojects_mosaics_clips_and_pyramids() -> None:
     )
 
     assert isinstance(result, NormalizedDem)
-    assert reprojector.calls == ["EPSG:5070", "EPSG:5070"]
+    # The tiles are mosaicked in their shared source CRS, then the single
+    # mosaic is warped once (not one warp per tile).
+    assert reprojector.calls == ["EPSG:5070"]
     assert result.base.crs == "EPSG:5070"
     # mosaic(0..4) clipped to x[1,3] -> cols 1,2
     assert result.base.values.tolist() == [[20, 50], [40, 70]]

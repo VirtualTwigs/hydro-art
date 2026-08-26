@@ -190,13 +190,22 @@ class GridSampler:
 
 
 def _require_aligned(grids: Sequence[RasterGrid]) -> tuple[float, float, str]:
-    """Validate grids share pixel size and CRS; return (pw, ph, crs)."""
+    """Validate grids share pixel size and CRS; return (pw, ph, crs).
+
+    Pixel sizes are compared with a relative tolerance: warping adjacent 3DEP
+    tiles to EPSG:5070 independently yields pixel sizes that differ only in the
+    last few float digits (~1e-14 relative), which are the same resolution for
+    mosaicking. A genuinely different resolution (e.g. a 10 m vs 30 m tier)
+    differs by whole metres and is still rejected.
+    """
     first = grids[0]
     pw = first.transform.pixel_width
     ph = first.transform.pixel_height
     crs = first.crs
     for g in grids[1:]:
-        if g.transform.pixel_width != pw or g.transform.pixel_height != ph:
+        if not math.isclose(
+            g.transform.pixel_width, pw, rel_tol=1e-6
+        ) or not math.isclose(g.transform.pixel_height, ph, rel_tol=1e-6):
             raise ValueError(
                 "Cannot mosaic grids with mismatched pixel sizes: "
                 f"{(pw, ph)} vs "
@@ -339,12 +348,20 @@ def normalize_dem(
     target_crs: str = INTERNAL_CRS,
     pyramid_levels: int = 4,
 ) -> NormalizedDem:
-    """Read, reproject, mosaic, clip, and pyramid DEM ``assets`` for a region.
+    """Read, mosaic, reproject, clip, and pyramid DEM ``assets`` for a region.
 
-    Each asset is read into its source-CRS grid, warped to ``target_crs``
-    (horizontal only — vertical datum/units are preserved verbatim in each
-    asset's provenance), then all grids are mosaicked, clipped to ``boundary``,
-    and reduced into a deterministic pyramid.
+    Each asset is read into its source-CRS grid; the grids are mosaicked **in
+    their shared source CRS** (3DEP tiles are 1°×1° cells on one geographic
+    lattice, so they tile cleanly there) and the single mosaic is then warped to
+    ``target_crs`` (horizontal only — vertical datum/units are preserved verbatim
+    in each asset's provenance), clipped to ``boundary``, and reduced into a
+    deterministic pyramid.
+
+    Mosaicking before the warp — rather than warping each tile independently —
+    is what keeps a multi-tile region alignable: an independent per-tile warp
+    picks a per-tile output resolution that drifts with latitude (a 1° cell near
+    49°N warps to a slightly smaller metre pixel than one near 46°N), so the
+    warped tiles would no longer share a pixel grid and could not be mosaicked.
 
     Raises:
         ValueError: If ``assets`` is empty.
@@ -353,10 +370,9 @@ def normalize_dem(
     if not assets:
         raise ValueError("normalize_dem requires at least one DEM asset.")
 
-    reprojected = [
-        reprojector.reproject(reader.read(asset), target_crs) for asset in assets
-    ]
-    merged = mosaic(reprojected)
+    source_grids = [reader.read(asset) for asset in assets]
+    merged_source = mosaic(source_grids)
+    merged = reprojector.reproject(merged_source, target_crs)
     clipped = clip_grid(merged, boundary)
     pyramid = build_pyramid(clipped, max_levels=pyramid_levels)
     provenance = tuple(
