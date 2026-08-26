@@ -16,15 +16,21 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
   commit (`tests/test_pipeline.py`); **#33** shared `clip_flowlines` (`extra_vaa_cols`/
   `include_id`, both mono mirrors deleted, `decc9cd`); **#34** `src/crs.py:INTERNAL_CRS`
   (`1351321`); **#35** `STATE_HUC4` derived from `REGION_HUC4` (`d7d46fd`); **#36**
-  six `web/` view helpers extracted into `hydro-ux.js` (`0c0ba45`). **#38 implemented,
-  commit pending**: reverted the `/com` corruption, CLAUDE.md `ruff`/`node` commands +
-  "Known debt / gotchas" + repaired the hydro-ux.js view-logic claim, first
-  `agent-os/retrospectives/` note. Suite green (527), recipe roundtrip green (11).
-  Hard invariant held: offline suite green + 2D default output byte-identical (the
-  only render-affecting change, #34's constant, is value-identical; a real GDAL
-  svg_sha256 compare wasn't possible offline — carry-forward). (Note: Epoch 8 #32
-  real-tile closeout remains open; its `src/raster.py` mosaic-order fix + tests are
-  still uncommitted, separate from this.)
+  six `web/` view helpers extracted into `hydro-ux.js` (`0c0ba45`); **#38** housekeeping
+  + retrospective closeout — reverted the `/com` corruption, CLAUDE.md `ruff`/`node`
+  commands + "Known debt / gotchas" + repaired the hydro-ux.js view-logic claim, first
+  `agent-os/retrospectives/` note (`6c3038a`). Suite green (527), recipe roundtrip
+  green (11). Hard invariant held: offline suite green + 2D default output
+  byte-identical (the only render-affecting change, #34's constant, is value-identical;
+  a real GDAL svg_sha256 compare wasn't possible offline — carry-forward).
+- **Epoch 8 #32 DONE (2026-08-25) — terrain-print real-tile closeout.** The real
+  WA statewide auto-acquire run surfaced a bug the offline fakes couldn't: `normalize_dem`
+  warped each 1°×1° 3DEP tile to EPSG:5070 independently, so per-tile output resolution
+  drifted with latitude and the warped tiles no longer shared a pixel grid. Fixed by
+  mosaicking the tiles in their shared source CRS first, then warping the single mosaic
+  once; `_require_aligned` now compares pixel sizes with a relative tolerance (last-float-
+  digit warp drift mosaics, a genuine tier change still rejected). Bug-fix only, no new
+  `src/` capability; 12 raster tests green (`0954c69`).
 - **#29 DONE — external-storage layout & output migration — implemented, commit
   pending.** Opens Epoch 7. Puts the large files a build reads/writes (extracted
   GDB datasets, the archive cache, rendered output) on a configurable external

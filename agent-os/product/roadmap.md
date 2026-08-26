@@ -402,7 +402,7 @@ CRS/units are recorded verbatim in provenance; the reader never invents nodata.)
 
 **Phase 8.3 — Real-tile validation (produce the gate artifact)**
 
-32. [ ] Terrain-print real-tile closeout — Produce and record the *demonstrable artifact* the Epoch 8
+32. [x] Terrain-print real-tile closeout — Produce and record the *demonstrable artifact* the Epoch 8
 gate names. #30 and #31 are code-complete and fully covered by the **offline** suite, but that suite
 proves the seam behavior against hand-built grids and **injected fakes** — no terrain-backed print has
 ever been rendered from real cached 3DEP COG tiles with `rasterio` actually installed. Per the epoch
