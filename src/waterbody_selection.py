@@ -32,6 +32,7 @@ from typing import Any, Callable, Iterable
 import shapely
 
 from src.clipping import clip_geometry
+from src.crs import INTERNAL_CRS
 from src.geometry import repair_geometry
 from src.waterbodies import WATERBODY_POLICY_VERSION, WaterbodyFeature
 
@@ -150,7 +151,7 @@ def process_waterbodies(
     *,
     boundary: Any | None = None,
     policy: WaterbodySelectionPolicy | None = None,
-    target_crs: str = "EPSG:5070",
+    target_crs: str = INTERNAL_CRS,
     reproject: Callable[[Any, str | None, str], Any] | None = None,
 ) -> WaterbodySelection:
     """Repair, reproject, clip, measure, and select classified waterbodies.

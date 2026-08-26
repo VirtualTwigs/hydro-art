@@ -27,6 +27,7 @@ from typing import Sequence
 
 import numpy as np
 
+from src.crs import INTERNAL_CRS
 from src.raster import NormalizedDem, RasterGrid
 
 __all__ = [
@@ -64,7 +65,7 @@ class TerrainMesh:
     lod: int
     error_budget_m: float
     max_error_m: float
-    crs: str = "EPSG:5070"
+    crs: str = INTERNAL_CRS
     vertical_units: str | None = None
     source_raster_hash: str = ""
     geometry_hash: str = field(default="")

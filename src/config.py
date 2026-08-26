@@ -19,6 +19,8 @@ from typing import Any, Mapping
 
 import yaml
 
+from src.crs import INTERNAL_CRS
+
 __all__ = [
     "ConfigError",
     "Settings",
@@ -62,7 +64,7 @@ class ConfigError(Exception):
 SUPPORTED_REGIONS: tuple[str, ...] = ("Oregon", "Washington", "California", "Idaho")
 
 #: Coordinate reference systems the pipeline knows how to handle.
-SUPPORTED_PROJECTIONS: tuple[str, ...] = ("EPSG:5070", "EPSG:4326", "EPSG:3857")
+SUPPORTED_PROJECTIONS: tuple[str, ...] = (INTERNAL_CRS, "EPSG:4326", "EPSG:3857")
 
 #: Output formats selectable via config/CLI (PRD section 22): SVG is required,
 #: the rest optional and produced by converting the SVG (PRD section 23).
@@ -178,7 +180,7 @@ DEFAULTS: dict[str, Any] = {
     "region": ["Oregon", "Washington"],
     "county": None,
     "months": "annual",
-    "projection": "EPSG:5070",
+    "projection": INTERNAL_CRS,
     "stream_order": "all",
     "stream_method": "strahler",
     "huc_level": "HUC4",

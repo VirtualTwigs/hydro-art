@@ -30,9 +30,11 @@ from typing import Any, Protocol, Sequence
 
 import numpy as np
 
+from src.crs import INTERNAL_CRS
 from src.elevation import ElevationProvenance, ElevationSample
 
 __all__ = [
+    "INTERNAL_CRS",
     "GridTransform",
     "RasterGrid",
     "NormalizedDem",
@@ -46,8 +48,9 @@ __all__ = [
     "normalize_dem",
 ]
 
-#: The project's internal horizontal CRS (per PRD / config).
-INTERNAL_CRS = "EPSG:5070"
+# ``INTERNAL_CRS`` is imported from :mod:`src.crs` (the single source of truth)
+# and re-exported here (see ``__all__``) so existing ``raster.INTERNAL_CRS``
+# importers keep working.
 
 
 @dataclass(frozen=True)

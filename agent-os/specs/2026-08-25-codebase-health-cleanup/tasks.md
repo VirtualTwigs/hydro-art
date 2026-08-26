@@ -18,11 +18,12 @@
 - [ ] Smoke-render one state through each mono renderer (non-offline; needs GDAL+NAS).
 
 ## TG2 — Canonical internal-CRS constant (#34)
-- [ ] Add `src/crs.py` (`INTERNAL_CRS`), re-export from `src/raster.py`.
-- [ ] Replace raw `"EPSG:5070"` in `config.py`/`mesh.py`/`hydro_z.py`/
-      `waterbody_selection.py` with the import.
-- [ ] Add a tiny offline test asserting the shared reference; confirm default
-      output byte-identical.
+- [x] Add `src/crs.py` (`INTERNAL_CRS`), re-export from `src/raster.py`.
+- [x] Replace raw `"EPSG:5070"` in `config.py`/`mesh.py`/
+      `waterbody_selection.py` with the import (`hydro_z.py` had only docstring
+      mentions — no code literal to replace).
+- [x] Add a tiny offline test asserting the shared reference; confirm default
+      output byte-identical (resolved default projection unchanged: `EPSG:5070`).
 
 ## TG3 — Derive `STATE_HUC4` from `REGION_HUC4` (#35)
 - [ ] `render_common` imports `REGION_HUC4`, extends it with WA `1707`; delete the
