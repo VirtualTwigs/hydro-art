@@ -319,7 +319,7 @@ images on the external drive (not local disk), existing output has been migrated
 resolves through the local path, and a build with the drive unmounted falls back cleanly to local
 paths without crashing.
 
-## Epoch 8 — terrain-aware print output
+## Epoch 8 — terrain-aware print output · complete
 
 Bring the DEM subsystem's shaded relief into the printed river art. Epoch 5 #22 shipped the pure
 hillshade primitive (`src/hillshade.py`) and a web viewer (`web/experience.html`), but the shaded
@@ -432,7 +432,7 @@ Epoch gate: a state or county print image shows the neon river network composite
 source-traceable bare-earth shaded relief in the same EPSG:5070 frame, produced deterministically from
 a documented DEM; the vector pipeline and its byte-for-byte default output are unchanged.
 
-## Epoch 9 — Codebase health & maintainability
+## Epoch 9 — Codebase health & maintainability · complete
 
 **No new product capability.** Every item is a refactor, test, or housekeeping fix surfaced by the
 2026-08-25 codebase audit (duplication, coverage gaps, uncommitted noise, missing feedback loop). The
