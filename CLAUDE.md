@@ -76,6 +76,7 @@ This is the single invariant that ties the codebase together, so it's called out
 - `packaging.py` (Epoch 5 #21, offline packaging) — **package preflight planner**: composes `resolve_required_files` + `manifest` verify + `elevation.tile_budget` into one "is this cache ready to ship?" verdict: `plan_package(cache, settings, *, tile_count=None)` → frozen `PackagePlan` (disjoint `present`/`missing`/`corrupt`, `total_bytes`, injected-tile-count preflight) with `is_complete`/`within_tile_budget`/`is_ready` + `format_plan`; `PackagingError(AcquisitionError)`; pure/offline (stdlib + `manifest`/`datasets`/`config`/`cache`), not in `PIPELINE_STAGES`, driven by `tools/package_cache.py`
 - `loading.py` — GeoPandas/pyogrio layer loading
 - `geometry.py` — invalid-geometry repair + `RepairStats`
+- `crs.py` (Epoch 9 #34) — single source of truth for the internal metric CRS: `INTERNAL_CRS = "EPSG:5070"`. Import it everywhere in `src/`; never re-introduce the raw string literal (see Known debt)
 - `projection.py` — reproject to EPSG:5070
 - `clipping.py` — clip to region boundary
 - `counties.py` (Epoch 6 #24, `--county` scope) — `STATE_FIPS` + `state_fips_for_region` + `county_boundary` over an injectable `CountyBoundaryProvider`/`CensusCountyProvider` (lazy geopandas, GDAL-free at import) — feeds `_clip_stage`'s county-polygon branch
