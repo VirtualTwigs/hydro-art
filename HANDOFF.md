@@ -8,16 +8,23 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
 
 ## Current state (2026-08-17)
 
-- **Epoch 9 PLANNED (2026-08-25) — codebase health & maintainability (#33–#38).** A
+- **Epoch 9 DONE (2026-08-25) — codebase health & maintainability (#33–#38).** A
   2026-08-25 audit surfaced maintainability debt (triplicated `clip_flowlines`,
   scattered `EPSG:5070` literal, hand-mirrored `STATE_HUC4`, duplicated `web/` view
   helpers, missing `test_pipeline.py`, uncommitted noise, zero retrospectives). Spec
-  `agent-os/specs/2026-08-25-codebase-health-cleanup/`. **Planning commit ships #37
-  only**: new `tests/test_pipeline.py` (9 tests, orchestrator structural contracts —
-  green against existing behavior). #33–#36 + #38 are refactor/housekeeping items
-  implemented next. Hard invariant for the epoch: offline suite green + 2D default
-  output byte-identical. (Note: Epoch 8 #32 real-tile closeout remains open; its
-  `src/raster.py` mosaic-order fix + tests are still uncommitted, separate from this.)
+  `agent-os/specs/2026-08-25-codebase-health-cleanup/`. Landed: **#37** planning
+  commit (`tests/test_pipeline.py`); **#33** shared `clip_flowlines` (`extra_vaa_cols`/
+  `include_id`, both mono mirrors deleted, `decc9cd`); **#34** `src/crs.py:INTERNAL_CRS`
+  (`1351321`); **#35** `STATE_HUC4` derived from `REGION_HUC4` (`d7d46fd`); **#36**
+  six `web/` view helpers extracted into `hydro-ux.js` (`0c0ba45`). **#38 implemented,
+  commit pending**: reverted the `/com` corruption, CLAUDE.md `ruff`/`node` commands +
+  "Known debt / gotchas" + repaired the hydro-ux.js view-logic claim, first
+  `agent-os/retrospectives/` note. Suite green (527), recipe roundtrip green (11).
+  Hard invariant held: offline suite green + 2D default output byte-identical (the
+  only render-affecting change, #34's constant, is value-identical; a real GDAL
+  svg_sha256 compare wasn't possible offline — carry-forward). (Note: Epoch 8 #32
+  real-tile closeout remains open; its `src/raster.py` mosaic-order fix + tests are
+  still uncommitted, separate from this.)
 - **#29 DONE — external-storage layout & output migration — implemented, commit
   pending.** Opens Epoch 7. Puts the large files a build reads/writes (extracted
   GDB datasets, the archive cache, rendered output) on a configurable external

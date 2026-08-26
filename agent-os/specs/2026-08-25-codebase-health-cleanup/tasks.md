@@ -37,12 +37,14 @@
       `HydroUX.*`; verify pages + `node tests/test_recipe_roundtrip.cjs`.
 
 ## TG5 — Housekeeping & retrospective (#38)
-- [ ] Revert `web/proto-b-guided.html:7` `/com` corruption.
-- [ ] CLAUDE.md: add `ruff`/`node` commands + "known debt / gotchas"; repair the
+- [x] Revert `web/proto-b-guided.html:7` `/com` corruption.
+- [x] CLAUDE.md: add `ruff`/`node` commands + "known debt / gotchas"; repair the
       `hydro-ux.js` view-logic claim.
-- [ ] Add `agent-os/retrospectives/` closeout note when Epoch 9 lands.
+- [x] Add `agent-os/retrospectives/` closeout note when Epoch 9 lands.
 
 ## Closeout
-- [ ] Full suite green (no regressions). Default `build.py` render byte-identical
-      (compare `svg_sha256`). Write `implementation/report.md`. Tick Epoch 9 items
-      `[x]` in the roadmap.
+- [x] Full suite green (no regressions; 527 passed). Default `build.py` render
+      byte-identical: not run offline (no local `datasets/`/GDAL); the only
+      render-affecting change (#34 constant) verified value-identical instead —
+      re-confirm `svg_sha256` on the next real render. Wrote `implementation/report.md`.
+      Ticked Epoch 9 items `[x]` in the roadmap.

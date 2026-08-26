@@ -441,7 +441,7 @@ output stays byte-identical** (these are pure internal cleanups, not behavior ch
 
 **Phase 9.1 — De-duplication (make the "single recipe" claim true)**
 
-33. [ ] De-duplicate the `clip_flowlines` render recipe — The GDB-iteration + VAA/EROM join + Strahler
+33. [x] De-duplicate the `clip_flowlines` render recipe — The GDB-iteration + VAA/EROM join + Strahler
 filter + shapely-clip loop is copy-pasted three times: the canonical `tools/render_common.clip_flowlines`,
 `tools/render_state_mono.clip_flowlines_elev` (admits "Mirrors …"), and
 `tools/render_state_mono_peak.clip_flowlines_elev_ids` (admits "Mirrors …"). Give the canonical
@@ -450,21 +450,21 @@ copies, so the two mono renderers call the shared recipe. `S`
 (These are `tools/` scripts outside the offline suite; the closeout is a smoke-render, not a test. Fix
 before `render_state_mono_peak.py` is committed as a permanent third copy.)
 
-34. [ ] Canonicalize the internal-CRS constant — `src/raster.py` defines `INTERNAL_CRS = "EPSG:5070"`,
+34. [x] Canonicalize the internal-CRS constant — `src/raster.py` defines `INTERNAL_CRS = "EPSG:5070"`,
 but `src/config.py`, `src/mesh.py`, `src/hydro_z.py`, and `src/waterbody_selection.py` hardcode the raw
 `"EPSG:5070"` string instead of importing it. Introduce one canonical constant (a small `src/crs.py` or
 re-export) and have every internal-CRS reference import it. `XS`
 (Pure rename/import change; a test asserts `config`/`mesh` reference the shared constant. Default output
 byte-identical.)
 
-35. [ ] Derive `STATE_HUC4` from `REGION_HUC4` — `tools/render_common.STATE_HUC4` is a hand-maintained
+35. [x] Derive `STATE_HUC4` from `REGION_HUC4` — `tools/render_common.STATE_HUC4` is a hand-maintained
 mirror of `src/datasets.REGION_HUC4` (Washington intentionally adds `1707`). Make `render_common` import
 `REGION_HUC4` and extend it, killing the drift hazard where updating one silently diverges from the
 other. `XS`
 
 **Phase 9.2 — Web view-helper extraction**
 
-36. [ ] Extract duplicated `web/` view helpers into `hydro-ux.js` — `drawSwatches`, `buildTimeline`,
+36. [x] Extract duplicated `web/` view helpers into `hydro-ux.js` — `drawSwatches`, `buildTimeline`,
 `paintTimeline`, `fillCounties`, `bindRange`, and `seg` are duplicated (several character-for-character)
 across `studio.html`, `proto-b-guided.html`, and `proto-c-canvas.html`, contradicting CLAUDE.md's "view
 logic lives only in `hydro-ux.js`" rule. Move them into `web/shared/hydro-ux.js` as exported helpers over
@@ -473,7 +473,7 @@ the existing `H.PALETTES`/`H.COUNTIES`/`H.MONTH_ABBR` and have each page call th
 
 **Phase 9.3 — Coverage & housekeeping**
 
-37. [ ] Pipeline orchestrator unit tests — `src/pipeline.py` (the 12-stage orchestrator, ~550 LOC) has
+37. [x] Pipeline orchestrator unit tests — `src/pipeline.py` (the 12-stage orchestrator, ~550 LOC) has
 no `tests/test_pipeline.py`; it is exercised only indirectly through the `test_*_pipeline.py` integration
 files. Add direct unit coverage for the structural contracts: canonical stage order, "no stubs remain"
 (every `PIPELINE_STAGES` entry has a real `_STAGE_FUNCS` function), `_stub` no-op behavior, `Stage`
@@ -482,7 +482,7 @@ stages in order sharing `artifacts`. `XS`
 (This item's deliverable **is** the test — it ships in the planning commit, green against existing
 behavior, and requires no source change.)
 
-38. [ ] Housekeeping & retrospective practice — (1) revert the accidental `/com` corruption in
+38. [x] Housekeeping & retrospective practice — (1) revert the accidental `/com` corruption in
 `web/proto-b-guided.html:7`; (2) add the missing invocations to CLAUDE.md's Commands (`ruff check .`,
 `node tests/test_recipe_roundtrip.cjs`) and a short "known debt / gotchas" note pointing at the
 `pipeline.py` gap and the de-dup items; (3) start a lightweight `agent-os/retrospectives/` practice (the
