@@ -26,6 +26,7 @@ import pandas as pd
 import shapely
 
 from src.coloring import get_palette
+from src.datasets import REGION_HUC4
 from src.rendering import bounds, flow_widths, render_svg
 
 EPSG = "EPSG:5070"
@@ -35,23 +36,13 @@ COUNTIES_SHP = "/tmp/counties_shp/cb_2023_us_county_500k.shp"
 GDB_ROOT = "datasets/nhdplus_hr"
 WBD_GLOB = "datasets/wbd/**/*.gdb"
 
-#: HUC4 basins to scan per state (matches src/datasets.REGION_HUC4, plus 1707
-#: which carries WA's Klickitat-area streams). Only those present locally are read.
+#: HUC4 basins to scan per state. Derived from ``src.datasets.REGION_HUC4`` (the
+#: single source of truth) rather than duplicated, with one intentional delta:
+#: Washington also scans ``1707``, which carries WA's Klickitat-area streams that
+#: the pipeline's region table omits. Only basins present locally are read.
 STATE_HUC4: dict[str, tuple[str, ...]] = {
-    "Washington": ("1701", "1702", "1703", "1707", "1708", "1710", "1711"),
-    "Oregon": ("1707", "1708", "1709", "1710", "1712", "1801"),
-    # California: HU2 region 18 (1801-1810) + region-17 OR/CA border basins
-    # (1710/1712). Mirrors src/datasets.REGION_HUC4; eastern HU2 15/16 desert
-    # fringes omitted (see that file's note).
-    "California": (
-        "1710", "1712",
-        "1801", "1802", "1803", "1804", "1805",
-        "1806", "1807", "1808", "1809", "1810",
-    ),
-    # Idaho: Snake River system + panhandle (all HU2 region 17). Mirrors
-    # src/datasets.REGION_HUC4; the SE Bear River corner (HU2 15/16) is omitted
-    # (see that file's note).
-    "Idaho": ("1701", "1704", "1705", "1706"),
+    **REGION_HUC4,
+    "Washington": tuple(sorted(REGION_HUC4["Washington"] + ("1707",))),
 }
 
 #: Approximate Clark County, WA extent in lon/lat (WGS84) for the no-download

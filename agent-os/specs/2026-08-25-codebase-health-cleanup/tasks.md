@@ -26,8 +26,9 @@
       output byte-identical (resolved default projection unchanged: `EPSG:5070`).
 
 ## TG3 — Derive `STATE_HUC4` from `REGION_HUC4` (#35)
-- [ ] `render_common` imports `REGION_HUC4`, extends it with WA `1707`; delete the
-      standalone table.
+- [x] `render_common` imports `REGION_HUC4`, extends it with WA `1707`; delete the
+      standalone table. (Derived table verified byte-identical to the old one,
+      incl. WA's sorted `1707` position.)
 
 ## TG4 — Extract `web/` view helpers (#36)
 - [ ] Move `drawSwatches`/`buildTimeline`/`paintTimeline`/`fillCounties`/
