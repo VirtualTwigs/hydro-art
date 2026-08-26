@@ -10,12 +10,12 @@
 - [x] Commit planning + the orchestrator test (leave #33–#36, #38 for implement).
 
 ## TG1 — De-duplicate `clip_flowlines` (#33)
-- [ ] Extend `tools/render_common.clip_flowlines` with `extra_vaa_cols`/`include_id`
+- [x] Extend `tools/render_common.clip_flowlines` with `extra_vaa_cols`/`include_id`
       (backward-compatible return shape).
-- [ ] Delete `render_state_mono.clip_flowlines_elev` +
+- [x] Delete `render_state_mono.clip_flowlines_elev` +
       `render_state_mono_peak.clip_flowlines_elev_ids`; point both at the shared
       recipe.
-- [ ] Smoke-render one state through each mono renderer (non-offline).
+- [ ] Smoke-render one state through each mono renderer (non-offline; needs GDAL+NAS).
 
 ## TG2 — Canonical internal-CRS constant (#34)
 - [ ] Add `src/crs.py` (`INTERNAL_CRS`), re-export from `src/raster.py`.

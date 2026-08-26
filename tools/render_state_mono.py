@@ -33,12 +33,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import geopandas as gpd
 import numpy as np
-import shapely
 
 from src.rendering import bounds, render_svg
 from tools.render_common import (
-    EPSG,
     STATE_HUC4,
+    clip_flowlines,
     flow_scaled_widths,
     gdb_paths,
     load_state,
@@ -85,86 +84,36 @@ def load_elevations(spec, keep_ids: set[int]) -> dict[int, float]:
     return out
 
 
-def clip_flowlines_elev(boundary, spec, min_order: int):
-    """Clip NHD flowlines under ``spec`` to ``boundary``, carrying elevation + flow.
+def _reach_elev(row_min, row_max) -> tuple[float, float]:
+    """Return ``(mean_m, max_m)`` smoothed elevation for one reach, in metres.
 
-    Mirrors :func:`tools.render_common.clip_flowlines` but joins the smoothed
-    flowline elevation (``MinElevSmo``/``MaxElevSmo``, metres) alongside ``QAMA``.
-    Each reach carries both its mean and its max smoothed elevation so the color
-    ramp can pick a metric later. Returns ``(geoms, elev_mean, elev_max, flows)``.
+    ``MinElevSmo``/``MaxElevSmo`` arrive in centimetres with a ``-9998`` no-data
+    sentinel (and ``nan`` for reaches absent from the VAA, as carried by
+    ``clip_flowlines``); both are excluded and an all-invalid reach falls back to
+    sea level ``(0.0, 0.0)``.
     """
-    shapely.prepare(boundary)
-    geoms: list = []
+    vals = [
+        v for v in (row_min, row_max)
+        if v is not None and v == v and v > ELEV_NODATA  # ``v == v`` drops nan
+    ]
+    if not vals:
+        return 0.0, 0.0
+    return float(np.mean(vals)) / 100.0, float(max(vals)) / 100.0
+
+
+def derive_elevations(mins, maxs) -> tuple[list[float], list[float]]:
+    """Turn parallel raw ``MinElevSmo``/``MaxElevSmo`` lists (as carried by
+    ``render_common.clip_flowlines(extra_vaa_cols=["MinElevSmo","MaxElevSmo"])``)
+    into parallel ``(elev_mean, elev_max)`` lists in metres via
+    :func:`_reach_elev`. Shared by both the still and the peak-flow renderers so
+    the hypsometric tint is computed one way."""
     elev_mean: list[float] = []
     elev_max: list[float] = []
-    flows: list[float] = []
-    for gdb in gdb_paths(spec):
-        code = Path(gdb).parent.name
-        try:
-            f = gpd.read_file(gdb, layer="NHDFlowline", columns=["NHDPlusID"])
-        except Exception as exc:  # noqa: BLE001 - skip a partial/corrupt GDB
-            print(f"  skip {code}: {exc}")
-            continue
-        vaa = gpd.read_file(
-            gdb, layer="NHDPlusFlowlineVAA",
-            columns=["NHDPlusID", "StreamOrde", "MinElevSmo", "MaxElevSmo"],
-            read_geometry=False,
-        )
-        order_by_id = dict(zip(vaa["NHDPlusID"], vaa["StreamOrde"]))
-
-        def _elev(row_min, row_max):
-            vals = [v for v in (row_min, row_max) if v is not None and v > ELEV_NODATA]
-            if not vals:
-                return 0.0, 0.0
-            return float(np.mean(vals)) / 100.0, float(max(vals)) / 100.0
-
-        elev_by_id = {
-            i: _elev(mn, mx)
-            for i, mn, mx in zip(vaa["NHDPlusID"], vaa["MinElevSmo"], vaa["MaxElevSmo"])
-        }
-        erom = gpd.read_file(
-            gdb, layer="NHDPlusEROMMA",
-            columns=["NHDPlusID", "QAMA"], read_geometry=False,
-        )
-        flow_by_id = dict(zip(erom["NHDPlusID"], erom["QAMA"]))
-
-        seg_orders = (
-            f["NHDPlusID"].map(lambda i: int(order_by_id.get(i, 1) or 1)).to_numpy()
-        )
-        seg_em = f["NHDPlusID"].map(lambda i: elev_by_id.get(i, (0.0, 0.0))[0]).to_numpy()
-        seg_ex = f["NHDPlusID"].map(lambda i: elev_by_id.get(i, (0.0, 0.0))[1]).to_numpy()
-        seg_flows = (
-            f["NHDPlusID"].map(lambda i: float(flow_by_id.get(i, 0.0) or 0.0)).to_numpy()
-        )
-        if min_order > 1:
-            keep = seg_orders >= min_order
-            f = f[keep]
-            seg_em = seg_em[keep]
-            seg_ex = seg_ex[keep]
-            seg_flows = seg_flows[keep]
-        f = f.to_crs(EPSG)
-        arr = np.array(f.geometry.values, dtype=object)
-        covered = shapely.covers(boundary, arr)
-        crossing = shapely.intersects(boundary, arr) & ~covered
-
-        kept0 = len(geoms)
-        for gi in np.nonzero(covered)[0]:
-            geoms.append(arr[gi])
-            elev_mean.append(float(seg_em[gi]))
-            elev_max.append(float(seg_ex[gi]))
-            flows.append(float(seg_flows[gi]))
-        cross_idx = np.nonzero(crossing)[0]
-        if cross_idx.size:
-            trimmed = shapely.intersection(boundary, arr[cross_idx])
-            for local_i, gi in enumerate(cross_idx):
-                g = trimmed[local_i]
-                if not g.is_empty:
-                    geoms.append(g)
-                    elev_mean.append(float(seg_em[gi]))
-                    elev_max.append(float(seg_ex[gi]))
-                    flows.append(float(seg_flows[gi]))
-        print(f"  {code}: kept {len(geoms) - kept0}")
-    return geoms, elev_mean, elev_max, flows
+    for mn, mx in zip(mins, maxs):
+        em, ex = _reach_elev(mn, mx)
+        elev_mean.append(em)
+        elev_max.append(ex)
+    return elev_mean, elev_max
 
 
 def elevation_colors(elevs, gamma: float, anchor: float | None = None):
@@ -256,8 +205,12 @@ def main() -> int:
         print(f"loading {args.state} boundary ...")
         boundary = load_state(args.state)
         print(f"clipping flowlines (min_order={args.min_order}) from {spec} ...")
-        geoms, elev_mean, elev_max, flows = clip_flowlines_elev(
-            boundary, spec, args.min_order
+        geoms, _orders, flows, _basins, extras = clip_flowlines(
+            boundary, spec, args.min_order,
+            extra_vaa_cols=["MinElevSmo", "MaxElevSmo"],
+        )
+        elev_mean, elev_max = derive_elevations(
+            extras["MinElevSmo"], extras["MaxElevSmo"]
         )
         cache.write_bytes(pickle.dumps((geoms, elev_mean, elev_max, flows)))
     print(f"total kept: {len(geoms)}")

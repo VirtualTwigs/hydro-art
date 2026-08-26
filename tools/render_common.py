@@ -18,7 +18,7 @@ from __future__ import annotations
 import glob
 import subprocess
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Sequence
 
 import geopandas as gpd
 import numpy as np
@@ -107,7 +107,24 @@ def gdb_paths(spec: str | Iterable[str]) -> list[str]:
     return sorted(set(paths))
 
 
-def clip_flowlines(boundary, spec: str | Iterable[str], min_order: int):
+def _as_float(x) -> float:
+    """Coerce a possibly-``None`` GDB cell to ``float`` (``None`` -> ``nan``).
+
+    ``nan`` is deliberate for a *missing* attribute so downstream metrics (e.g.
+    the elevation ramp's no-data handling) can exclude it, matching the behavior
+    of the elevation renderers before they shared this recipe.
+    """
+    return float(x) if x is not None else float("nan")
+
+
+def clip_flowlines(
+    boundary,
+    spec: str | Iterable[str],
+    min_order: int,
+    *,
+    extra_vaa_cols: Sequence[str] = (),
+    include_id: bool = False,
+):
     """Clip NHD flowlines under ``spec`` to ``boundary``.
 
     Each kept flowline carries its USGS Strahler ``StreamOrde`` (from
@@ -120,12 +137,24 @@ def clip_flowlines(boundary, spec: str | Iterable[str], min_order: int):
 
     Returns parallel lists ``(geoms, orders, flows, basins)`` where ``basins`` is
     each geometry's source HUC4 (the GDB's parent directory name).
+
+    ``extra_vaa_cols`` names additional ``NHDPlusFlowlineVAA`` columns (e.g.
+    ``MinElevSmo``/``MaxElevSmo``) to read and carry through as raw floats;
+    ``include_id`` carries each reach's ``NHDPlusID`` (the stable join key for the
+    monthly-flow series). When either is requested a 5th value ``extras`` is
+    appended — a dict mapping each requested column name (and ``"nhdplus_id"``) to
+    a list parallel to ``geoms``. Callers that pass neither get the historical
+    4-tuple unchanged, so existing renderers need no change.
     """
     shapely.prepare(boundary)
     geoms: list = []
     orders: list[int] = []
     flows: list[float] = []
     basins: list[str] = []
+    extra_cols = list(extra_vaa_cols)
+    extras: dict[str, list] = {col: [] for col in extra_cols}
+    if include_id:
+        extras["nhdplus_id"] = []
     for gdb in gdb_paths(spec):
         code = Path(gdb).parent.name
         try:
@@ -135,43 +164,62 @@ def clip_flowlines(boundary, spec: str | Iterable[str], min_order: int):
             continue
         vaa = gpd.read_file(
             gdb, layer="NHDPlusFlowlineVAA",
-            columns=["NHDPlusID", "StreamOrde"], read_geometry=False,
+            columns=["NHDPlusID", "StreamOrde", *extra_cols], read_geometry=False,
         )
         order_by_id = dict(zip(vaa["NHDPlusID"], vaa["StreamOrde"]))
+        extra_by_id = {col: dict(zip(vaa["NHDPlusID"], vaa[col])) for col in extra_cols}
         erom = gpd.read_file(
             gdb, layer="NHDPlusEROMMA",
             columns=["NHDPlusID", "QAMA"], read_geometry=False,
         )
         flow_by_id = dict(zip(erom["NHDPlusID"], erom["QAMA"]))
+        ids = f["NHDPlusID"].to_numpy()
         seg_orders = (
             f["NHDPlusID"].map(lambda i: int(order_by_id.get(i, 1) or 1)).to_numpy()
         )
         seg_flows = (
             f["NHDPlusID"].map(lambda i: float(flow_by_id.get(i, 0.0) or 0.0)).to_numpy()
         )
+        seg_extra = {
+            col: f["NHDPlusID"].map(lambda i, c=col: _as_float(extra_by_id[c].get(i)))
+            .to_numpy()
+            for col in extra_cols
+        }
         if min_order > 1:
             keep = seg_orders >= min_order
             f = f[keep]
+            ids = ids[keep]
             seg_orders = seg_orders[keep]
             seg_flows = seg_flows[keep]
+            seg_extra = {c: a[keep] for c, a in seg_extra.items()}
         f = f.to_crs(EPSG)
         arr = np.array(f.geometry.values, dtype=object)
         covered = shapely.covers(boundary, arr)
         crossing = shapely.intersects(boundary, arr) & ~covered
 
+        def _emit(gi: int, geom) -> None:
+            geoms.append(geom)
+            orders.append(int(seg_orders[gi]))
+            flows.append(float(seg_flows[gi]))
+            basins.append(code)
+            for col in extra_cols:
+                extras[col].append(float(seg_extra[col][gi]))
+            if include_id:
+                extras["nhdplus_id"].append(int(ids[gi]))
+
         kept0 = len(geoms)
         for gi in np.nonzero(covered)[0]:
-            geoms.append(arr[gi]); orders.append(int(seg_orders[gi]))
-            flows.append(float(seg_flows[gi])); basins.append(code)
+            _emit(gi, arr[gi])
         cross_idx = np.nonzero(crossing)[0]
         if cross_idx.size:
             trimmed = shapely.intersection(boundary, arr[cross_idx])
             for local_i, gi in enumerate(cross_idx):
                 g = trimmed[local_i]
                 if not g.is_empty:
-                    geoms.append(g); orders.append(int(seg_orders[gi]))
-                    flows.append(float(seg_flows[gi])); basins.append(code)
+                    _emit(gi, g)
         print(f"  {code}: kept {len(geoms) - kept0}")
+    if extra_cols or include_id:
+        return geoms, orders, flows, basins, extras
     return geoms, orders, flows, basins
 
 
