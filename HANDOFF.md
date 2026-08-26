@@ -1,12 +1,11 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-12, after Epoch 6 (#23–#28) complete, a roadmap bookkeeping audit (W1–W3 + #11 marked done, committed `c254d47`), Epoch 5 #20 (accuracy validation suite, committed `43d1635`), #21 offline-packaging slices (portable cache manifests `f5997d8` + DEM tile-budget `0825475`), and the #22 terrain-aware-hillshade slice (committed `a0674c4`), the #22 animation/camera-paths
-slice (committed `d22a0d1`), the #22 web-delivery slice (which completed roadmap #22), the third
-#21 slice — the **package preflight planner** (`src/packaging.py` + `tools/package_cache.py`,
-committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acquisition entry point**
-(`acquire_dem_for_settings` in `src/dem.py`, implemented, commit pending)._
+_Last updated: 2026-08-25, after Epoch 8 (terrain-aware print, #30–#32) and Epoch 9 (codebase
+health, #33–#38) both closed, each with a closeout note under `agent-os/retrospectives/`
+(`2026-08-25-epoch-8-terrain-print.md` `d44dad1`, `2026-08-25-epoch-9-codebase-health.md`
+`6c3038a`). See the per-item bullets below for the full trail back through Epochs 5–7._
 
-## Current state (2026-08-17)
+## Current state (2026-08-25)
 
 - **Epoch 9 DONE (2026-08-25) — codebase health & maintainability (#33–#38).** A
   2026-08-25 audit surfaced maintainability debt (triplicated `clip_flowlines`,
