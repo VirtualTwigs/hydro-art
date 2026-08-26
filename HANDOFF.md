@@ -19,7 +19,8 @@ committed `1c01574`), plus a fourth #21 slice — the **settings-driven DEM acqu
   six `web/` view helpers extracted into `hydro-ux.js` (`0c0ba45`); **#38** housekeeping
   + retrospective closeout — reverted the `/com` corruption, CLAUDE.md `ruff`/`node`
   commands + "Known debt / gotchas" + repaired the hydro-ux.js view-logic claim, first
-  `agent-os/retrospectives/` note (`6c3038a`). Suite green (527), recipe roundtrip
+  `agent-os/retrospectives/` note — `2026-08-25-epoch-9-codebase-health.md` (`6c3038a`).
+  Suite green (527), recipe roundtrip
   green (11). Hard invariant held: offline suite green + 2D default output
   byte-identical (the only render-affecting change, #34's constant, is value-identical;
   a real GDAL svg_sha256 compare wasn't possible offline — carry-forward).
