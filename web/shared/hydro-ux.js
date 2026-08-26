@@ -499,6 +499,72 @@
     return p ? applyRecipe(state, p.recipe) : Object.assign({}, state);
   }
 
+  // ---- View helpers (DOM; browser-only) -----------------------------------
+  // Small helpers shared by the studio + prototype pages so the swatch,
+  // month-timeline, county-select, and segmented-control/range view logic lives
+  // in one place instead of being copy-pasted per page. They read the already
+  // exported option data (PALETTES/COUNTIES/MONTH_ABBR) plus the page's mutable
+  // `state`, and write to the fixed element IDs every page shares (#swatches,
+  // #county, #timeline, #tlLabel). The event-binding helpers (seg/bindRange)
+  // take the page's re-render callback as `after`, since each page repaints
+  // differently. `document` is only touched inside the bodies, so this module
+  // still loads under Node (the .cjs recipe test never calls these).
+
+  function drawSwatches(state) {
+    document.getElementById("swatches").innerHTML =
+      PALETTES[state.palette].map((c) => `<i style="background:${c}"></i>`).join("");
+  }
+
+  function fillCounties(state) {
+    const opts = COUNTIES[state.state];
+    document.getElementById("county").innerHTML =
+      opts.map((c) => `<option value="${c}">${c}</option>`).join("");
+    state.county = opts[0];
+  }
+
+  function buildTimeline(state) {
+    document.getElementById("timeline").innerHTML =
+      MONTH_ABBR.map((m, i) => `<div class="mo" data-m="${i}">${m}</div>`).join("");
+    paintTimeline(state);
+  }
+
+  function paintTimeline(state) {
+    const tl = document.getElementById("timeline");
+    [...tl.children].forEach((c, i) => {
+      c.classList.remove("in-range", "edge");
+      if (state.timeMode === "single" && i === state.monthStart) c.classList.add("edge");
+      if (state.timeMode === "range") {
+        if (i === state.monthStart || i === state.monthEnd) c.classList.add("edge");
+        else if (i > state.monthStart && i < state.monthEnd) c.classList.add("in-range");
+      }
+    });
+    document.getElementById("tlLabel").textContent =
+      state.timeMode === "range"
+        ? `${MONTH_ABBR[state.monthStart]}\u2013${MONTH_ABBR[state.monthEnd]}`
+        : MONTH_ABBR[state.monthStart];
+  }
+
+  // Segmented button group: on click, mark the clicked button active, write its
+  // `data-v` into `state[key]`, then run `after` (the page's re-render).
+  function seg(state, id, key, after) {
+    const box = document.getElementById(id);
+    box.addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      [...box.children].forEach((x) => x.classList.toggle("active", x === b));
+      state[key] = b.dataset.v; after();
+    });
+  }
+
+  // Range input bound to `state[key]` (parsed float); optionally writes a
+  // formatted value into `#valId`, then runs `after`.
+  function bindRange(state, id, key, fmt, valId, after) {
+    document.getElementById(id).addEventListener("input", (e) => {
+      state[key] = parseFloat(e.target.value);
+      if (valId) document.getElementById(valId).textContent = fmt(state[key]);
+      after();
+    });
+  }
+
   // ---- Public surface -----------------------------------------------------
   const HydroUX = {
     STATES, COUNTIES, PALETTES, HYPSO, MONTH_ABBR, HUC_LEVELS,
@@ -510,6 +576,7 @@
     toRecipe, sanitizeRecipe, encodeRecipe, decodeRecipe, applyRecipe,
     b64url, b64urlDecode,
     PRESETS, presetById, applyPreset,
+    drawSwatches, fillCounties, buildTimeline, paintTimeline, seg, bindRange,
   };
   global.HydroUX = HydroUX;
   if (typeof module !== "undefined" && module.exports) module.exports = HydroUX;

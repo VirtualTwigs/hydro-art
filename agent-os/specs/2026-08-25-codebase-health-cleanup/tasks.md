@@ -31,9 +31,9 @@
       incl. WA's sorted `1707` position.)
 
 ## TG4 — Extract `web/` view helpers (#36)
-- [ ] Move `drawSwatches`/`buildTimeline`/`paintTimeline`/`fillCounties`/
+- [x] Move `drawSwatches`/`buildTimeline`/`paintTimeline`/`fillCounties`/
       `bindRange`/`seg` into `web/shared/hydro-ux.js` (superset signatures).
-- [ ] Update `studio.html`/`proto-b-guided.html`/`proto-c-canvas.html` to call
+- [x] Update `studio.html`/`proto-b-guided.html`/`proto-c-canvas.html` to call
       `HydroUX.*`; verify pages + `node tests/test_recipe_roundtrip.cjs`.
 
 ## TG5 — Housekeeping & retrospective (#38)

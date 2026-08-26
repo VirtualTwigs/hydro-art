@@ -154,28 +154,9 @@ const state = {
 };
 
 el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
-function fillCounties(){ el("county").innerHTML = H.COUNTIES[state.state].map(c => `<option value="${c}">${c}</option>`).join(""); state.county = H.COUNTIES[state.state][0]; }
-fillCounties();
-function drawSwatches(){ el("swatches").innerHTML = H.PALETTES[state.palette].map(c=>`<i style="background:${c}"></i>`).join(""); }
+H.fillCounties(state);
 
 // Timeline (step 2)
-function buildTimeline(){
-  el("timeline").innerHTML = H.MONTH_ABBR.map((m,i)=>`<div class="mo" data-m="${i}">${m}</div>`).join("");
-  paintTimeline();
-}
-function paintTimeline(){
-  [...el("timeline").children].forEach((c,i)=>{
-    c.classList.remove("in-range","edge");
-    if (state.timeMode === "single" && i === state.monthStart) c.classList.add("edge");
-    if (state.timeMode === "range"){
-      if (i === state.monthStart || i === state.monthEnd) c.classList.add("edge");
-      else if (i > state.monthStart && i < state.monthEnd) c.classList.add("in-range");
-    }
-  });
-  el("tlLabel").textContent = state.timeMode === "range"
-    ? `${H.MONTH_ABBR[state.monthStart]}–${H.MONTH_ABBR[state.monthEnd]}`
-    : H.MONTH_ABBR[state.monthStart];
-}
 el("timeline").addEventListener("click", e => {
   const c = e.target.closest(".mo"); if (!c) return;
   const m = +c.dataset.m;
@@ -185,7 +166,7 @@ el("timeline").addEventListener("click", e => {
     if (Math.abs(m - state.monthStart) <= Math.abs(m - state.monthEnd)) state.monthStart = Math.min(m, state.monthEnd);
     else state.monthEnd = Math.max(m, state.monthStart);
   }
-  paintTimeline(); apply();
+  H.paintTimeline(state); apply();
 });
 
 // Render
@@ -220,32 +201,25 @@ function updateSummary(){
   el("cli").textContent = H.cliMapping(state) + (state.formats.length ? `\n  --output ${state.formats.join(" ")}` : "");
 }
 
-// Segmented helper
-function seg(id, key, after){
-  el(id).addEventListener("click", e => {
-    const b = e.target.closest("button"); if (!b) return;
-    [...el(id).children].forEach(x => x.classList.toggle("active", x===b));
-    state[key] = b.dataset.v; (after||apply)();
-  });
-}
-seg("scope","scope",()=>{ el("countyWrap").hidden = state.scope!=="county"; applyScope(); apply(); });
-seg("timeMode","timeMode",()=>{ el("tlWrap").hidden = state.timeMode==="annual"; if (state.timeMode==="range" && state.monthEnd<=state.monthStart) state.monthEnd = Math.min(11, state.monthStart+3); paintTimeline(); apply(); });
-seg("colorMode","colorMode",()=>{
+// Segmented helper (shared HydroUX.seg)
+H.seg(state, "scope","scope",()=>{ el("countyWrap").hidden = state.scope!=="county"; applyScope(); apply(); });
+H.seg(state, "timeMode","timeMode",()=>{ el("tlWrap").hidden = state.timeMode==="annual"; if (state.timeMode==="range" && state.monthEnd<=state.monthStart) state.monthEnd = Math.min(11, state.monthStart+3); H.paintTimeline(state); apply(); });
+H.seg(state, "colorMode","colorMode",()=>{
   el("paletteWrap").hidden = state.colorMode!=="watershed";
   el("singleWrap").hidden  = state.colorMode!=="single";
   el("elevHint").hidden    = state.colorMode!=="elevation";
   apply();
 });
-seg("widthMode","widthMode");
+H.seg(state, "widthMode","widthMode", apply);
 el("glowMode").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   [...el("glowMode").children].forEach(x => x.classList.toggle("active", x===b));
   state.glow = b.dataset.v === "on"; apply();
 });
 
-el("state").addEventListener("change", e => { state.state = e.target.value; fillCounties(); rebuild(); });
+el("state").addEventListener("change", e => { state.state = e.target.value; H.fillCounties(state); rebuild(); });
 el("county").addEventListener("change", e => { state.county = e.target.value; applyScope(); apply(); });
-el("palette").addEventListener("change", e => { state.palette = e.target.value; drawSwatches(); apply(); });
+el("palette").addEventListener("change", e => { state.palette = e.target.value; H.drawSwatches(state); apply(); });
 el("singleColor").addEventListener("input", e => { state.single = e.target.value; apply(); });
 el("fmt").addEventListener("click", e => {
   const c = e.target.closest(".chip"); if (!c) return;
@@ -253,9 +227,8 @@ el("fmt").addEventListener("click", e => {
   state.formats = [...el("fmt").querySelectorAll(".chip.active")].map(x=>x.dataset.v);
   updateSummary();
 });
-function bindRange(id, key, fmt, valId){ el(id).addEventListener("input", e => { state[key]=parseFloat(e.target.value); if(valId) el(valId).textContent=fmt(state[key]); apply(); }); }
-bindRange("minW","minW", v=>v.toFixed(1)+"px", "minVal");
-bindRange("maxW","maxW", v=>v.toFixed(1)+"px", "maxVal");
+H.bindRange(state, "minW","minW", v=>v.toFixed(1)+"px", "minVal", apply);
+H.bindRange(state, "maxW","maxW", v=>v.toFixed(1)+"px", "maxVal", apply);
 
 // Stepper navigation
 function showStep(n){
@@ -271,7 +244,7 @@ el("next").addEventListener("click", () => { if (step === NSTEPS-1){ alert("Prot
 el("steps").addEventListener("click", e => { const i=[...el("steps").children].indexOf(e.target.closest(".step")); if (i>=0) showStep(i); });
 
 // Boot
-drawSwatches(); buildTimeline(); rebuild(); showStep(0);
+H.drawSwatches(state); H.buildTimeline(state); rebuild(); showStep(0);
 </script>
 </body>
 </html>
