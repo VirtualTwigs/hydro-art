@@ -492,6 +492,92 @@ Epoch gate: the offline suite is green, the 2D pipeline's default output is byte
 duplicated copy of `clip_flowlines` or the named `web/` view helpers remains, `src/pipeline.py` has
 direct unit coverage, and a retrospective note exists for a closed epoch.
 
+## Epoch 10 — Verification & real-data confidence
+
+**No new product capability.** The 2026-08-27 assessment surfaced the codebase's one structural weak
+seam: the offline suite (its greatest strength) sometimes *asserts* invariants it cannot *verify* —
+byte-identical output and the real GDAL/warp paths — so real-data runs keep discovering what injected
+fakes miss (the #32 latitude-drift mosaic bug; #34's byte-identical claim carried forward unverified).
+This epoch makes those invariants *checkable on demand* without disturbing the fully-offline 527-test
+suite. Hard invariant: the offline suite stays green and the 2D default output stays byte-identical.
+
+**Phase 10.1 — Determinism you can prove**
+
+39. [ ] Determinism verifier — `tools/verify_determinism.py`: render a fixed region twice and diff
+`svg_sha256` + rasterized PNG; commit per-region golden hashes as fixtures. Closes the "#34 asserted
+byte-identical but couldn't verify offline" carry-forward. `S`
+
+40. [ ] Golden-output fixtures for one small region — commit a tiny county's expected SVG hash + DEM
+mosaic checksum so a machine *with* GDAL catches drift the offline fakes can't. `M`
+
+**Phase 10.2 — Exercise the paths fakes skip**
+
+41. [ ] Real-data smoke harness (opt-in, outside the offline suite) — a `tools/`-driven check that
+fires exactly the branches fakes skip: the reprojector's non-identity EPSG:4269→5070 warp, multi-tile
+mosaic alignment (the #32 class), and the cross-device SMB mover. Gated behind an env flag/marker so
+the offline suite is untouched. `M`
+
+42. [ ] DEM alignment invariant on real tiles — a targeted regression asserting mosaicked tiles share a
+pixel grid *after* the single warp, on ≥2 real 3DEP tiles at different latitudes (the #32 bug). `S`
+
+**Phase 10.3 — Reduce docs churn**
+
+43. [ ] HANDOFF/roadmap status automation — a small script to stamp timestamps + epoch status, so
+progress bookkeeping stops costing 3–4 hand-edit commits per epoch. `S`
+
+Epoch gate: a single command proves determinism (double-render byte-identical) and exercises the real
+warp/mosaic/cross-device paths, producing a trustworthy pass/fail without reading the code; the offline
+suite is still green and the 2D default output byte-identical.
+
+## Epoch 11 — Year-over-year historical flow (Option C)
+
+Give the "year in motion" render a **year-over-year axis**. Today's twelve monthly frames are a
+*synthetic average year* — `tools/monthly_flow.py` disaggregates NHDPlus HR's mean-annual `QAMA` using
+the GDB's long-term climate *normals*, with no calendar year attached. This epoch runs the *same*
+shared disaggregation (`src.monthly_flow.disaggregate_monthly`) against **real per-year monthly climate
+from PRISM** (monthly record from **1895**), for a chosen year or a span of years, across California,
+Washington, Oregon, Utah, and Idaho. Chosen over the NWM-retrospective and USGS-gauge routes because it
+reuses the existing engine, reaches the deepest history, needs no NHDPlus-V2↔HR crosswalk, and only a
+few GB of HTTP-downloadable rasters (it is honestly a model, not observed flow). Mirrors the #23/#25
+precedent — promote a pure offline algorithm + option surface into `src/`, keep the heavy raster reads
+in a `tools/` executor behind an injectable seam; the default synthetic-year render stays
+byte-identical. Spec: `agent-os/specs/2026-08-27-year-over-year-flow/`.
+
+**Phase 11.1 — Pure historical-flow engine**
+
+44. [x] Historical-flow disaggregation engine — `src/historical_flow.py` (numpy-only, offline):
+`PRISM_FIRST_YEAR`, `YearlyClimate`, the injectable `ClimateProvider` seam, `normalize_years`/
+`year_span` validation, `yearly_flow_series` (per-year `disaggregate_monthly`), and `annual_mean_series`
+/`peak_month_series` cross-year reducers; clock-free (`latest` passed in). `M`
+(Done in the planning commit: 17 offline tests in `tests/test_historical_flow.py` inject a fake
+`ClimateProvider` over a 3-reach chain — validation, parity with `disaggregate_monthly`, once-per-year,
+reach-count mismatch, July-spike peaks in July, mass conservation. No source change to the 2D pipeline.)
+
+**Phase 11.2 — PRISM climate ingestion (non-offline)**
+
+45. [ ] PRISM monthly climate provider — `tools/historical_flow.py`: `PrismClimateProvider` reads 12
+monthly PRISM `ppt`+`tmean` grids per year and samples each catchment (aligned to the reach order
+`tools/monthly_flow.build_monthly_flow` uses) → `YearlyClimate`, behind the `ClimateProvider` seam so
+`src/` stays GDAL-free; PRISM archive NAS-staged (mount-aware) like the GDBs. `L`
+
+**Phase 11.3 — Year-over-year rendering**
+
+46. [ ] Year-over-year render mode — extend `render_infographic_year.py`/`render_monthly.py` to drive
+frames from `yearly_flow_series` for a single chosen historical year and for a walk across years, with a
+**fixed cross-series width span** (reuse `src.rendering.fixed_flow_span`/`widths_on_span`) so inter-year
+swell/drought is visible rather than renormalized away. `M`
+
+**Phase 11.4 — Region expansion**
+
+47. [ ] Add Utah as a supported region — `tools/derive_state_huc4.py` → UT HUC4s; wire
+`SUPPORTED_REGIONS`, `datasets.REGION_HUC4`, `counties.STATE_FIPS`, and the `render_common.STATE_HUC4`
+mirror; download UT NHDPlus HR GDBs. The well-trodden Idaho (#21) fourth-region path; completes the
+CA/WA/OR/UT/ID cohort. `S`
+
+Epoch gate: a render shows the same network's monthly flow for a chosen historical calendar year (and
+can step across years) driven by real PRISM climate for CA/WA/OR/UT/ID, back to a documented start year;
+the default synthetic-year render stays byte-identical.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
