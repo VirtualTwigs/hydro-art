@@ -166,6 +166,7 @@ Self-contained HTML/JS pages (no build step — open directly over `file://`) ex
 - Type hints + docstrings on public functions; `from __future__ import annotations` at the top of modules.
 - Immutable/frozen dataclasses for value objects (`Settings`, `Stage`); prefer pure functions operating on injected inputs over stateful classes.
 - Runtime data dirs `datasets/`, `cache/`, `output/`, `logs/` are large and git-ignored (regenerable). `.venv/` is the project interpreter.
+- `notebooks/` holds ad-hoc Jupyter GIS exploration (e.g. `watershed_analysis.ipynb`). Like `tools/`, notebooks import heavy GIS libs (`geopandas`/`pyogrio`) eagerly and may import from `src/` (e.g. `src.crs.INTERNAL_CRS`) — the one-way dependency still holds (`src/` and the offline suite never import notebooks). They live outside the pipeline and the test suite; they only work in a full (non-offline) environment.
 
 ## Known debt / gotchas
 
@@ -174,3 +175,4 @@ Self-contained HTML/JS pages (no build step — open directly over `file://`) ex
 - **The DEM/terrain/3D subsystem is *not* wired into `PIPELINE_STAGES`** (see Architecture). `color_by=elevation` and non-annual `--months` are shipped as real `build.py` flags but **fail fast** in the 2D pipeline; the actual renders come from `tools/render_state_mono.py` / `tools/render_monthly.py`. The `web/` output contract carries this caveat honestly — keep it.
 - **`src/raster.py` normalizes DEMs mosaic-**before**-warp** (Epoch 8): each 1°×1° 3DEP tile warped independently drifts resolution with latitude, so `_require_aligned` compares pixel sizes with a *relative* tolerance (float-last-digit warp drift mosaics; a genuine tier change is still rejected). Don't "simplify" this back to warp-then-mosaic.
 - **`web/shared/hydro-ux.js` must stay Node-loadable** — no `document`/`window` reference at module top-level (the DOM view helpers touch `document` only inside their function bodies), or `node tests/test_recipe_roundtrip.cjs` breaks.
+- **Jupyter scratch is git-ignored, real notebooks are not.** `.ipynb_checkpoints/` and scratch `Untitled.ipynb` are in `.gitignore`; committed notebooks live under `notebooks/` (untracked until you `git add` them).

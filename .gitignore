@@ -25,3 +25,7 @@ venv/
 
 # Node (SVGO)
 node_modules/
+
+# Jupyter
+.ipynb_checkpoints/
+Untitled.ipynb
