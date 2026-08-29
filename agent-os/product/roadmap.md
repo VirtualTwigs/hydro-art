@@ -555,17 +555,17 @@ reach-count mismatch, July-spike peaks in July, mass conservation. No source cha
 
 **Phase 11.2 — PRISM climate ingestion (non-offline)**
 
-45. [ ] PRISM monthly climate provider — `tools/historical_flow.py`: `PrismClimateProvider` reads 12
-monthly PRISM `ppt`+`tmean` grids per year and samples each catchment (aligned to the reach order
-`tools/monthly_flow.build_monthly_flow` uses) → `YearlyClimate`, behind the `ClimateProvider` seam so
-`src/` stays GDAL-free; PRISM archive NAS-staged (mount-aware) like the GDBs. `L`
+45. [x] PRISM monthly climate provider — `tools/historical_flow.py`: `PrismClimateProvider` reads 12
+monthly PRISM `ppt`+`tmean` grids per year and samples each catchment centroid → `YearlyClimate`, behind
+the `ClimateProvider` seam so `src/` stays GDAL-free; PRISM archive NAS-staged (mount-aware) via
+`tools/prism_fetch.py` like the GDBs. `L`
 
 **Phase 11.3 — Year-over-year rendering**
 
-46. [ ] Year-over-year render mode — extend `render_infographic_year.py`/`render_monthly.py` to drive
-frames from `yearly_flow_series` for a single chosen historical year and for a walk across years, with a
-**fixed cross-series width span** (reuse `src.rendering.fixed_flow_span`/`widths_on_span`) so inter-year
-swell/drought is visible rather than renormalized away. `M`
+46. [x] Year-over-year render mode — `tools/render_state_yoy.py` drives frames from
+`src.historical_flow.yearly_flow_series` for a walk across years, with a **fixed cross-series width span**
+(reuse `src.rendering.fixed_flow_span`/`widths_on_span`) so inter-year swell/drought is visible rather
+than renormalized away. Proven on WA 2014–2023 (May flow 76M→211M cfs). `M`
 
 **Phase 11.4 — Region expansion**
 

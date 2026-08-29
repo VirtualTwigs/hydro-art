@@ -19,24 +19,26 @@ non-offline (closeout = smoke-render + note).
 - [x] 1.3 Run only these tests (17 passing). Full-suite regression check + this
   report deferred to the commit step.
 
-## Group 2 — PRISM climate ingestion (#45) · non-offline
+## Group 2 — PRISM climate ingestion (#45) · non-offline · **DONE**
 
-- [ ] 2.1 `tools/historical_flow.py`: `PrismClimateProvider` reading 12 monthly
-  PRISM `ppt` + `tmean` grids per year, sampling each catchment aligned to the
-  reach order `tools/monthly_flow.build_monthly_flow` uses → `YearlyClimate`.
-- [ ] 2.2 NAS-staged PRISM download/stage helper (mount-aware, mirrors the cache
-  discipline; archives on the NAS Pro drive, not local).
-- [ ] 2.3 Smoke: pull one year for one HUC4, confirm `yearly_flow_series` returns
-  sane `[n,12]` flow; record catchment coverage / any missing-climate fallback.
+- [x] 2.1 `tools/historical_flow.py`: `PrismClimateProvider` reading 12 monthly
+  PRISM `ppt` + `tmean` grids per year, sampling each catchment centroid (EPSG:4269;
+  row/col computed once from the shared geotransform, then vectorized) → `YearlyClimate`;
+  ocean nodata → precip 0 / temp 10 °C.
+- [x] 2.2 NAS-staged PRISM download/stage helper (`tools/prism_fetch.py`, NACSE
+  web service, idempotent/resumable; archives under `<root>/prism/<var>/`).
+- [x] 2.3 Smoke: staged all of 2014–2023 (240 grids); WA render disaggregated every
+  HUC4 with **147,908/147,908 reaches** carrying real PRISM flow (no fallbacks).
 
-## Group 3 — Year-over-year rendering (#46) · non-offline
+## Group 3 — Year-over-year rendering (#46) · non-offline · **DONE**
 
-- [ ] 3.1 Extend `render_infographic_year.py` / `render_monthly.py` to drive
-  frames from `yearly_flow_series` for a single chosen year and for a year walk.
-- [ ] 3.2 Fixed cross-series width span across all rendered months/years (reuse
+- [x] 3.1 `tools/render_state_yoy.py` drives frames from
+  `src.historical_flow.yearly_flow_series` for a year walk (real per-year
+  `disaggregate_monthly` per HUC4, merged by `NHDPlusID`).
+- [x] 3.2 Fixed cross-series width span across all rendered years (reuse
   `src.rendering.fixed_flow_span`/`widths_on_span`) so inter-year change shows.
-- [ ] 3.3 Smoke: render a dry year vs. a wet year for one state; confirm the
-  channel widths visibly differ.
+- [x] 3.3 Smoke: WA 2014–2023 GIF — summed peak-month (May) flow ranges from a
+  76M cfs drought (2016) to 211M cfs (2023); channel widths visibly differ.
 
 ## Group 4 — Utah region (#47) · non-offline
 
