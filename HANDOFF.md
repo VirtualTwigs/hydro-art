@@ -1,9 +1,45 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-25, after Epoch 8 (terrain-aware print, #30–#32) and Epoch 9 (codebase
+_Last updated: 2026-08-30, after the Epoch 11.5 #56/#57 order-fulfillment core landed
+(commit pending). Prior: Epoch 8 (terrain-aware print, #30–#32) and Epoch 9 (codebase
 health, #33–#38) both closed, each with a closeout note under `agent-os/retrospectives/`
 (`2026-08-25-epoch-8-terrain-print.md` `d44dad1`, `2026-08-25-epoch-9-codebase-health.md`
 `6c3038a`). See the per-item bullets below for the full trail back through Epochs 5–7._
+
+## Current state (2026-08-30)
+
+- **Epoch 11.5 #56/#57 fulfillment core — implemented, commit pending.** The
+  reproducible, rights-compliant **order → deliverable plan → manifest** core for
+  made-to-order county watershed prints (Revenue Validation gate). Spec
+  `agent-os/specs/2026-08-30-order-fulfillment/`. New **`src/fulfillment.py`** (stdlib-only,
+  imports only stdlib + `src.config` `SUPPORTED_REGIONS`; not in `PIPELINE_STAGES`):
+  frozen value objects (`Order`/`StyleSpec`/`Size`/`DataSource`/`Deliverable`/
+  `DeliverablePlan`), injectable `ORDER_STYLES`/`SIZES` catalogs, `build_order`
+  (validate-at-boundary/fail-fast → frozen `Order`, no payload mutation), **Rights gate**
+  `assert_sellable` (refuses any `uses_prism` style; the two approved directions
+  `neon-basin`/`elevation-tint` are PRISM-free), `attribution_line`/`title_block`
+  (deterministic USGS credit), `deliverable_plan` (add-on-order-independent), and
+  `fulfillment_manifest` (checksums must cover the plan exactly → `sort_keys`
+  byte-identical for equal inputs). TDD: `tests/test_fulfillment.py` (29 tests, 4 groups).
+  New non-offline **`tools/fulfill_order.py`** executor (outside the suite): `--order
+  order.json`/flags → `build_order` → dispatch on `StyleSpec.renderer` (`pipeline` =
+  neon-basin county clip via `render_common`; `mono` fails fast → use `neon-basin`) →
+  stamp title block into the SVG → export each plan item at `Size.px` (PNG via `rasterize`,
+  PDF via `rsvg-convert`, SVG, license) → sha256 → manifest at
+  `output/orders/<order_id>/`. Docs: spec `sample_order.json` + `presets.md`;
+  `implementation/report.md`. Suite: **573 passing** (+29), recipe roundtrip 11, no
+  regressions; no `PIPELINE_STAGES` touched (2D default byte-identical). **Real smoke
+  (Clark County, WA):** clipped 11,374 flowlines from HUC4 1708, 4 deliverables +
+  manifest, title block stamped correctly. **Reproducible re-order:** first re-run's PDF
+  sha differed (cairo stamped a wall-clock PDF CreationDate) → fixed by pinning
+  `SOURCE_DATE_EPOCH=0` on the `rsvg-convert` call; two full re-runs now yield a
+  byte-identical manifest (`ed669ae0…`). Roadmap #56/#57 stay `[ ]` (listing + intake +
+  funnel ops live in `agent-os/product/revenue-ledger.md`, not code — a status note under
+  Epoch 11.5 records the code core landed). **Known executor caveat:** the rasterized
+  print takes the county's natural aspect at the ordered width (18x24 → 5400×5862, not
+  the full 5400×7200 canvas the plan/manifest record). Smoke needs the public Census
+  county/state boundary shapefiles staged under `/tmp/{counties,states}_shp` (not
+  repo-tracked).
 
 ## Current state (2026-08-25)
 

@@ -1,0 +1,12 @@
+{
+  "order_id": "ORD-1001",
+  "region": "Washington",
+  "county": "Clark",
+  "style": "neon-basin",
+  "size": "18x24",
+  "formats": ["png", "pdf"],
+  "add_ons": ["svg", "commercial_license"],
+  "title": null,
+  "subtitle": null,
+  "buyer_ref": "sample-buyer"
+}
