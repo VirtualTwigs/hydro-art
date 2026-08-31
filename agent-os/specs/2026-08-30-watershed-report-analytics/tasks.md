@@ -50,9 +50,12 @@ per group first, run ONLY those, then implement.
   - `FlowValidationError` on length mismatch and on all-nan overlap.
 - [x] 3.2 Implement `src/flow_validation.py` #50 surface (numpy-only).
 - [x] 3.3 Run only these tests.
-- [ ] 3.4 (non-offline) `tools/nwis_gauge.py` `GaugeProvider`: fetch USGS NWIS
+- [x] 3.4 (non-offline) `tools/nwis_gauge.py` `GaugeProvider`: fetch USGS NWIS
   monthly means for a gauge id, snapshot raw response + manifest to the NAS, return
-  `{year: [12]}`. Confirm the exact Salmon Creek gauge id + period of record.
+  `{year: [12]}`. Confirmed: **14212000 Salmon Creek nr Battle Ground, WA**; dv
+  discharge period of record **1943-10-01..1990-05-10** (gap 1976..1987), so the
+  model-vs-gauge overlap is water years 1944..1989 (34 years staged). (Note: no
+  active gauge covers 2014..2023 — 14212000 was discontinued 1990.)
 - [ ] 3.5 (non-offline smoke) Validate the Salmon Creek model series against the
   real gauge; **record bias/r/NSE/seasonal skill** and the chosen framing verdict.
 
@@ -70,11 +73,13 @@ per group first, run ONLY those, then implement.
 
 ## Group 5 — PRISM back-catalog extension (#52) · non-offline
 
-- [ ] 5.1 Extend `tools/prism_fetch.py` with a `--start/--end` span (idempotent,
-  resumable, mount-aware); no change to `PrismClimateProvider`.
-- [ ] 5.2 Smoke: stage a deeper span (e.g. 1990–2023) for HUC4 1708; re-run the
-  Salmon Creek series and confirm the record depth in the report. Record staged
-  size + grid count.
+- [x] 5.1 Extend `tools/prism_fetch.py` with a `--start/--end` span (idempotent,
+  resumable, mount-aware); no change to `PrismClimateProvider`. (Already present:
+  `--start/--end/--vars/--root/--pause`, skips staged grids — verified idempotent.)
+- [x] 5.2 Smoke: staged the 1990–2023 span for HUC4 1708 (816 grids = 34 yrs × 12
+  mo × {ppt,tmean}: 576 downloaded + 240 already staged, 0 failed) under
+  `<root>/prism/<var>/`. A second gauge-era 1944–1989 span is staging for the #50
+  validation panel. Record depth confirmed via the report build.
 
 ## Group 6 — Spatial decomposition (#53) · offline
 
