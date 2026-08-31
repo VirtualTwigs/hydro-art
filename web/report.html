@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Watershed Report</title>
+<link rel="stylesheet" href="shared/ux.css" />
+<style>
+  body { max-width: 1080px; margin: 0 auto; padding: 20px 20px 60px; }
+  header.report-head {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 16px;
+  }
+  header.report-head .place { color: var(--muted); }
+  header.report-head .spacer { flex: 1; }
+  header.report-head select { width: auto; }
+  .section-note { color: var(--muted); font-size: 11px; margin: 2px 0 10px; }
+  .vmetrics { display: flex; gap: 16px; color: var(--muted); font-size: 11px; }
+  .vmetrics b { color: var(--ink); }
+</style>
+</head>
+<body>
+<header class="report-head">
+  <h1 class="brand">Hydro-Art <span class="dot">◇</span></h1>
+  <div>
+    <div id="wsName" style="font-size:15px"></div>
+    <div class="place" id="wsPlace"></div>
+  </div>
+  <div class="spacer"></div>
+  <label class="row" style="margin:0 6px 0 0">Range</label>
+  <select id="rangeSel" aria-label="Report range"></select>
+</header>
+
+<!-- Headline metric tiles + validation badge -->
+<div class="report-grid" id="tiles"></div>
+
+<!-- The credibility anchor: model-vs-gauge honesty, restated in prose -->
+<div class="warn ok" id="honesty" style="margin:-6px 0 14px"></div>
+
+<!-- Long record -->
+<div class="chart-card">
+  <h3>The long record — annual peak</h3>
+  <div class="section-note" id="longNote"></div>
+  <div id="longSpark"></div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card">
+    <h3>Typical year — mean monthly flow</h3>
+    <div class="section-note">Fixed-span monthly climatology (cfs).</div>
+    <div id="typicalSpark"></div>
+  </div>
+  <div class="chart-card" id="ensoCard">
+    <h3>Climate drivers — ENSO (ONI)
+      <label style="float:right;font-size:10px;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="ensoToggle" checked style="width:auto;vertical-align:middle" /> show
+      </label>
+    </h3>
+    <div class="section-note">Annual peak vs. ocean state; ● wet · ● dry.</div>
+    <div id="ensoSpark"></div>
+  </div>
+</div>
+
+<div class="hint">
+  Static, file://-safe report over the shared foundation. Metrics come from the
+  offline <code>src/flow_metrics.py</code> / <code>src/flow_validation.py</code>
+  layer (here, a deterministic sample document); real reports are exported by
+  <code>tools/build_watershed_report.py</code> (#54).
+</div>
+
+<script src="shared/hydro-ux.js"></script>
+<script>
+"use strict";
+(function () {
+  const UX = window.HydroUX;
+  const $ = (id) => document.getElementById(id);
+
+  // The report document (delivery.py-style export). Standalone: the sample doc.
+  const doc = UX.REPORT_SAMPLE;
+  const state = { showEnso: true, range: doc.range.slice() };
+
+  function tile(eyebrow, valueHtml, deltaHtml, deltaCls) {
+    return `<div class="metric-tile">
+      <div class="eyebrow">${eyebrow}</div>
+      <div class="value">${valueHtml}</div>
+      <div class="delta ${deltaCls || ""}">${deltaHtml}</div>
+    </div>`;
+  }
+
+  function renderTiles() {
+    const m = doc.metrics;
+    const peakDelta = m.peak.trendPerDecade;
+    const lowDelta = m.summerLow.trendPerDecade;
+    const cot = m.centerOfTiming;
+    const v = doc.validation;
+    const vc = UX.verdictClass(v.verdict);
+    $("tiles").innerHTML =
+      tile("Peak",
+        `${UX.fmtNum(m.peak.value)}<span class="unit">${m.peak.unit}</span>`,
+        `${UX.ordinal(Math.round(m.peak.pct * 100))} pct ${UX.trendArrow(peakDelta)} ${UX.fmtNum(peakDelta)}/dec`,
+        peakDelta >= 0 ? "ok" : "warn") +
+      tile("Summer low",
+        `${UX.fmtNum(m.summerLow.value)}<span class="unit">${m.summerLow.unit}</span>`,
+        `${UX.ordinal(Math.round(m.summerLow.pct * 100))} pct ${UX.trendArrow(lowDelta)} ${UX.fmtNum(lowDelta)}/dec`,
+        lowDelta >= 0 ? "ok" : "danger") +
+      tile("Center of timing",
+        `${UX.MONTH_ABBR[cot.monthIndex]}`,
+        `${UX.trendArrow(cot.trendPerDecade)} ${UX.fmtNum(cot.trendPerDecade)} mo/dec`,
+        cot.trendPerDecade < 0 ? "warn" : "muted") +
+      `<div class="validation-badge ${vc}">
+         <div class="eyebrow">vs. gauge</div>
+         <div class="verdict">${UX.verdictLabel(v.verdict)}</div>
+         <div class="vmetrics">
+           <span>r <b>${UX.fmtNum(v.r, 2)}</b></span>
+           <span>NSE <b>${UX.fmtNum(v.nse, 2)}</b></span>
+           <span>bias <b>${UX.fmtNum(v.bias)}</b></span>
+         </div>
+       </div>`;
+
+    const honest = v.verdict === "good"
+      ? "Model tracks the gauge well — treat these numbers as gauge-accurate."
+      : v.verdict === "moderate"
+      ? "Model is climatology-consistent and directionally reliable, but not gauge-accurate — read trends, not exact values."
+      : "Model diverges from the gauge — climatology-consistent only; do not read as gauge-accurate.";
+    $("honesty").className = "warn " + (vc === "ok" ? "ok" : vc === "warn" ? "" : "danger");
+    $("honesty").textContent = honest;
+  }
+
+  function renderCharts() {
+    const lr = doc.longRecord;
+    $("longSpark").innerHTML = UX.buildSparkline(lr.peak, { w: 1000, h: 60, label: "annual peak" });
+    $("longNote").textContent =
+      `${lr.years[0]}\u2013${lr.years[lr.years.length - 1]} · ${lr.years.length} years`;
+    $("typicalSpark").innerHTML = UX.buildSparkline(doc.typicalYear.mean, { w: 480, h: 60, label: "typical year" });
+
+    if (state.showEnso) {
+      $("ensoSpark").innerHTML = UX.buildSparkline(doc.enso.map((e) => e.oni), { w: 480, h: 60, label: "ONI" });
+      $("ensoSpark").hidden = false;
+    } else {
+      $("ensoSpark").hidden = true;
+    }
+  }
+
+  function renderHeader() {
+    $("wsName").textContent = doc.watershed;
+    $("wsPlace").textContent = doc.place;
+  }
+
+  function buildRangeOptions() {
+    // Minimal range selector: whole record, plus a couple of trailing windows.
+    const y0 = doc.range[0], y1 = doc.range[1];
+    const ranges = [[y0, y1], [y1 - 20, y1], [y1 - 10, y1]];
+    $("rangeSel").innerHTML = ranges
+      .map(([a, b]) => `<option value="${a}-${b}">${a}\u2013${b}</option>`)
+      .join("");
+  }
+
+  // ---- boot + wiring ----
+  renderHeader();
+  buildRangeOptions();
+  renderTiles();
+  renderCharts();
+
+  $("ensoToggle").addEventListener("change", (e) => {
+    state.showEnso = e.target.checked;
+    renderCharts();
+  });
+  // Range selector re-labels the header window (data is a static export, so the
+  // metrics don't recompute client-side — a served mode would refetch, #54).
+  $("rangeSel").addEventListener("change", (e) => {
+    const [a, b] = e.target.value.split("-");
+    $("wsPlace").textContent = `${doc.place} · ${a}\u2013${b}`;
+  });
+})();
+</script>
+</body>
+</html>

@@ -168,6 +168,48 @@ pre {
 .steps .step.done { color: var(--ok); border-bottom-color: var(--accent-dim); }
 .steps .step.done .num { color: var(--ok); border-color: var(--accent-dim); }
 
+/* ---------- Watershed report view (#55) ---------- */
+.report-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 14px;
+}
+.metric-tile {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); padding: 12px 14px;
+}
+.metric-tile .value { font-size: 22px; color: var(--ink); margin: 4px 0 2px; }
+.metric-tile .value .unit { font-size: 12px; color: var(--muted); margin-left: 3px; }
+.metric-tile .delta { font-size: 11px; color: var(--muted); }
+.metric-tile .delta.ok { color: var(--ok); }
+.metric-tile .delta.warn { color: var(--warn); }
+.metric-tile .delta.danger { color: var(--danger); }
+
+.validation-badge {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.validation-badge .verdict { font-size: 15px; font-weight: 600; letter-spacing: .04em; }
+.validation-badge .verdict::before { content: "\25cf"; margin-right: 6px; color: var(--muted); }
+.validation-badge.ok     .verdict, .validation-badge.ok     .verdict::before { color: var(--ok); }
+.validation-badge.warn   .verdict, .validation-badge.warn   .verdict::before { color: var(--warn); }
+.validation-badge.danger .verdict, .validation-badge.danger .verdict::before { color: var(--danger); }
+
+.chart-card {
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel-2); padding: 12px 14px; margin: 0 0 12px;
+}
+.chart-card h3 {
+  margin: 0 0 8px; font-size: 11px; color: var(--muted); font-weight: 500;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.sparkline { width: 100%; height: 56px; display: block; }
+.sparkline path { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.sparkline .band { fill: rgba(0,255,255,.10); stroke: none; }
+.sparkline .trend { stroke: var(--accent-2); stroke-dasharray: 4 3; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sparkline .dot { fill: var(--accent); }
+
 /* ---------- Utility ---------- */
 .row-flex { display: flex; gap: 10px; align-items: center; }
 .grow { flex: 1; }

@@ -565,6 +565,119 @@
     });
   }
 
+  // ---- Watershed report helpers (#55) — pure formatting + SVG builders ----
+  // Node-loadable: no `document`/`window` here, so the headless harness in
+  // tests/test_report_helpers.cjs can exercise them. The report page mirrors the
+  // offline metrics (src/flow_metrics.py, src/flow_validation.py); the web view
+  // only *formats* an already-computed report document, it never recomputes.
+
+  // English ordinal ("92" -> "92nd") for percentile-rank labels.
+  function ordinal(n) {
+    const v = Math.round(n) % 100;
+    const s = ["th", "st", "nd", "rd"];
+    return `${Math.round(n)}${s[(v - 20) % 10] || s[v] || s[0]}`;
+  }
+
+  // Trend glyph from a signed delta: ▲ up, ▼ down, · flat/unknown.
+  function trendArrow(delta) {
+    if (!isFinite(delta) || delta === 0) return "\u00b7";
+    return delta > 0 ? "\u25b2" : "\u25bc";
+  }
+
+  // Compact number format (trims a trailing ".0"); keeps small values readable.
+  function fmtNum(v, digits) {
+    if (!isFinite(v)) return "\u2014";
+    digits = digits == null ? (Math.abs(v) >= 100 ? 0 : Math.abs(v) < 1 ? 2 : 1) : digits;
+    return Number(v).toFixed(digits).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  }
+
+  // Map a validation verdict onto the shared status token class used by the CSS
+  // (.validation-badge.ok/.warn/.danger and .metric-tile deltas).
+  function verdictClass(verdict) {
+    return { good: "ok", moderate: "warn", weak: "danger" }[verdict] || "muted";
+  }
+  function verdictLabel(verdict) {
+    return { good: "GOOD", moderate: "MODERATE", weak: "WEAK" }[verdict] || "N/A";
+  }
+
+  // Normalize a numeric series to [x,y] points in a w×h box (y inverted so higher
+  // values ride up). Non-finite samples are dropped. `pad` insets the stroke so it
+  // isn't clipped. Returns [] for an empty/degenerate series.
+  function sparklinePoints(values, w, h, pad) {
+    pad = pad == null ? 1.5 : pad;
+    const xs = [], ys = [];
+    (values || []).forEach((v, i) => { if (isFinite(v)) { xs.push(i); ys.push(v); } });
+    if (ys.length === 0) return [];
+    const n = (values || []).length;
+    let lo = Math.min(...ys), hi = Math.max(...ys);
+    if (hi === lo) { hi = lo + 1; lo -= 1; } // flat series -> centered line
+    const spanX = Math.max(1, n - 1), spanY = hi - lo;
+    const iw = w - 2 * pad, ih = h - 2 * pad;
+    const pts = [];
+    (values || []).forEach((v, i) => {
+      if (!isFinite(v)) return;
+      pts.push([pad + (i / spanX) * iw, pad + ih - ((v - lo) / spanY) * ih]);
+    });
+    return pts;
+  }
+
+  // An SVG path "d" string ("M x y L x y ...") for a series; "" when empty.
+  function sparklinePath(values, w, h, pad) {
+    const pts = sparklinePoints(values, w, h, pad);
+    if (pts.length === 0) return "";
+    return pts.map(([x, y], i) =>
+      `${i === 0 ? "M" : "L"}${fmtNum(x, 2)} ${fmtNum(y, 2)}`).join(" ");
+  }
+
+  // A self-contained inline <svg> sparkline string (class "sparkline"; the CSS
+  // styles path/dot/band). Draws the series line plus a dot on the last point.
+  function buildSparkline(values, opts) {
+    opts = opts || {};
+    const w = opts.w || 240, h = opts.h || 48;
+    const d = sparklinePath(values, w, h, opts.pad);
+    const pts = sparklinePoints(values, w, h, opts.pad);
+    const last = pts.length ? pts[pts.length - 1] : null;
+    const dot = last ? `<circle class="dot" cx="${fmtNum(last[0], 2)}" cy="${fmtNum(last[1], 2)}" r="2.2"/>` : "";
+    return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" `
+      + `role="img" aria-label="${(opts.label || "trend").replace(/"/g, "")}">`
+      + `<path d="${d}"/>${dot}</svg>`;
+  }
+
+  // A deterministic sample report document (delivery.py-style export) so the page
+  // renders standalone over file:// with no build. Mirrors the ux.md mock (Salmon
+  // Creek); real reports come from tools/build_watershed_report.py (#54).
+  function sampleReport() {
+    const rnd = mulberry32(0x5A1303);
+    const years = [], peak = [], summerLow = [];
+    for (let y = 1990; y <= 2023; y++) {
+      years.push(y);
+      peak.push(Math.round(470 + (y - 1990) * 3 + (rnd() - 0.5) * 240));
+      summerLow.push(Number((0.9 - (y - 1990) * 0.01 + (rnd() - 0.5) * 0.3).toFixed(2)));
+    }
+    const mean = MONTH_ABBR.map((_, i) => Number((6 + 5 * Math.cos((i - 0) / 12 * 2 * Math.PI)).toFixed(2)));
+    const lo = mean.map((v) => Number((v * 0.6).toFixed(2)));
+    const hi = mean.map((v) => Number((v * 1.5).toFixed(2)));
+    const enso = years.map((y, i) => {
+      const oni = Number((Math.sin(i * 1.3) * 1.4).toFixed(2));
+      return { year: y, oni, peak: peak[i], phase: oni >= 0 ? "wet" : "dry" };
+    });
+    return {
+      watershed: "Salmon Creek",
+      place: "Clark County, WA",
+      range: [1990, 2023],
+      metrics: {
+        peak: { value: peak[peak.length - 1], unit: "cfs", pct: 0.92, trendPerDecade: 30 },
+        summerLow: { value: summerLow[summerLow.length - 1], unit: "cfs", pct: 0.04, trendPerDecade: -0.1 },
+        centerOfTiming: { monthIndex: 2, trendPerDecade: -0.3 }, // Mar, shifting earlier
+      },
+      validation: { verdict: "moderate", r: 0.71, nse: 0.55, bias: -3.2 },
+      longRecord: { years, peak, summerLow },
+      typicalYear: { months: MONTH_ABBR.slice(), mean, lo, hi },
+      enso,
+    };
+  }
+  const REPORT_SAMPLE = sampleReport();
+
   // ---- Public surface -----------------------------------------------------
   const HydroUX = {
     STATES, COUNTIES, PALETTES, HYPSO, MONTH_ABBR, HUC_LEVELS,
@@ -577,6 +690,8 @@
     b64url, b64urlDecode,
     PRESETS, presetById, applyPreset,
     drawSwatches, fillCounties, buildTimeline, paintTimeline, seg, bindRange,
+    ordinal, trendArrow, fmtNum, verdictClass, verdictLabel,
+    sparklinePoints, sparklinePath, buildSparkline, sampleReport, REPORT_SAMPLE,
   };
   global.HydroUX = HydroUX;
   if (typeof module !== "undefined" && module.exports) module.exports = HydroUX;

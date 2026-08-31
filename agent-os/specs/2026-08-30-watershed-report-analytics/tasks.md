@@ -100,12 +100,13 @@ per group first, run ONLY those, then implement.
 
 ## Group 8 — Web report view (#55) · view-layer (proposed UX)
 
-- [ ] 8.1 Add shared components to `web/shared/ux.css` (`.metric-tile`,
+- [x] 8.1 Add shared components to `web/shared/ux.css` (`.metric-tile`,
   `.report-grid`, `.validation-badge`, `.chart-card`, `.sparkline`).
-- [ ] 8.2 Add report data/formatting helpers to `web/shared/hydro-ux.js`
+- [x] 8.2 Add report data/formatting helpers to `web/shared/hydro-ux.js`
   (Node-loadable — no top-level `document`/`window`); extend the headless
-  `tests/test_recipe_roundtrip.cjs`-style harness for any new pure helper.
-- [ ] 8.3 Build the report page over the shared foundation (see `planning/ux.md`).
+  `tests/test_recipe_roundtrip.cjs`-style harness for any new pure helper
+  (`tests/test_report_helpers.cjs`).
+- [x] 8.3 Build the report page over the shared foundation (`web/report.html`).
 
 ## Group 9 — Close out · offline
 
