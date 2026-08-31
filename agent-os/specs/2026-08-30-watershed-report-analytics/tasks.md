@@ -56,8 +56,14 @@ per group first, run ONLY those, then implement.
   discharge period of record **1943-10-01..1990-05-10** (gap 1976..1987), so the
   model-vs-gauge overlap is water years 1944..1989 (34 years staged). (Note: no
   active gauge covers 2014..2023 — 14212000 was discontinued 1990.)
-- [ ] 3.5 (non-offline smoke) Validate the Salmon Creek model series against the
-  real gauge; **record bias/r/NSE/seasonal skill** and the chosen framing verdict.
+- [x] 3.5 (non-offline smoke) Validated the Salmon Creek model outlet series
+  against gauge 14212000 over the 34 overlap years (1944–1975 + 1988–1989):
+  **r = 0.80, NSE = −9.86, bias = +166.9 cfs, RMSE = 208.9 → verdict "weak".**
+  Honest framing: monthly *timing* correlates (r=0.80) but *magnitude* badly
+  overpredicts — the model outlet is the watershed's most-downstream reach (large
+  Lake-River-confluence drainage) while the gauge sits mid-watershed at Battle
+  Ground; "climatology-consistent, not gauge-accurate." Figure:
+  `notebooks/figures/salmon_creek_validation.png`.
 
 ## Group 4 — Climate-index teleconnection (#51) · offline metrics + non-offline fetch
 
@@ -68,8 +74,11 @@ per group first, run ONLY those, then implement.
     by one year (hand-checked).
 - [x] 4.2 Implement `align_index`/`correlate` in `src/flow_validation.py`.
 - [x] 4.3 Run only these tests.
-- [ ] 4.4 (non-offline) `tools/climate_index.py`: fetch + snapshot ENSO ONI / PDO;
-  expose `index_by_year`. Smoke-correlate against Salmon Creek peak-flow; record r.
+- [x] 4.4 (non-offline) `tools/climate_index.py`: snapshot-backed ENSO ONI (NOAA
+  CPC) + PDO (NCEI ERSST v5), annual-mean `index_by_year`. Smoke-correlated ONI
+  against Salmon Creek Dec peak-flow (n=40): **r = +0.16 (lag-1 r = +0.12)** —
+  weak; peak flow here isn't strongly ENSO-driven. Figure:
+  `notebooks/figures/salmon_creek_enso.png`.
 
 ## Group 5 — PRISM back-catalog extension (#52) · non-offline
 
@@ -95,13 +104,20 @@ per group first, run ONLY those, then implement.
 
 ## Group 7 — Report assembly (#54) · non-offline
 
-- [ ] 7.1 `tools/report_common.py`: shared load (reuse `_yoy_net_<huc4>.pkl` +
-  clip caches) + watershed-reach selection + the matplotlib figure recipe.
-- [ ] 7.2 `tools/build_watershed_report.py` CLI (`--huc4/--huc12/--name/--start/
-  --end/[--gauge]`) → full figure set to `notebooks/figures/`.
+- [x] 7.1 `tools/report_common.py`: shared load (reuses `output/_wshed_<tag>_mo<n>`
+  clip + `_yoy_net_<huc4>.pkl` network caches) → `WatershedSeries` (outlet via
+  `flow_metrics.outlet_index`) + the 7-panel matplotlib figure recipe, driven
+  purely by the offline `src/flow_metrics` + `src/flow_validation` layer.
+- [x] 7.2 `tools/build_watershed_report.py` CLI (`--huc4/--huc12/--name/--start/
+  --end/[--gauge]/[--index]`) → full 7-figure set to `notebooks/figures/` + a JSON
+  metrics summary. Smoke-built Salmon Creek 1944–1989 end-to-end (615 reaches,
+  outlet idx 614, Dec peak) → all 7 PNGs rendered (multipart-geometry safe).
 - [ ] 7.3 Refactor `notebooks/salmon_creek_yoy.ipynb` to consume `report_common`;
   add long-record, validation, low-flow/salmon, and ENSO sections.
-- [ ] 7.4 Smoke: build the Salmon Creek report end-to-end; eyeball each figure.
+- [x] 7.4 Smoke: built the Salmon Creek 1944–1989 report end-to-end (`--gauge
+  14212000 --index oni`) → 7 PNGs in `notebooks/figures/` (map, hydrographs,
+  long_record, typical_year, low_flow, validation, enso). Metrics recorded in 3.5
+  / 4.4 above (long record: trend "none", τ=−0.02 p=0.87; summer low: "none").
 
 ## Group 8 — Web report view (#55) · view-layer (proposed UX)
 
