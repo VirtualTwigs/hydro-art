@@ -506,9 +506,15 @@ first manually reviewed digital order in Epoch 11.5.)
 
 **Phase 10.1 — Determinism you can prove**
 
-39. [ ] Determinism verifier — `tools/verify_determinism.py`: render a fixed region twice and diff
+39. [x] Determinism verifier — `tools/verify_determinism.py`: render a fixed region twice and diff
 `svg_sha256` + rasterized PNG; commit per-region golden hashes as fixtures. Closes the "#34 asserted
 byte-identical but couldn't verify offline" carry-forward. `S`
+(Shipped 2026-08-30, commit `87c64fd`. Pure golden-registry/verdict core `src/determinism.py`
+(`DeterminismVerdict`, `evaluate`/`record_golden`/`format_verdict`; GDAL-free, tested in
+`tests/test_determinism.py`) + the non-offline `tools/verify_determinism.py` double-render CLI
+(`--record`/`--force`, `svg_sha256` + `SOURCE_DATE_EPOCH=0`-pinned rasterized-PNG diff). The
+committed per-region golden fixtures + the real GDAL double-render that *exercises* the verifier
+are #40 / the epoch-gate closeout.)
 
 40. [ ] Golden-output fixtures for one small region — commit a tiny county's expected SVG hash + DEM
 mosaic checksum so a machine *with* GDAL catches drift the offline fakes can't. `M`
@@ -522,11 +528,21 @@ the offline suite is untouched. `M`
 
 42. [ ] DEM alignment invariant on real tiles — a targeted regression asserting mosaicked tiles share a
 pixel grid *after* the single warp, on ≥2 real 3DEP tiles at different latitudes (the #32 bug). `S`
+(Partial — the **offline** guard shipped 2026-08-30 (commit `87c64fd`): `tests/test_dem_alignment.py`
+asserts `normalize_dem` mosaics two hand-built two-latitude grids *before* the single warp into one
+uniform-pixel grid, and that `_require_aligned` accepts `rel_tol=1e-6` warp drift while rejecting a
+genuine tier change — the #32 regression, GDAL-free. The **real-tile** half named here (≥2 real 3DEP
+tiles at different latitudes) is bundled into #41's smoke harness (TG3b) and still needs a GDAL/NAS
+host.)
 
 **Phase 10.3 — Reduce docs churn**
 
-43. [ ] HANDOFF/roadmap status automation — a small script to stamp timestamps + epoch status, so
+43. [x] HANDOFF/roadmap status automation — a small script to stamp timestamps + epoch status, so
 progress bookkeeping stops costing 3–4 hand-edit commits per epoch. `S`
+(Shipped 2026-08-30, commit `87c64fd`. Pure stampers `src/status.py`
+(`format`/`stamp_last_updated`, `tick_roadmap_item`, `stamp_epoch_status`; idempotent, GDAL-free,
+tested in `tests/test_status.py` + `tests/test_update_status.py`) behind the diff-printing
+`tools/update_status.py` CLI.)
 
 Epoch gate: a single command proves determinism (double-render byte-identical) and exercises the real
 warp/mosaic/cross-device paths, producing a trustworthy pass/fail without reading the code; the offline
@@ -644,49 +660,49 @@ is replaced (see Notes).
 
 **Phase 12.1 — Offline hydrograph-metrics engine**
 
-48. [ ] Hydrograph-metrics engine — `src/flow_metrics.py` (pure, numpy-only, offline): per-year
+48. [x] Hydrograph-metrics engine — `src/flow_metrics.py` (pure, numpy-only, offline): per-year
 peak / low-flow (summer-minimum) series, center-of-timing (month of 50% cumulative flow), Richards-Baker
 flashiness, wet/dry seasonal ratio, and monthly flow-duration percentiles over the
 `{year: [n,12]}` series `yearly_flow_series` already produces. `M`
-49. [ ] Trend, percentile & rolling-normal statistics — extend `src/flow_metrics.py` with
+49. [x] Trend, percentile & rolling-normal statistics — extend `src/flow_metrics.py` with
 Mann-Kendall + Sen's-slope robust trend, a value's percentile rank against the record, anomaly-vs-normal,
 and sliding 30-year normals — the rigor that makes a *deep* record meaningful (replaces the notebook's
 OLS-on-10-points). `S`
 
 **Phase 12.2 — Validation & climate signals (credibility)**
 
-50. [ ] Model-vs-gauge validation — `src/flow_validation.py` (pure, offline comparison metrics: bias,
+50. [x] Model-vs-gauge validation — `src/flow_validation.py` (pure, offline comparison metrics: bias,
 Pearson r, Nash-Sutcliffe efficiency, RMSE, per-month seasonal skill; missing months skipped never
 zero-filled, mirroring `src/accuracy.py`) + a `tools/nwis_gauge.py` `GaugeProvider` (USGS NWIS monthly
 means, NAS-staged/snapshotted for reproducibility) behind the seam. Turns the "model, not gauge" caveat
 into an honest validation plot. `L`
-51. [ ] Climate-index teleconnection — offline `align_index`/`correlate` helpers (join a per-year flow
+51. [x] Climate-index teleconnection — offline `align_index`/`correlate` helpers (join a per-year flow
 metric to a per-year climate index on common years, Pearson + optional lag) in `src/flow_validation.py`
 + a tiny `tools/climate_index.py` fetch (ENSO ONI / PDO public tables, snapshotted). Answers *why* wet
 and dry years happen. `S`
 
 **Phase 12.3 — Deep temporal record**
 
-52. [ ] PRISM back-catalog extension — stage PRISM `ppt`+`tmean` back toward 1895 (reuses
+52. [x] PRISM back-catalog extension — stage PRISM `ppt`+`tmean` back toward 1895 (reuses
 `tools/prism_fetch.py` + `PrismClimateProvider`, no engine change; a `--start/--end` span), so every
 temporal metric runs on ~130 years instead of 10. Non-offline fetch; NAS-staged, mount-aware, resumable.
 `M`
 
 **Phase 12.4 — Spatial decomposition**
 
-53. [ ] Sub-watershed & longitudinal decomposition — offline `src/flow_metrics.py` helpers: subset a
+53. [x] Sub-watershed & longitudinal decomposition — offline `src/flow_metrics.py` helpers: subset a
 series by reach-index membership (per-HUC12 hydrographs, e.g. Upper vs Lower Salmon Creek), pick the
 outlet (max-accumulated) reach, and build a longitudinal flow-accumulation profile down the mainstem
 over the topology. `M`
 
 **Phase 12.5 — Report assembly & UX**
 
-54. [ ] Parametrized watershed-report builder — `tools/report_common.py` (shared data-loading + the
+54. [x] Parametrized watershed-report builder — `tools/report_common.py` (shared data-loading + the
 matplotlib plotting recipe, mirroring `render_common.py` so notebook and tool never drift) +
 `tools/build_watershed_report.py` (any HUC12 group → the full figure set), and refactor
 `notebooks/salmon_creek_yoy.ipynb` to consume it. Includes the ecological (salmon low-flow × stream-temp)
 framing. `L`
-55. [ ] Web report mode (proposed UX) — a report view over the shared `web/shared/ux.css` +
+55. [x] Web report mode (proposed UX) — a report view over the shared `web/shared/ux.css` +
 `web/shared/hydro-ux.js` foundation: metric tiles (peak / summer-low / center-of-timing / percentile),
 a model-vs-gauge validation badge, a long-record trend sparkline, and an ENSO-overlay toggle. New shared
 CSS components live in `ux.css`; report data/formatting helpers live in `hydro-ux.js` — no per-page

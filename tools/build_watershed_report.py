@@ -60,11 +60,16 @@ def main() -> int:
           f"peak month {ws.peak_month + 1}")
 
     gauge_obs = None
+    gauge_loc = None
     if args.gauge:
         print(f"fetching gauge {args.gauge} ...")
-        obs = GaugeProvider(args.gauge, args.root).monthly_means(args.start, args.end)
+        prov = GaugeProvider(args.gauge, args.root)
+        obs = prov.monthly_means(args.start, args.end)
         gauge_obs = obs
-        print(f"  gauge: {len(obs)} years with observed monthly means")
+        gauge_loc = prov.location()
+        print(f"  gauge: {len(obs)} years with observed monthly means; "
+              f"site at lat {gauge_loc[0]:.4f}, lon {gauge_loc[1]:.4f} "
+              f"({gauge_loc[2]})")
 
     index_by_year = None
     if not args.no_index:
@@ -75,7 +80,7 @@ def main() -> int:
         print(f"  index: {len(idx)} years")
 
     summary = build_report(
-        ws, gauge_obs=gauge_obs, index_by_year=index_by_year,
+        ws, gauge_obs=gauge_obs, gauge_loc=gauge_loc, index_by_year=index_by_year,
         index_name=args.index.upper(), out_dir=Path(args.out_dir),
     )
     print(f"\nwrote figures to {args.out_dir}/")

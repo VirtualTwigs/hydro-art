@@ -56,13 +56,19 @@ per group first, run ONLY those, then implement.
   discharge period of record **1943-10-01..1990-05-10** (gap 1976..1987), so the
   model-vs-gauge overlap is water years 1944..1989 (34 years staged). (Note: no
   active gauge covers 2014..2023 — 14212000 was discontinued 1990.)
-- [x] 3.5 (non-offline smoke) Validated the Salmon Creek model outlet series
-  against gauge 14212000 over the 34 overlap years (1944–1975 + 1988–1989):
-  **r = 0.80, NSE = −9.86, bias = +166.9 cfs, RMSE = 208.9 → verdict "weak".**
-  Honest framing: monthly *timing* correlates (r=0.80) but *magnitude* badly
-  overpredicts — the model outlet is the watershed's most-downstream reach (large
-  Lake-River-confluence drainage) while the gauge sits mid-watershed at Battle
-  Ground; "climatology-consistent, not gauge-accurate." Figure:
+- [x] 3.5 (non-offline smoke) Validated the Salmon Creek model against gauge
+  14212000 over the 34 overlap years (1944–1975 + 1988–1989). **Reach-matching
+  fix:** the comparison now snaps to the model reach *at the gauge* (idx 597,
+  10.3 m away via `GaugeProvider.location()` → `report_common.gauge_reach_index`)
+  instead of the watershed outlet — the outlet (idx 614) is the basin mouth 23 km
+  downstream at the Lake-River confluence, a ~3.7× larger drainage than the
+  mid-watershed Battle Ground gauge, so the two were never apples-to-apples.
+  Snapped: **r = 0.78, NSE = +0.50, bias = +18.6 cfs, RMSE = 44.9** (vs. outlet
+  r=0.80, NSE=−9.86, bias=+166.9, RMSE=208.9 — bias collapsed 9×). Verdict stays
+  "weak" only because NSE=0.4993 lands a hair under the 0.50 "moderate" cutoff
+  (moderate = NSE≥0.5 & r≥0.7; r clears, NSE misses by 0.0007). Honest framing:
+  the model reproduces gauge *timing and magnitude* at the gauge site — it was
+  never overpredicting, it was being scored at the wrong drainage point. Figure:
   `notebooks/figures/salmon_creek_validation.png`.
 
 ## Group 4 — Climate-index teleconnection (#51) · offline metrics + non-offline fetch
@@ -112,8 +118,12 @@ per group first, run ONLY those, then implement.
   --end/[--gauge]/[--index]`) → full 7-figure set to `notebooks/figures/` + a JSON
   metrics summary. Smoke-built Salmon Creek 1944–1989 end-to-end (615 reaches,
   outlet idx 614, Dec peak) → all 7 PNGs rendered (multipart-geometry safe).
-- [ ] 7.3 Refactor `notebooks/salmon_creek_yoy.ipynb` to consume `report_common`;
-  add long-record, validation, low-flow/salmon, and ENSO sections.
+- [x] 7.3 Refactored `notebooks/salmon_creek_yoy.ipynb` to a thin `report_common`
+  driver (24 cells): `load_watershed_series` + `build_report`, long-record,
+  validation, low-flow/salmon, and ENSO sections, 7 panels shown inline. Re-executed
+  end-to-end via `jupyter nbconvert --execute` on the GIS/NAS host — 0 cell errors, 7
+  inline PNG panels. Setup cell `os.chdir(REPO)` so `report_common`'s repo-root caches
+  resolve under nbconvert (CWD = notebook dir).
 - [x] 7.4 Smoke: built the Salmon Creek 1944–1989 report end-to-end (`--gauge
   14212000 --index oni`) → 7 PNGs in `notebooks/figures/` (map, hydrographs,
   long_record, typical_year, low_flow, validation, enso). Metrics recorded in 3.5
@@ -131,8 +141,12 @@ per group first, run ONLY those, then implement.
 
 ## Group 9 — Close out · offline
 
-- [ ] 9.1 Run the full suite (regression check) + `node
-  tests/test_recipe_roundtrip.cjs`; confirm the 2D default output byte-identical.
-- [ ] 9.2 `implementation/report.md`; update `HANDOFF.md`; tick roadmap #48–#55.
-- [ ] 9.3 Write the Epoch 12 retrospective (see `planning/pre-analysis.md` for the
-  watch-list to close against).
+- [x] 9.1 Full offline suite green: **630 passed**; `node
+  tests/test_recipe_roundtrip.cjs` (11) + `node tests/test_report_helpers.cjs` (8)
+  green. 2D default output byte-identical (Epoch 12 added only pure numpy `src/`
+  modules, none in `PIPELINE_STAGES`; no pipeline stage touched).
+- [x] 9.2 `implementation/report.md` written; `HANDOFF.md` updated; roadmap
+  #48–#55 ticked.
+- [x] 9.3 Wrote the Epoch 12 retrospective
+  (`agent-os/retrospectives/2026-08-31-epoch-12-watershed-report.md`), graded against
+  the pre-registered watch-list.

@@ -30,14 +30,17 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import geopandas as gpd
 import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+from shapely.geometry import Point
 
 from src import flow_metrics as fm
 from src import flow_validation as fv
+from src.crs import INTERNAL_CRS
 from src.historical_flow import normalize_years
 from tools.historical_flow import DEFAULT_ROOT
 from tools.monthly_flow import MONTH_ABBR
@@ -47,6 +50,26 @@ from tools.render_watershed_yoy import clip_watershed, load_huc12_boundary
 
 FLOOR = 1e-2
 FIG_DIR = Path("notebooks/figures")
+
+# NWIS horizontal-datum codes -> EPSG (for snapping the gauge to a model reach).
+_DATUM_EPSG = {"NAD83": "EPSG:4269", "NAD27": "EPSG:4267", "WGS84": "EPSG:4326"}
+
+
+def gauge_reach_index(
+    geoms: list, lat: float, lon: float, *, datum: str = "NAD83"
+) -> tuple[int, float]:
+    """Index (+ distance, m) of the reach nearest the gauge.
+
+    The watershed *outlet* is the basin mouth — a far larger drainage than a
+    mid-watershed gauge, so validating the outlet against the gauge compares two
+    different drainage areas. Snapping to the reach at the gauge location fixes
+    the magnitude mismatch (``geoms`` are in ``INTERNAL_CRS`` / EPSG:5070).
+    """
+    src_crs = _DATUM_EPSG.get(datum.upper(), "EPSG:4269")
+    pt = gpd.GeoSeries([Point(lon, lat)], crs=src_crs).to_crs(INTERNAL_CRS).iloc[0]
+    dists = np.array([g.distance(pt) for g in geoms])
+    idx = int(dists.argmin())
+    return idx, float(dists[idx])
 
 
 @dataclass
@@ -152,7 +175,7 @@ def _parts(geom):
         yield xs, ys
 
 
-def fig_watershed_map(ws: WatershedSeries, ax) -> None:
+def fig_watershed_map(ws: WatershedSeries, ax, *, gauge_idx: int | None = None) -> None:
     """The watershed's reaches, colored by hypsometric elevation tint."""
     anchor = float(np.percentile(np.clip(ws.elev_max, 0.0, None), 97.0))
     colors, emax = elevation_colors(ws.elev_max, 0.8, anchor)
@@ -162,7 +185,12 @@ def fig_watershed_map(ws: WatershedSeries, ax) -> None:
     last = list(_parts(ws.geoms[ws.outlet_idx]))
     if last:
         ox, oy = last[-1]
-        ax.plot(ox[-1], oy[-1], "o", color="#ff4d5e", ms=7, label="outlet / gauge")
+        ax.plot(ox[-1], oy[-1], "o", color="#ff4d5e", ms=7, label="outlet")
+    if gauge_idx is not None:
+        gparts = list(_parts(ws.geoms[gauge_idx]))
+        if gparts:
+            gx, gy = gparts[-1]
+            ax.plot(gx[-1], gy[-1], "^", color="#ffe14d", ms=9, label="gauge")
     ax.set_aspect("equal")
     ax.set_axis_off()
     ax.set_title(f"{ws.name} — {ws.n} reaches (tint: elev 0–{emax:.0f} m)")
@@ -237,19 +265,30 @@ def fig_low_flow(ws: WatershedSeries, ax) -> dict:
     return {"low_trend": mk.trend, "low_sens_slope": slope}
 
 
-def fig_validation(ws: WatershedSeries, gauge_obs: dict[int, np.ndarray], ax) -> dict:
+def fig_validation(
+    ws: WatershedSeries,
+    gauge_obs: dict[int, np.ndarray],
+    ax,
+    *,
+    gauge_idx: int | None = None,
+    gauge_dist: float | None = None,
+) -> dict:
     """Model vs. gauge over the overlap years; report r/NSE/bias + verdict.
 
-    The comparison is over the flattened monthly overlap; ``nan`` gauge months are
-    skipped (never zero-filled) inside ``src.flow_validation``.
+    The model side is the reach *at the gauge* when ``gauge_idx`` is supplied
+    (snapped via ``gauge_reach_index``), else the watershed outlet. The comparison
+    is over the flattened monthly overlap; ``nan`` gauge months are skipped (never
+    zero-filled) inside ``src.flow_validation``.
     """
-    common = sorted(set(ws.outlet) & set(gauge_obs))
+    reach = ws.outlet_idx if gauge_idx is None else gauge_idx
+    model_by_year = {y: ws.per_year[y][reach] for y in ws.years}
+    common = sorted(set(model_by_year) & set(gauge_obs))
     if not common:
         ax.text(0.5, 0.5, "no model/gauge overlap years", ha="center",
                 transform=ax.transAxes)
         ax.set_axis_off()
         return {}
-    model = np.concatenate([ws.outlet[y] for y in common])
+    model = np.concatenate([model_by_year[y] for y in common])
     obs = np.concatenate([np.asarray(gauge_obs[y], dtype=float) for y in common])
     rep = fv.validate(model, obs)
     ax.scatter(obs, model, s=12, color="#00ffff", alpha=0.6)
@@ -263,10 +302,16 @@ def fig_validation(ws: WatershedSeries, gauge_obs: dict[int, np.ndarray], ax) ->
         f"Validation [{rep.verdict}] — r={rep.pearson_r:.2f} "
         f"NSE={rep.nash_sutcliffe:.2f} bias={rep.bias:+.1f}"
     )
+    where = ("outlet reach" if gauge_idx is None
+             else f"reach {reach} @ {gauge_dist:.0f} m from gauge")
+    ax.text(0.02, 0.98, f"model @ {where}", transform=ax.transAxes,
+            ha="left", va="top", fontsize=7, color="#8891a8")
     ax.legend(fontsize=8, frameon=False)
     return {
         "verdict": rep.verdict, "r": rep.pearson_r, "nse": rep.nash_sutcliffe,
         "bias": rep.bias, "rmse": rep.rmse, "overlap_years": common,
+        "reach": int(reach),
+        "reach_dist_m": None if gauge_dist is None else round(gauge_dist, 1),
     }
 
 
@@ -295,6 +340,7 @@ def build_report(
     ws: WatershedSeries,
     *,
     gauge_obs: dict[int, np.ndarray] | None = None,
+    gauge_loc: tuple[float, float, str] | None = None,
     index_by_year: dict[int, float] | None = None,
     index_name: str = "ONI",
     out_dir: Path = FIG_DIR,
@@ -306,6 +352,11 @@ def build_report(
                      "years": [ws.years[0], ws.years[-1]], "reaches": ws.n,
                      "peak_month": MONTH_ABBR[ws.peak_month]}
 
+    gauge_idx = gauge_dist = None
+    if gauge_obs and gauge_loc is not None:
+        lat, lon, datum = gauge_loc
+        gauge_idx, gauge_dist = gauge_reach_index(ws.geoms, lat, lon, datum=datum)
+
     def _save(fig, stem):
         path = out_dir / f"{tag}_{stem}.png"
         fig.savefig(path, dpi=140, bbox_inches="tight", facecolor="#07080c")
@@ -314,7 +365,7 @@ def build_report(
 
     fig, ax = plt.subplots(figsize=(7, 7), facecolor="#07080c")
     _style(ax)
-    fig_watershed_map(ws, ax)
+    fig_watershed_map(ws, ax, gauge_idx=gauge_idx)
     _save(fig, "map")
 
     fig, ax = plt.subplots(figsize=(8, 4), facecolor="#07080c")
@@ -340,7 +391,8 @@ def build_report(
     if gauge_obs:
         fig, ax = plt.subplots(figsize=(5, 5), facecolor="#07080c")
         _style(ax)
-        summary.update(fig_validation(ws, gauge_obs, ax))
+        summary.update(fig_validation(ws, gauge_obs, ax,
+                                      gauge_idx=gauge_idx, gauge_dist=gauge_dist))
         _save(fig, "validation")
 
     if index_by_year:

@@ -1,10 +1,52 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-30, after the Epoch 11.5 #56/#57 order-fulfillment core landed
-(commit pending). Prior: Epoch 8 (terrain-aware print, #30–#32) and Epoch 9 (codebase
-health, #33–#38) both closed, each with a closeout note under `agent-os/retrospectives/`
-(`2026-08-25-epoch-8-terrain-print.md` `d44dad1`, `2026-08-25-epoch-9-codebase-health.md`
-`6c3038a`). See the per-item bullets below for the full trail back through Epochs 5–7._
+_Last updated: 2026-08-31, after Epoch 12 (watershed report analytics, #48–#55) close-out
+and the Epoch 10 roadmap reconciliation (#39/#42-offline/#43 landed in `87c64fd`). Prior:
+Epoch 11.5 #56/#57 order-fulfillment core, Epoch 8 (terrain-aware print, #30–#32) and
+Epoch 9 (codebase health, #33–#38), each with a closeout note under
+`agent-os/retrospectives/`. See the per-item bullets below for the full trail back through
+Epochs 5–7._
+
+## Current state (2026-08-31)
+
+- **Epoch 12 DONE (2026-08-31) — watershed report analytics (#48–#55).** Promoted the
+  one-off `notebooks/salmon_creek_yoy.ipynb` into a reusable, credible watershed report.
+  Spec `agent-os/specs/2026-08-30-watershed-report-analytics/`. Two pure numpy-only
+  offline `src/` modules hold all statistics: **`src/flow_metrics.py`** (#48 peak/low/COT/
+  flashiness/seasonal-ratio/flow-duration; #49 Mann-Kendall + Sen's slope, percentile
+  rank, anomaly, rolling 30-yr normals; #53 subset/outlet/longitudinal helpers) and
+  **`src/flow_validation.py`** (#50 bias/r/NSE/RMSE/seasonal-skill + `validate`; #51
+  `align_index`/`correlate`). Heavy reads behind seams in `tools/`: `nwis_gauge.py`
+  `GaugeProvider` (NWIS monthly means + site location, snapshotted), `climate_index.py`
+  `ClimateIndexProvider` (ONI/PDO), `prism_fetch.py --start/--end` back-catalog (#52).
+  Report assembly: **`tools/report_common.py`** (shared load + reach selection + 7-panel
+  recipe) + **`tools/build_watershed_report.py`** CLI (#54); web report view (#55) —
+  `web/shared/ux.css` components + `web/shared/hydro-ux.js` helpers + `web/report.html`.
+  **Notebook (#54 task 7.3)** refactored to a thin `report_common` driver (deep-record,
+  validation, low-flow/salmon, ENSO sections) and re-executed end-to-end via nbconvert on
+  the GIS/NAS host — all cells run, 7 panels render inline. Gotcha: the setup cell
+  `os.chdir(REPO)` so `report_common`'s repo-root-relative caches resolve under nbconvert
+  (CWD = the notebook dir otherwise). **Credibility finding (#50):** the first run scored
+  the basin *outlet* vs the gauge (NSE=−9.86, bias=+166.9) — the outlet is the basin mouth
+  ~23 km / ~3.7× drainage below the mid-watershed Battle Ground gauge. Snapping to the
+  model reach *at the gauge* (`gauge_reach_index` via the NWIS site lat/lon, idx 597, 10.3 m)
+  → **r=0.78, NSE=+0.50, bias=+18.6, RMSE=44.9**; verdict "weak" only because NSE misses the
+  0.50 cutoff by 0.0007. Suite: **630 passing**, recipe roundtrip 11 + report helpers 8, no
+  regressions; no `PIPELINE_STAGES` touched (2D default byte-identical). Retrospective:
+  `agent-os/retrospectives/2026-08-31-epoch-12-watershed-report.md`. Implementation report:
+  `agent-os/specs/2026-08-30-watershed-report-analytics/implementation/report.md`. **Rights
+  gate:** no PRISM-derived report/animation ships commercially until the PRISM arrangement
+  is documented. Uncommitted: the #50 reach-snapping additions to `tools/{report_common,
+  nwis_gauge,build_watershed_report}.py` + `notebooks/salmon_creek_yoy.ipynb` + the new
+  retro/report + roadmap/HANDOFF edits (commit pending).
+- **Epoch 10 partial — roadmap reconciled (2026-08-31).** Commit `87c64fd` (2026-08-30)
+  landed #39 (determinism verifier: `src/determinism.py` core + `tools/verify_determinism.py`),
+  #42-offline (`tests/test_dem_alignment.py` mosaic-before-warp #32 guard on hand-built
+  grids), and #43 (status automation: `src/status.py` + `tools/update_status.py`). Roadmap
+  #39/#43 now ticked `[x]`; #42 stays `[ ]` (its real-tile half is bundled into #41's smoke
+  harness) with an evidence note; **#40 (golden fixtures) and #41 (real-data smoke harness)
+  remain** — both need a GDAL/NAS host. Spec
+  `agent-os/specs/2026-08-30-verification-and-real-data-confidence/`.
 
 ## Current state (2026-08-30)
 

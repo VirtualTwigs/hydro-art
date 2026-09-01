@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 DEFAULT_ROOT = "/Volumes/home/data/hydro-art"
 NWIS_DV = "https://waterservices.usgs.gov/nwis/dv/"
+NWIS_SITE = "https://waterservices.usgs.gov/nwis/site/"
 UA = "hydro-art/1.0 (research; watershed report validation)"
 PARAM = "00060"   # discharge, cubic feet per second
 STAT = "00003"    # daily mean
@@ -41,6 +42,10 @@ STAT = "00003"    # daily mean
 
 def snapshot_path(root: Path, site: str, start: int, end: int) -> Path:
     return root / "nwis" / site / f"dv_{PARAM}_{start}_{end}.rdb"
+
+
+def site_snapshot_path(root: Path, site: str) -> Path:
+    return root / "nwis" / site / "site.rdb"
 
 
 def fetch_rdb(site: str, start: int, end: int, *, timeout: int = 120) -> str:
@@ -71,6 +76,61 @@ def ensure_snapshot(root: Path, site: str, start: int, end: int) -> Path:
         json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
     )
     return out
+
+
+def fetch_site_rdb(site: str, *, timeout: int = 120) -> str:
+    """Fetch the NWIS site-description RDB table (carries the site lat/lon)."""
+    url = f"{NWIS_SITE}?format=rdb&sites={site}"
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", "replace")
+
+
+def ensure_site_snapshot(root: Path, site: str) -> Path:
+    """Stage the raw site RDB + a manifest once; reuse it on every later run."""
+    out = site_snapshot_path(root, site)
+    if out.exists() and out.stat().st_size > 0:
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    rdb = fetch_site_rdb(site)
+    tmp = out.with_suffix(".rdb.part")
+    tmp.write_text(rdb, encoding="utf-8")
+    tmp.replace(out)
+    manifest = {"site": site, "bytes": out.stat().st_size, "source": NWIS_SITE}
+    out.with_suffix(".manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    return out
+
+
+def parse_site_rdb(text: str) -> tuple[float, float, str]:
+    """Parse an NWIS site RDB table -> (lat, lon, horizontal-datum code).
+
+    The columns of interest are ``dec_lat_va`` / ``dec_long_va`` (decimal degrees)
+    and ``dec_coord_datum_cd`` (e.g. ``NAD83``). ``#`` comment lines, a header row,
+    and the RDB format-spec row are skipped; the first data row wins.
+    """
+    header: list[str] | None = None
+    saw_format_line = False
+    for line in text.splitlines():
+        if line.startswith("#") or not line.strip():
+            continue
+        cells = line.split("\t")
+        if header is None:
+            header = cells
+            continue
+        if not saw_format_line:
+            saw_format_line = True
+            continue
+        row = dict(zip(header, cells))
+        try:
+            lat = float(row["dec_lat_va"])
+            lon = float(row["dec_long_va"])
+        except (KeyError, ValueError):
+            continue
+        datum = (row.get("dec_coord_datum_cd") or "NAD83").strip() or "NAD83"
+        return lat, lon, datum
+    raise ValueError("no decimal lat/lon row found in NWIS site RDB")
 
 
 def parse_rdb(text: str) -> tuple[str, dict[int, np.ndarray]]:
@@ -147,6 +207,16 @@ class GaugeProvider:
         snap = ensure_snapshot(self.root, self.site, start, end)
         self.name, series = parse_rdb(snap.read_text(encoding="utf-8"))
         return {y: series[y] for y in range(start, end + 1) if y in series}
+
+    def location(self) -> tuple[float, float, str]:
+        """Return the gauge's ``(lat, lon, horizontal-datum code)`` (snapshotted).
+
+        Used to snap the model-vs-gauge comparison to the reach *at the gauge*
+        rather than the watershed outlet (the outlet is the basin mouth, a much
+        larger drainage than a mid-watershed gauge — an apples-to-oranges match).
+        """
+        snap = ensure_site_snapshot(self.root, self.site)
+        return parse_site_rdb(snap.read_text(encoding="utf-8"))
 
 
 def main() -> int:
