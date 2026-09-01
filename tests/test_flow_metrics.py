@@ -95,6 +95,33 @@ def test_flow_duration_monotone_non_increasing_with_endpoints() -> None:
     assert np.all(np.diff(fd) <= 0)
 
 
+def test_center_of_timing_vectorized_over_reaches() -> None:
+    a = np.zeros((2, 12))
+    a[0, 4] = 3.0          # reach 0: all flow in May (month 5)
+    a[1, :] = 1.0          # reach 1: flat year → 6.5
+    cot = center_of_timing(a)
+    assert cot.shape == (2,)
+    np.testing.assert_allclose(cot, [5.0, 6.5])
+
+
+def test_flashiness_vectorized_over_reaches() -> None:
+    a = np.vstack([np.full(12, 4.0), np.array([1.0, 0.0] * 6)])
+    flash = flashiness(a)
+    assert flash.shape == (2,)
+    np.testing.assert_allclose(flash, [0.0, 11.0 / 6.0])
+
+
+def test_seasonal_ratio_vectorized_over_reaches() -> None:
+    wet = [10, 11, 0, 1, 2, 3]   # Nov,Dec,Jan,Feb,Mar,Apr
+    dry = [4, 5, 6, 7, 8, 9]     # May..Oct
+    a = np.zeros((2, 12))
+    a[0, wet] = 8.0; a[0, dry] = 2.0   # ratio 4.0
+    a[1, wet] = 6.0; a[1, dry] = 3.0   # ratio 2.0
+    ratio = seasonal_ratio(a)
+    assert ratio.shape == (2,)
+    np.testing.assert_allclose(ratio, [4.0, 2.0])
+
+
 def test_purity_inputs_not_mutated() -> None:
     y = np.ones((2, 12))
     series = {2020: y}
@@ -170,6 +197,17 @@ def test_outlet_index_picks_max_accumulated_within_membership() -> None:
     accum = np.array([10.0, 50, 30, 5, 40])
     assert outlet_index(accum, [0, 2, 3]) == 2  # max of (10,30,5) is 30 at idx 2
     assert outlet_index(accum, [0, 3, 4]) == 4  # max of (10,5,40) is 40 at idx 4
+
+
+def test_boolean_mask_membership_selects_flagged_reaches() -> None:
+    a = np.arange(60.0).reshape(5, 12)
+    mask = np.array([True, False, True, False, True])  # reaches 0, 2, 4
+    sub = subset_series({2020: a}, mask)
+    assert sub[2020].shape == (3, 12)
+    np.testing.assert_array_equal(sub[2020], a[[0, 2, 4]])
+    # outlet_index over the same boolean membership returns a *global* index
+    accum = np.array([10.0, 50, 30, 5, 40])
+    assert outlet_index(accum, np.array([True, False, True, True, False])) == 2
 
 
 def test_longitudinal_profile_non_decreasing_downstream() -> None:
@@ -279,3 +317,76 @@ def test_correlate_lag_shifts_the_join() -> None:
     index = {2010: 1.0, 2011: 5.0, 2012: 2.0, 2013: 9.0, 2014: 3.0}
     metric = {2011: 1.0, 2012: 5.0, 2013: 2.0, 2014: 9.0}
     assert correlate(metric, index, lag=1) == pytest.approx(1.0)
+
+
+def test_pearson_r_constant_series_is_nan() -> None:
+    # a zero-variance series has no correlation defined → nan (documented)
+    assert np.isnan(pearson_r(np.array([3.0, 3.0, 3.0]), np.array([1.0, 2.0, 3.0])))
+
+
+def test_nash_sutcliffe_zero_variance_obs_is_nan() -> None:
+    # obs with no spread → the NSE denominator is 0 → nan, never a divide error
+    assert np.isnan(nash_sutcliffe(np.array([1.0, 2.0, 3.0]), np.array([5.0, 5.0, 5.0])))
+
+
+# --- boundary-error guards (fail fast, never silently) -------------------
+
+def test_series_and_monthly_shape_guards() -> None:
+    with pytest.raises(FlowMetricsError):
+        peak_flow({2020: [[1.0, 2.0, 3.0], [4.0, 5.0]]})   # ragged inner rows
+    with pytest.raises(FlowMetricsError):
+        center_of_timing(np.ones(11))                      # not 12 months
+
+
+def test_month_window_guards() -> None:
+    y = np.ones((1, 12))
+    with pytest.raises(FlowMetricsError):
+        low_flow({2020: y}, months=(13,))                  # month out of range
+    with pytest.raises(FlowMetricsError):
+        low_flow({2020: y}, months=())                     # empty window
+    with pytest.raises(FlowMetricsError):
+        seasonal_ratio(np.ones(12), wet=tuple(range(1, 13)))  # leaves no dry months
+
+
+def test_flow_duration_quantile_guards() -> None:
+    with pytest.raises(FlowMetricsError):
+        flow_duration(np.ones(12), [])                     # empty quantiles
+    with pytest.raises(FlowMetricsError):
+        flow_duration(np.ones(12), [150])                  # outside [0, 100]
+
+
+def test_series_1d_length_guards() -> None:
+    with pytest.raises(FlowMetricsError):
+        mann_kendall(np.ones((2, 3)))                      # not 1-D
+    with pytest.raises(FlowMetricsError):
+        mann_kendall([1, 2])                               # < 3 points
+    with pytest.raises(FlowMetricsError):
+        sens_slope([5.0])                                  # < 2 points
+    with pytest.raises(FlowMetricsError):
+        percentile_rank(5.0, [3.0])                        # record < 2
+    with pytest.raises(FlowMetricsError):
+        rolling_normals(np.arange(5.0), window=0)          # window < 1
+
+
+def test_membership_guards() -> None:
+    series = {2020: np.ones((3, 12))}
+    with pytest.raises(FlowMetricsError):
+        subset_series(series, np.array([True, False]))     # bool mask wrong length
+    with pytest.raises(FlowMetricsError):
+        subset_series(series, [])                          # empty idx
+    with pytest.raises(FlowMetricsError):
+        subset_series(series, [5])                         # idx out of range
+
+
+def test_longitudinal_profile_guards() -> None:
+    with pytest.raises(FlowMetricsError):
+        longitudinal_profile([1.0, 2.0, 3.0], [10.0, 20.0], [0.0, 10.0], [10])  # length mismatch
+    with pytest.raises(FlowMetricsError):
+        longitudinal_profile([1.0], [10.0], [0.0], [])     # empty path
+    with pytest.raises(FlowMetricsError):
+        longitudinal_profile([1.0], [10.0], [0.0], [99])   # unknown HydroSeq
+
+
+def test_seasonal_skill_shape_guard() -> None:
+    with pytest.raises(FlowValidationError):
+        seasonal_skill(np.ones(12), np.ones(11))           # model/obs shape mismatch
