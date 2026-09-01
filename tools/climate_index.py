@@ -1,7 +1,7 @@
 """Climate-index provider — ENSO ONI / PDO annual series (roadmap #51).
 
 Non-offline data-acquisition helper for the watershed-report teleconnection
-section. The pure correlation metrics live in ``src/flow_validation.py``
+section. The pure correlation metrics live in ``src/flow_metrics.py``
 (offline, numpy only) — ``align_index`` / ``correlate``; this script supplies the
 *index* side of that join: it fetches a monthly climate index, aggregates to an
 annual mean, and returns a ``{year: value}`` mapping ready to correlate against a

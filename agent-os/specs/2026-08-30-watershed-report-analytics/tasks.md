@@ -38,7 +38,8 @@ per group first, run ONLY those, then implement.
 
 ## Group 3 — Model-vs-gauge validation (#50) · offline metrics + non-offline provider
 
-- [x] 3.1 Write `tests/test_flow_validation.py` first (hand-built model/obs arrays):
+- [x] 3.1 Write the #50 validation tests first (hand-built model/obs arrays), in
+  `tests/test_flow_metrics.py` (the combined module's test file):
   - identical arrays → `bias == 0`, `pearson_r == 1`, `nash_sutcliffe == 1`,
     `rmse == 0`.
   - a constant offset → exact `bias`; an anti-correlated pair → `pearson_r == -1`;
@@ -48,7 +49,7 @@ per group first, run ONLY those, then implement.
   - `validate` → `ValidationReport` whose `verdict` crosses the documented
     good/moderate/weak thresholds at hand-chosen r/NSE.
   - `FlowValidationError` on length mismatch and on all-nan overlap.
-- [x] 3.2 Implement `src/flow_validation.py` #50 surface (numpy-only).
+- [x] 3.2 Implement the #50 surface in `src/flow_metrics.py` (numpy-only).
 - [x] 3.3 Run only these tests.
 - [x] 3.4 (non-offline) `tools/nwis_gauge.py` `GaugeProvider`: fetch USGS NWIS
   monthly means for a gauge id, snapshot raw response + manifest to the NAS, return
@@ -73,12 +74,12 @@ per group first, run ONLY those, then implement.
 
 ## Group 4 — Climate-index teleconnection (#51) · offline metrics + non-offline fetch
 
-- [x] 4.1 Extend `tests/test_flow_validation.py`:
+- [x] 4.1 Extend the validation tests in `tests/test_flow_metrics.py`:
   - `align_index`: metric years {2014..2023} ∩ index years {2016..2025} → the 8
     common years, both arrays aligned; empty overlap → `FlowValidationError`.
   - `correlate`: a perfectly index-tracking metric → `1.0`; `lag=1` shifts the join
     by one year (hand-checked).
-- [x] 4.2 Implement `align_index`/`correlate` in `src/flow_validation.py`.
+- [x] 4.2 Implement `align_index`/`correlate` in `src/flow_metrics.py`.
 - [x] 4.3 Run only these tests.
 - [x] 4.4 (non-offline) `tools/climate_index.py`: snapshot-backed ENSO ONI (NOAA
   CPC) + PDO (NCEI ERSST v5), annual-mean `index_by_year`. Smoke-correlated ONI
@@ -113,7 +114,7 @@ per group first, run ONLY those, then implement.
 - [x] 7.1 `tools/report_common.py`: shared load (reuses `output/_wshed_<tag>_mo<n>`
   clip + `_yoy_net_<huc4>.pkl` network caches) → `WatershedSeries` (outlet via
   `flow_metrics.outlet_index`) + the 7-panel matplotlib figure recipe, driven
-  purely by the offline `src/flow_metrics` + `src/flow_validation` layer.
+  purely by the offline combined `src/flow_metrics` layer.
 - [x] 7.2 `tools/build_watershed_report.py` CLI (`--huc4/--huc12/--name/--start/
   --end/[--gauge]/[--index]`) → full 7-figure set to `notebooks/figures/` + a JSON
   metrics summary. Smoke-built Salmon Creek 1944–1989 end-to-end (615 reaches,

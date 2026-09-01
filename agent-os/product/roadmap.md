@@ -671,22 +671,22 @@ OLS-on-10-points). `S`
 
 **Phase 12.2 — Validation & climate signals (credibility)**
 
-50. [x] Model-vs-gauge validation — `src/flow_validation.py` (pure, offline comparison metrics: bias,
+50. [x] Model-vs-gauge validation — `src/flow_metrics.py` (pure, offline comparison metrics: bias,
 Pearson r, Nash-Sutcliffe efficiency, RMSE, per-month seasonal skill; missing months skipped never
 zero-filled, mirroring `src/accuracy.py`) + a `tools/nwis_gauge.py` `GaugeProvider` (USGS NWIS monthly
 means, NAS-staged/snapshotted for reproducibility) behind the seam. Turns the "model, not gauge" caveat
 into an honest validation plot. `L`
 51. [x] Climate-index teleconnection — offline `align_index`/`correlate` helpers (join a per-year flow
-metric to a per-year climate index on common years, Pearson + optional lag) in `src/flow_validation.py`
+metric to a per-year climate index on common years, Pearson + optional lag) in `src/flow_metrics.py`
 + a tiny `tools/climate_index.py` fetch (ENSO ONI / PDO public tables, snapshotted). Answers *why* wet
 and dry years happen. `S`
 
 **Phase 12.3 — Deep temporal record**
 
-52. [x] PRISM back-catalog extension — stage PRISM `ppt`+`tmean` back toward 1895 (reuses
-`tools/prism_fetch.py` + `PrismClimateProvider`, no engine change; a `--start/--end` span), so every
-temporal metric runs on ~130 years instead of 10. Non-offline fetch; NAS-staged, mount-aware, resumable.
-`M`
+52. [x] PRISM back-catalog extension — stage PRISM `ppt`+`tmean` for the **full 1895–present record**
+(reuses `tools/prism_fetch.py` + `PrismClimateProvider`, no engine change; a `--start/--end` span), so every
+temporal metric runs on the complete ~130-year record instead of 10. Non-offline fetch; NAS-staged,
+mount-aware, resumable. `M`
 
 **Phase 12.4 — Spatial decomposition**
 
@@ -702,16 +702,31 @@ matplotlib plotting recipe, mirroring `render_common.py` so notebook and tool ne
 `tools/build_watershed_report.py` (any HUC12 group → the full figure set), and refactor
 `notebooks/salmon_creek_yoy.ipynb` to consume it. Includes the ecological (salmon low-flow × stream-temp)
 framing. `L`
+
+Epoch gate: from a single watershed selection, a reproducible report (CLI builder + notebook) shows a
+multi-decade flow record with robust trend statistics, an honest model-vs-gauge validation verdict, a
+climate-driver correlation, and sub-watershed/longitudinal structure — all from offline-tested `src/`
+statistics fed by snapshotted external data; the 2D pipeline and its byte-for-byte default output are
+unchanged.
+
+## Epoch 13 — Web watershed-report view
+
+Surface the Epoch 12 watershed report on the web, over the shared `web/shared/ux.css` +
+`web/shared/hydro-ux.js` foundation — no per-page duplication (honors the Epoch 9 anti-drift rule). Split
+out of Epoch 12 so the offline analytics/validation core (a research/credibility deliverable) ships
+independently of the view layer. Same commercialization + PRISM rights gates as Epoch 12 apply.
+Spec: `agent-os/specs/2026-08-30-watershed-report-analytics/`.
+
 55. [x] Web report mode (proposed UX) — a report view over the shared `web/shared/ux.css` +
 `web/shared/hydro-ux.js` foundation: metric tiles (peak / summer-low / center-of-timing / percentile),
 a model-vs-gauge validation badge, a long-record trend sparkline, and an ENSO-overlay toggle. New shared
 CSS components live in `ux.css`; report data/formatting helpers live in `hydro-ux.js` — no per-page
 duplication (honors the Epoch 9 anti-drift rule). `M`
 
-Epoch gate: from a single watershed selection, a reproducible report shows a multi-decade flow record
-with robust trend statistics, an honest model-vs-gauge validation verdict, a climate-driver correlation,
-and sub-watershed/longitudinal structure — all from offline-tested `src/` statistics fed by
-snapshotted external data; the 2D pipeline and its byte-for-byte default output are unchanged.
+Epoch gate: the watershed report from Epoch 12 renders as a shareable web view built entirely on the
+shared UX foundation (no duplicated option data, mapping, or view logic), carrying the honest
+validation verdict and climate-driver overlay; `src/` and the offline suite stay free of any `web/`
+dependency.
 
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.

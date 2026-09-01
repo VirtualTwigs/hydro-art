@@ -54,18 +54,18 @@ Ordered by risk. Each names what to record so the closeout retro can grade it.
 
 7. **Scope-creep / purity leak.** The temptation is to let matplotlib, `requests`,
    or pandas creep into `src/`.
-   - **Invariant to grade:** `src/flow_metrics.py` and `src/flow_validation.py`
-     import **numpy only**; the offline suite stays GDAL/network-free and the 2D
-     default output byte-identical.
+   - **Invariant to grade:** the combined `src/flow_metrics.py` imports **numpy
+     only**; the offline suite stays GDAL/network-free and the 2D default output
+     byte-identical.
 
 ## B. Common code (reuse map — avoid the Epoch 9 copy-paste drift)
 
 The single biggest maintainability lesson in this repo (Epoch 9) was killing three
 copies of `clip_flowlines`. This epoch pre-commits to shared surfaces:
 
-- **One offline statistics layer.** `src/flow_metrics.py` + `src/flow_validation.py`
-  are the *only* place hydrograph math lives. The notebook, the CLI report builder,
-  and any web export consume them — **no stats logic in `notebooks/` or `tools/`.**
+- **One offline statistics layer.** the single combined `src/flow_metrics.py`
+  is the *only* place hydrograph math lives. The notebook, the CLI report builder,
+  and any web export consume it — **no stats logic in `notebooks/` or `tools/`.**
 - **The injectable-provider pattern, reused.** `GaugeProvider` (NWIS) and the
   climate-index fetch follow the existing `ClimateProvider` seam (#44/#45): pure
   `src/` consumer, heavy read in `tools/`, fake in tests. Do not invent a new I/O
@@ -79,8 +79,8 @@ copies of `clip_flowlines`. This epoch pre-commits to shared surfaces:
   the `output/_yoy_net_<huc4>.pkl` network cache and the `render_common` clip cache,
   and `src/manifest.py`'s snapshot/verify pattern for the new external snapshots.
 - **Every `src/<name>.py` gets `tests/test_<name>.py`** (the repo rule):
-  `flow_metrics` → `test_flow_metrics.py`, `flow_validation` →
-  `test_flow_validation.py`.
+  `flow_metrics` → `test_flow_metrics.py` (the single combined module carries the
+  #48/#49/#53 metrics and the #50/#51 validation tests together).
 
 ## C. Common CSS (web report view #55 — reuse `ux.css`, don't fork)
 

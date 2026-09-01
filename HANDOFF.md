@@ -11,12 +11,13 @@ Epochs 5–7._
 
 - **Epoch 12 DONE (2026-08-31) — watershed report analytics (#48–#55).** Promoted the
   one-off `notebooks/salmon_creek_yoy.ipynb` into a reusable, credible watershed report.
-  Spec `agent-os/specs/2026-08-30-watershed-report-analytics/`. Two pure numpy-only
-  offline `src/` modules hold all statistics: **`src/flow_metrics.py`** (#48 peak/low/COT/
+  Spec `agent-os/specs/2026-08-30-watershed-report-analytics/`. One pure numpy-only
+  offline `src/` module holds all statistics: **`src/flow_metrics.py`** (#48 peak/low/COT/
   flashiness/seasonal-ratio/flow-duration; #49 Mann-Kendall + Sen's slope, percentile
-  rank, anomaly, rolling 30-yr normals; #53 subset/outlet/longitudinal helpers) and
-  **`src/flow_validation.py`** (#50 bias/r/NSE/RMSE/seasonal-skill + `validate`; #51
-  `align_index`/`correlate`). Heavy reads behind seams in `tools/`: `nwis_gauge.py`
+  rank, anomaly, rolling 30-yr normals; #53 subset/outlet/longitudinal helpers; #50
+  bias/r/NSE/RMSE/seasonal-skill + `validate`; #51 `align_index`/`correlate`) — the #50/#51
+  validation half was folded in from a former `src/flow_validation.py` (one combined
+  analysis module). Heavy reads behind seams in `tools/`: `nwis_gauge.py`
   `GaugeProvider` (NWIS monthly means + site location, snapshotted), `climate_index.py`
   `ClimateIndexProvider` (ONI/PDO), `prism_fetch.py --start/--end` back-catalog (#52).
   Report assembly: **`tools/report_common.py`** (shared load + reach selection + 7-panel

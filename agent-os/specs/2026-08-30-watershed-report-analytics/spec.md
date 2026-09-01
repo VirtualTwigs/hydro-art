@@ -27,7 +27,12 @@ Two design rules carried from prior epochs, enforced throughout:
 > dependency is replaced. USGS/NHD/WBD provenance + attribution must be recorded on any
 > asset that leaves the project.
 
-## `src/flow_metrics.py` (new, numpy-only, offline) — items #48, #49, #53
+## `src/flow_metrics.py` (new, numpy-only, offline) — items #48, #49, #53 + #50, #51
+
+**One combined analysis module** (per the 2026-09-01 realignment): the intrinsic
+hydrograph / trend / spatial metrics (#48/#49/#53) below and the model-vs-observed
+validation + climate-index teleconnection (#50/#51, next section) live in the single
+`src/flow_metrics.py` — there is no separate `flow_validation.py`.
 
 Pure functions over the `{year: [n,12]}` series (or a single reach's `[years,12]`
 matrix). No mutation of inputs; identical inputs → identical outputs.
@@ -58,9 +63,10 @@ def longitudinal_profile(accum_flow, hydroseq, dnhydroseq, path) -> np.ndarray
 for boundary failures (empty series, ragged shapes, window > record). Imports only
 numpy; `__all__` exports the public surface.
 
-## `src/flow_validation.py` (new, numpy-only, offline) — items #50, #51
+## `src/flow_metrics.py` validation half — items #50, #51
 
-Pure comparison + correlation metrics over caller-supplied arrays. Missing values
+Folded into the same `src/flow_metrics.py` module (not a separate file). Pure
+comparison + correlation metrics over caller-supplied arrays. Missing values
 (`nan`) are **skipped, never zero-filled** — the `src/accuracy.py` discipline.
 
 ```python
@@ -92,8 +98,8 @@ def correlate(metric_by_year, index_by_year, *, lag=0) -> float
 - `tools/climate_index.py` — fetch ENSO ONI / PDO monthly/annual index (small
   public tables), snapshot to the NAS, expose `index_by_year`.
 - `tools/prism_fetch.py` (extend, #52) — accept a `--start/--end` span so the
-  monthly `ppt`+`tmean` archive can be staged back toward 1895; idempotent/
-  resumable, mount-aware, exactly as today.
+  monthly `ppt`+`tmean` archive can be staged for the **full 1895–present record**;
+  idempotent/resumable, mount-aware, exactly as today.
 
 All three keep `src/` GDAL/network-free; the offline suite injects fakes.
 
@@ -139,7 +145,8 @@ smoke-run + short note (the real NWIS/PRISM numbers recorded), not a unit test �
 per the Epoch 8/10 lesson that a real run must exercise the paths fakes skip.
 
 - `tests/test_flow_metrics.py` — #48/#49/#53.
-- `tests/test_flow_validation.py` — #50/#51 pure metrics.
+- `tests/test_flow_metrics.py` — also covers #50/#51 pure validation metrics
+  (merged from the former `test_flow_validation.py`).
 - `web/`: extend `tests/test_recipe_roundtrip.cjs`-style headless coverage for any
   new `hydro-ux.js` report helper.
 

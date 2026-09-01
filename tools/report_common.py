@@ -12,7 +12,7 @@ so every watershed report reads as one product. Three parts:
    (``src.flow_metrics.outlet_index``); its per-year ``[12]`` row is the watershed
    hydrograph that the gauge (also at the outlet) is validated against.
 3. **Figure recipe** — a set of matplotlib panels driven purely by the offline
-   metric layer (``src.flow_metrics`` #48/#49/#53, ``src.flow_validation`` #50/#51):
+   metric layer (``src.flow_metrics`` #48/#49/#53 + #50/#51 validation):
    watershed map, per-year hydrographs, long-record trend (Mann-Kendall + Sen's
    slope), typical-year band, summer-low trend, model-vs-gauge validation, and the
    ENSO teleconnection scatter.
@@ -39,7 +39,6 @@ import numpy as np
 from shapely.geometry import Point
 
 from src import flow_metrics as fm
-from src import flow_validation as fv
 from src.crs import INTERNAL_CRS
 from src.historical_flow import normalize_years
 from tools.historical_flow import DEFAULT_ROOT
@@ -278,7 +277,7 @@ def fig_validation(
     The model side is the reach *at the gauge* when ``gauge_idx`` is supplied
     (snapped via ``gauge_reach_index``), else the watershed outlet. The comparison
     is over the flattened monthly overlap; ``nan`` gauge months are skipped (never
-    zero-filled) inside ``src.flow_validation``.
+    zero-filled) inside ``src.flow_metrics``.
     """
     reach = ws.outlet_idx if gauge_idx is None else gauge_idx
     model_by_year = {y: ws.per_year[y][reach] for y in ws.years}
@@ -290,7 +289,7 @@ def fig_validation(
         return {}
     model = np.concatenate([model_by_year[y] for y in common])
     obs = np.concatenate([np.asarray(gauge_obs[y], dtype=float) for y in common])
-    rep = fv.validate(model, obs)
+    rep = fm.validate(model, obs)
     ax.scatter(obs, model, s=12, color="#00ffff", alpha=0.6)
     lim = [0, float(np.nanmax([np.nanmax(obs), np.nanmax(model)])) * 1.05]
     ax.plot(lim, lim, "--", color="#8891a8", lw=1, label="1:1")
@@ -320,14 +319,14 @@ def fig_enso(ws: WatershedSeries, index_by_year: dict[int, float], ax,
     """Peak-flow vs. climate index scatter with the Pearson r (and lag-1 r)."""
     peak = ws.peak_by_year()
     try:
-        metric, index = fv.align_index(peak, index_by_year)
-    except fv.FlowValidationError:
+        metric, index = fm.align_index(peak, index_by_year)
+    except fm.FlowValidationError:
         ax.text(0.5, 0.5, "no metric/index overlap", ha="center",
                 transform=ax.transAxes)
         ax.set_axis_off()
         return {}
-    r0 = fv.correlate(peak, index_by_year)
-    r1 = fv.correlate(peak, index_by_year, lag=1)
+    r0 = fm.correlate(peak, index_by_year)
+    r1 = fm.correlate(peak, index_by_year, lag=1)
     ax.scatter(index, metric, s=16, color="#9d00ff", alpha=0.7)
     ax.set_xlabel(f"{index_name} (annual)")
     ax.set_ylabel(f"peak-month flow ({MONTH_ABBR[ws.peak_month]}, cfs)")

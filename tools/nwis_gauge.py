@@ -1,7 +1,7 @@
 """USGS NWIS gauge provider — observed monthly-mean discharge (roadmap #50).
 
 Non-offline data-acquisition helper for the watershed-report validation section.
-The pure comparison metrics live in ``src/flow_validation.py`` (offline, numpy
+The pure comparison metrics live in ``src/flow_metrics.py`` (offline, numpy
 only); this script supplies the *observed* side of that comparison: it fetches
 daily-mean discharge (parameter ``00060``, statistic ``00003`` = mean, in cfs)
 from the USGS NWIS "dv" web service, aggregates to a monthly mean, and returns a

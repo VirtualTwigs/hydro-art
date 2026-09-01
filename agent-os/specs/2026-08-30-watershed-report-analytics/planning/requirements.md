@@ -33,7 +33,7 @@ in the supported cohort, by adding analytical depth and — first — credibilit
 Reuse the existing engine and this repo's proven architecture. The
 `{year: [n,12]}` flow series `src.historical_flow.yearly_flow_series` already
 produces is the single input to a new **offline, numpy-only statistics layer**
-(`src/flow_metrics.py`, `src/flow_validation.py`). All external observations
+(the single combined `src/flow_metrics.py`). All external observations
 (PRISM back-catalog, USGS NWIS gauge, ENSO/PDO index) are read by **`tools/`
 executors behind injectable provider seams** — the `ClimateProvider` precedent
 (#44/#45) — and **snapshotted** so a report is reproducible offline. The notebook
@@ -67,8 +67,8 @@ and a new `tools/build_watershed_report.py` are thin consumers of a shared
 
 ## Non-functional / invariants
 
-- **Offline discipline preserved.** `src/flow_metrics.py` and
-  `src/flow_validation.py` are **numpy-only**, import no GDAL/rasterio/geopandas,
+- **Offline discipline preserved.** the combined `src/flow_metrics.py` is
+  **numpy-only**, imports no GDAL/rasterio/geopandas,
   and are not wired into `PIPELINE_STAGES`. All heavy/external reads live in
   `tools/` behind injectable seams; the offline suite injects fakes + hand-built
   arrays with known answers.

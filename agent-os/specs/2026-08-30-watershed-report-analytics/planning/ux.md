@@ -2,7 +2,7 @@
 
 Two surfaces share one content model: the **printed/notebook report** (the primary
 deliverable, #54) and an optional **web report view** (#55). Both are driven by the
-same offline metrics (`src/flow_metrics.py`, `src/flow_validation.py`) so they never
+same offline metrics (the single combined `src/flow_metrics.py`) so they never
 disagree.
 
 ## 1. Report narrative (notebook + `build_watershed_report.py`, #54)

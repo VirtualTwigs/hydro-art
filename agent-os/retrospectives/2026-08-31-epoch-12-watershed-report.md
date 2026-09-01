@@ -22,11 +22,11 @@ invariant: the 2D pipeline and its byte-identical default output are untouched
   flow-duration percentiles (#48); Mann-Kendall + Sen's slope, percentile rank,
   anomaly, rolling 30-yr normals (#49); `subset_series` / `outlet_index` /
   `longitudinal_profile` spatial helpers (#53). Tested in `tests/test_flow_metrics.py`.
-- **#50/#51** — `src/flow_validation.py` (numpy-only, offline): bias / Pearson r /
-  Nash-Sutcliffe / RMSE / per-month seasonal skill (nan months skipped, never
-  zero-filled — mirrors `src/accuracy.py`) + `validate`→`ValidationReport` verdict
-  (#50); `align_index` / `correlate` (+ lag) teleconnection helpers (#51). Tested in
-  `tests/test_flow_validation.py`. Non-offline providers behind the seam:
+- **#50/#51** — folded into the combined `src/flow_metrics.py` (numpy-only, offline):
+  bias / Pearson r / Nash-Sutcliffe / RMSE / per-month seasonal skill (nan months
+  skipped, never zero-filled — mirrors `src/accuracy.py`) + `validate`→`ValidationReport`
+  verdict (#50); `align_index` / `correlate` (+ lag) teleconnection helpers (#51). Tested
+  in `tests/test_flow_metrics.py`. Non-offline providers behind the seam:
   `tools/nwis_gauge.py` `GaugeProvider` (USGS NWIS monthly means + site location,
   NAS-snapshotted) and `tools/climate_index.py` `ClimateIndexProvider` (ENSO ONI /
   PDO, snapshotted).
@@ -72,8 +72,8 @@ invariant: the 2D pipeline and its byte-identical default output are untouched
 6. **Spatial over-claim (#53).** *Held.* PRISM 4 km over 239 km² ≈ 15 cells — the
    intra-basin signal is weak; the report leads with the *temporal* story and the map
    carries the resolution caveat.
-7. **Scope-creep / purity leak.** *Held.* `src/flow_metrics.py` and
-   `src/flow_validation.py` import numpy only; the offline suite (630 tests) stays
+7. **Scope-creep / purity leak.** *Held.* the combined `src/flow_metrics.py`
+   imports numpy only; the offline suite (630 tests) stays
    GDAL/network-free and the 2D default output is byte-identical (no `PIPELINE_STAGES`
    touched).
 

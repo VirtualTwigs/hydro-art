@@ -568,7 +568,7 @@
   // ---- Watershed report helpers (#55) — pure formatting + SVG builders ----
   // Node-loadable: no `document`/`window` here, so the headless harness in
   // tests/test_report_helpers.cjs can exercise them. The report page mirrors the
-  // offline metrics (src/flow_metrics.py, src/flow_validation.py); the web view
+  // offline metrics (src/flow_metrics.py); the web view
   // only *formats* an already-computed report document, it never recomputes.
 
   // English ordinal ("92" -> "92nd") for percentile-rank labels.
