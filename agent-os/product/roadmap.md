@@ -516,8 +516,15 @@ byte-identical but couldn't verify offline" carry-forward. `S`
 committed per-region golden fixtures + the real GDAL double-render that *exercises* the verifier
 are #40 / the epoch-gate closeout.)
 
-40. [ ] Golden-output fixtures for one small region — commit a tiny county's expected SVG hash + DEM
+40. [x] Golden-output fixtures for one small region — commit a tiny county's expected SVG hash + DEM
 mosaic checksum so a machine *with* GDAL catches drift the offline fakes can't. `M`
+(Shipped 2026-08-31. Pure `src/raster.grid_checksum` (versioned, endian/contiguity/NaN-canonical DEM
+fingerprint) + two-checksum golden registry in `src/determinism.py` (`Golden` value type, `dem_sha`
+wired through `evaluate`/`record_golden`/`format_verdict`; bare-string #39 entries still load).
+`tools/verify_determinism.py` grew `--check-dem`/`--dem` (county-aware DEM clip) + fixed a latent
+`export_paths` str→`Path` bug. Committed fixture `tests/fixtures/golden/registry.json`:
+**Wahkiakum, WA** — SVG sha (cross-host invariant) + county-scoped DEM mosaic sha (same-host
+regression, GDAL/PROJ-version sensitive). 644 offline tests green.)
 
 **Phase 10.2 — Exercise the paths fakes skip**
 

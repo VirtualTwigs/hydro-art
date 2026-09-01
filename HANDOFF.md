@@ -9,6 +9,25 @@ Epochs 5–7._
 
 ## Current state (2026-08-31)
 
+- **#40 DONE (2026-08-31) — golden-output fixtures (Phase 10.1 close).** Gave the #39
+  verifier a committed fixture + a second checksum dimension. **`src/raster.grid_checksum`**
+  (pure/offline: versioned header + crs + canonical-LE transform/shape + nodata sentinel +
+  NaN-canonical LE-float64 values → sha256; endianness/contiguity-stable). **Two-checksum
+  golden registry** in `src/determinism.py`: new `Golden(svg_sha256, dem_mosaic_sha256=None)`
+  value type; `load_registry` parses object form + #39 bare strings; `evaluate(..., dem_sha=)`
+  adds a soft `dem_ok`; `record_golden` merges halves; `dump_registry`/`format_verdict` updated.
+  **`tools/verify_determinism.py`** grew `--check-dem`/`--dem` (county-aware DEM clip via
+  `county_boundary` bounds so a county golden doesn't over-acquire the state's 3DEP) and a
+  fixed latent `export_paths` str→`Path` crash in `_render_once`. **Committed fixture**
+  `tests/fixtures/golden/registry.json` — **Wahkiakum, WA** (HUC4 1708): SVG sha
+  `3c725d66…6457fafc` (run-to-run OK, cross-host invariant) + county-scoped DEM mosaic sha
+  `a84769ec…a7c6ae92a` (single tile `USGS_1_n47w124.tif`, reproducible twice — **same-host
+  regression only**, GDAL/PROJ-version sensitive; the SVG sha is the stronger invariant).
+  Suite **644 passing** (+14), node 11+8; no `PIPELINE_STAGES` touched (2D byte-identical).
+  Spec `agent-os/specs/2026-08-31-golden-output-fixtures/`. **#41 (real-data smoke harness)
+  remains.** Uncommitted: `src/raster.py`, `src/determinism.py`, `tools/verify_determinism.py`,
+  `tests/{test_raster,test_determinism}.py`, `tests/fixtures/golden/registry.json`, spec +
+  roadmap/HANDOFF edits (commit pending — separate `commit item #40`).
 - **Epoch 12 DONE (2026-08-31) — watershed report analytics (#48–#55).** Promoted the
   one-off `notebooks/salmon_creek_yoy.ipynb` into a reusable, credible watershed report.
   Spec `agent-os/specs/2026-08-30-watershed-report-analytics/`. One pure numpy-only

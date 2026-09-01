@@ -24,6 +24,7 @@ normalized, queryable elevation surface. It provides:
 
 from __future__ import annotations
 
+import hashlib
 import math
 from dataclasses import dataclass, field, replace
 from typing import Any, Protocol, Sequence
@@ -46,7 +47,11 @@ __all__ = [
     "clip_grid",
     "build_pyramid",
     "normalize_dem",
+    "grid_checksum",
 ]
+
+#: Version tag for the :func:`grid_checksum` scheme; bump if the byte layout changes.
+_CHECKSUM_SCHEME = b"hydro-art.raster.v1"
 
 # ``INTERNAL_CRS`` is imported from :mod:`src.crs` (the single source of truth)
 # and re-exported here (see ``__all__``) so existing ``raster.INTERNAL_CRS``
@@ -100,6 +105,55 @@ class RasterGrid:
         max_x = t.origin_x + self.width * t.pixel_width
         min_y = t.origin_y - self.height * t.pixel_height
         return (min_x, min_y, max_x, max_y)
+
+
+def grid_checksum(grid: RasterGrid) -> str:
+    """Return a canonical sha256 fingerprint of a :class:`RasterGrid`.
+
+    The DEM-subsystem counterpart of ``svg_sha256``: it fingerprints the mosaicked,
+    normalized elevation surface (typically ``normalize_dem(...).base``) so a
+    GDAL-equipped machine can catch drift in the real warp/mosaic path that the
+    offline fakes only simulate (roadmap #40). Identical grids hash identically;
+    any change to the values, transform, CRS, or nodata changes the hash.
+
+    The hash is **platform- and endianness-stable**: values and the transform are
+    serialized as C-contiguous *little-endian* float64, so a big-endian or
+    non-contiguous view of the same logical grid produces the same digest. ``NaN``
+    is normalized to a single canonical bit pattern so ``nan != nan`` can't make two
+    otherwise-identical grids hash differently.
+
+    Note: this fingerprints a grid's *bytes*, so a DEM mosaic checksum is a
+    **same-host regression** (real GDAL/PROJ warp output can differ by
+    library/platform version), whereas ``svg_sha256`` is a stronger, pure-Python,
+    cross-host invariant.
+    """
+    hasher = hashlib.sha256()
+    hasher.update(_CHECKSUM_SCHEME)
+    hasher.update(grid.crs.encode("utf-8"))
+
+    t = grid.transform
+    meta = np.array(
+        [t.origin_x, t.origin_y, t.pixel_width, t.pixel_height], dtype="<f8"
+    )
+    hasher.update(meta.tobytes())
+    shape = np.array([grid.height, grid.width], dtype="<i8")
+    hasher.update(shape.tobytes())
+
+    if grid.nodata is None:
+        hasher.update(b"nodata:none")
+    else:
+        hasher.update(b"nodata:")
+        hasher.update(np.array([grid.nodata], dtype="<f8").tobytes())
+
+    # Canonical value bytes: C-contiguous little-endian float64 with NaN collapsed
+    # to a single bit pattern (float64 NaNs otherwise vary in payload/sign bits).
+    values = np.ascontiguousarray(grid.values, dtype="<f8")
+    if np.isnan(values).any():
+        values = values.copy()
+        values[np.isnan(values)] = np.nan
+    values = np.ascontiguousarray(values, dtype="<f8")
+    hasher.update(values.tobytes())
+    return hasher.hexdigest()
 
 
 @dataclass(frozen=True)

@@ -22,6 +22,7 @@ from src.raster import (
     GridSampler,
     build_pyramid,
     clip_grid,
+    grid_checksum,
     mosaic,
     normalize_dem,
     sample_bilinear,
@@ -190,3 +191,58 @@ def test_normalize_dem_reprojects_mosaics_clips_and_pyramids() -> None:
     # Vertical reference preserved verbatim through normalization.
     assert result.provenance[0].vertical_crs == "NAVD88"
     assert result.provenance[0].vertical_units == "meters"
+
+
+# --- grid_checksum (roadmap #40: DEM mosaic fingerprint) ---------------------
+
+
+def test_grid_checksum_is_stable_and_hex() -> None:
+    g = _grid([[10, 20], [30, 40]])
+    a = grid_checksum(g)
+    b = grid_checksum(_grid([[10, 20], [30, 40]]))
+    assert a == b  # identical grids -> identical hash
+    assert len(a) == 64 and all(c in "0123456789abcdef" for c in a)
+
+
+def test_grid_checksum_changes_with_values() -> None:
+    base = grid_checksum(_grid([[10, 20], [30, 40]]))
+    assert grid_checksum(_grid([[10, 20], [30, 41]])) != base
+
+
+def test_grid_checksum_changes_with_transform_crs_and_nodata() -> None:
+    base = grid_checksum(_grid([[10, 20], [30, 40]]))
+    assert grid_checksum(_grid([[10, 20], [30, 40]], origin_x=1.0)) != base
+    assert grid_checksum(_grid([[10, 20], [30, 40]], px=2.0)) != base
+    assert grid_checksum(_grid([[10, 20], [30, 40]], crs="EPSG:4269")) != base
+    assert grid_checksum(_grid([[10, 20], [30, 40]], nodata=-9999.0)) != base
+
+
+def test_grid_checksum_nan_is_canonical() -> None:
+    # Two grids with NaN in the same cell must hash equal (nan != nan must not
+    # make an otherwise-identical grid hash differently); a NaN in a different
+    # cell must differ.
+    g1 = _grid([[np.nan, 20], [30, 40]])
+    g2 = _grid([[np.nan, 20], [30, 40]])
+    assert grid_checksum(g1) == grid_checksum(g2)
+    g3 = _grid([[10, np.nan], [30, 40]])
+    assert grid_checksum(g3) != grid_checksum(g1)
+
+
+def test_grid_checksum_is_endianness_and_contiguity_stable() -> None:
+    values = np.array([[10.0, 20.0], [30.0, 40.0]])
+    canonical = grid_checksum(_grid(values))
+    # Big-endian view of the same data.
+    be = RasterGrid(
+        values=values.astype(">f8"),
+        transform=GridTransform(0.0, 2.0, 1.0, 1.0),
+        crs="EPSG:5070",
+    )
+    assert grid_checksum(be) == canonical
+    # Non-contiguous view (a transposed-back slice) of the same logical array.
+    non_contig = np.asfortranarray(values)
+    nc = RasterGrid(
+        values=non_contig,
+        transform=GridTransform(0.0, 2.0, 1.0, 1.0),
+        crs="EPSG:5070",
+    )
+    assert grid_checksum(nc) == canonical

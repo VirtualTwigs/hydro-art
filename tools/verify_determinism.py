@@ -44,6 +44,7 @@ from src.config import ConfigError, Settings
 from src.datasets import AcquisitionError
 from src.determinism import (
     DeterminismError,
+    dump_registry,
     evaluate,
     format_verdict,
     load_registry,
@@ -84,6 +85,34 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--datasets-dir", default=None)
     parser.add_argument("--output-dir", default=None)
     parser.add_argument("--staging", default=None)
+    # DEM mosaic checksum (roadmap #40) — opt-in; fingerprints the real GDAL
+    # warp/mosaic path the offline fakes only simulate. Same-host regression.
+    parser.add_argument(
+        "--check-dem",
+        action="store_true",
+        help="Also fingerprint the region's DEM mosaic (real 3DEP warp/mosaic).",
+    )
+    parser.add_argument(
+        "--dem",
+        default=None,
+        help="Supplied normalized DEM grid (.npy) to checksum instead of "
+        "auto-acquiring 3DEP relief; implies --check-dem.",
+    )
+    parser.add_argument(
+        "--dem-region",
+        default=None,
+        help="Region to acquire the DEM for (default: --region).",
+    )
+    parser.add_argument("--dem-cellsize", type=float, default=10.0, help="DEM cell metres for a supplied .npy.")
+    parser.add_argument("--dem-nodata", type=float, default=None, help="Nodata for a supplied .npy.")
+    parser.add_argument("--dem-tier", default=None, help="Override elevation.tier.")
+    parser.add_argument(
+        "--dem-tile-budget", type=int, default=None,
+        help="Override elevation.tile_budget (0 = unlimited).",
+    )
+    parser.add_argument(
+        "--dem-refresh", action="store_true", help="Redownload already-cached tiles."
+    )
     return parser
 
 
@@ -98,7 +127,9 @@ def _render_once(settings: Settings, args: argparse.Namespace, console: Console)
         staging_dir=roots.staging,
     )
     ctx = pipeline.run(settings)
-    return ctx.artifacts["svg_sha256"], list(ctx.artifacts.get("export_paths", []))
+    # export_paths artifacts are strings; coerce so _png_bytes can use .suffix.
+    paths = [Path(p) for p in ctx.artifacts.get("export_paths", [])]
+    return ctx.artifacts["svg_sha256"], paths
 
 
 def _png_bytes(svg_paths: Sequence[Path]) -> bytes | None:
@@ -125,6 +156,108 @@ def _png_bytes(svg_paths: Sequence[Path]) -> bytes | None:
         return out.read_bytes()
 
 
+def _dem_mosaic_sha(args: argparse.Namespace, console: Console) -> str | None:
+    """Compute the region's DEM mosaic checksum, or ``None`` (degrade to a skip).
+
+    Two sources, mirroring ``tools/render_terrain_print.py``:
+
+    - ``--dem <path.npy>``: load a pre-normalized grid (cellsize transform) and
+      fingerprint it — fast, for same-host experiments.
+    - otherwise: auto-acquire real 3DEP relief for the region
+      (``acquire_dem_for_settings``), reproject/mosaic to EPSG:5070 through the
+      concrete ``raster_io`` seams (``normalize_dem``), clipped to the region's
+      EPSG:5070 envelope, then ``grid_checksum`` the mosaic.
+
+    Any DEM error degrades to ``None`` (a clear "skipped" line) so the SVG
+    determinism check is never held hostage to the DEM subsystem.
+    """
+    import numpy as np
+
+    from src.raster import GridTransform, RasterGrid, grid_checksum, normalize_dem
+
+    try:
+        if args.dem:
+            values = np.load(args.dem).astype(float)
+            grid = RasterGrid(
+                values=values,
+                transform=GridTransform(0.0, values.shape[0] * args.dem_cellsize,
+                                        args.dem_cellsize, args.dem_cellsize),
+                crs="EPSG:5070",
+                nodata=args.dem_nodata,
+            )
+            return grid_checksum(grid)
+
+        import dataclasses
+
+        from pyproj import Transformer
+
+        from src.cache import Cache
+        from src.cli import resolve_settings
+        from src.dem import acquire_dem_for_settings, region_bounds
+        from src.download import Downloader, UrllibFetcher
+        from src.raster_io import RasterioRasterReader, RasterioReprojector
+
+        region = args.dem_region or args.region
+        settings = resolve_settings(["--region", region])
+        overrides: dict = {"enabled": True}
+        if args.dem_refresh:
+            overrides["cache_policy"] = "refresh"
+        if args.dem_tier is not None:
+            overrides["tier"] = args.dem_tier
+        if args.dem_tile_budget is not None:
+            overrides["tile_budget"] = args.dem_tile_budget
+        settings = dataclasses.replace(
+            settings, elevation=dataclasses.replace(settings.elevation, **overrides)
+        )
+
+        roots = _storage_roots(args)
+        # Scope the DEM to the *county* when one is given (so a county golden
+        # doesn't over-acquire the whole state's 3DEP): clip to the county polygon
+        # bounds; else the state envelope. `clip` is EPSG:5070, `wgs` is EPSG:4326
+        # (the CRS `acquire_dem_for_settings` discovers tiles in).
+        if args.county and not args.dem_region:
+            from src.counties import CensusCountyProvider, county_boundary
+
+            poly = county_boundary(
+                CensusCountyProvider(),
+                region=region,
+                county=args.county,
+                target_crs="EPSG:5070",
+            )
+            clip = tuple(poly.bounds)  # (min_x, min_y, max_x, max_y) in 5070
+            to4326 = Transformer.from_crs("EPSG:5070", "EPSG:4326", always_xy=True)
+            lons, lats = to4326.transform(
+                [clip[0], clip[2], clip[0], clip[2]],
+                [clip[1], clip[1], clip[3], clip[3]],
+            )
+            wgs = (min(lons), min(lats), max(lons), max(lats))
+        else:
+            wgs = region_bounds(region)  # (min_lon, min_lat, max_lon, max_lat)
+            to5070 = Transformer.from_crs("EPSG:4326", "EPSG:5070", always_xy=True)
+            xs, ys = to5070.transform(
+                [wgs[0], wgs[2], wgs[0], wgs[2]], [wgs[1], wgs[1], wgs[3], wgs[3]]
+            )
+            clip = (min(xs), min(ys), max(xs), max(ys))
+
+        assets = acquire_dem_for_settings(
+            settings,
+            boundary=wgs,
+            cache=Cache(roots.cache),
+            downloader=Downloader(UrllibFetcher()),
+            log=lambda msg: console.print(f"  dem: {msg}"),
+        )
+        dem = normalize_dem(
+            assets=assets,
+            boundary=clip,
+            reader=RasterioRasterReader(),
+            reprojector=RasterioReprojector(),
+        )
+        return grid_checksum(dem.base)
+    except Exception as exc:  # noqa: BLE001 — DEM is best-effort; never block SVG.
+        console.print(f"[yellow]  dem: skipped ({type(exc).__name__}: {exc})[/]")
+        return None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     console = Console()
     args = _build_parser().parse_args(argv)
@@ -146,8 +279,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         console.print(f"[bold red]Acquisition error:[/] {exc}")
         return 2
 
+    # DEM mosaic checksum (roadmap #40) — opt-in, best-effort.
+    dem_sha = None
+    if args.check_dem or args.dem:
+        dem_sha = _dem_mosaic_sha(args, console)
+
     registry = load_registry(args.golden)
-    verdict = evaluate(key, [sha1, sha2], registry)
+    verdict = evaluate(key, [sha1, sha2], registry, dem_sha=dem_sha)
     console.print(format_verdict(verdict))
 
     # Best-effort rasterized-PNG determinism (degrades to a warning).
@@ -160,14 +298,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         console.print("[bold red]  png: DRIFT — rasterized PNGs differ[/]")
         return 1
 
-    if args.record and verdict.run_to_run_ok and (verdict.golden_sha is None or args.force):
+    if args.record and verdict.run_to_run_ok and (verdict.needs_recording or args.force):
         updated = record_golden(registry, verdict)
         golden_path = Path(args.golden)
         golden_path.parent.mkdir(parents=True, exist_ok=True)
         import json
 
         golden_path.write_text(
-            json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            json.dumps(dump_registry(updated), indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
         )
         console.print(f"[green]  recorded golden for {key} -> {golden_path}[/]")
 
