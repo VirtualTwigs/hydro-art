@@ -735,6 +735,33 @@ shared UX foundation (no duplicated option data, mapping, or view logic), carryi
 validation verdict and climate-driver overlay; `src/` and the offline suite stay free of any `web/`
 dependency.
 
+## Epoch 14 — License-free climate source (retire the PRISM rights gate)
+
+The year-over-year animation (Epochs 10–11, #45/#46) and the watershed reports (Epoch 12, #52) are the
+project's most striking output but are **commercially blocked**: PRISM data is not public domain — sale
+of any PRISM-derived asset requires a written arrangement with the PRISM Climate Group (the Rights gate
+below). PRISM's own terms state *"commercial use is strictly prohibited unless you have made special
+arrangements in advance"* and prohibit redistribution even on the paid 800 m tier; the free 4 km tier
+this project uses (`tools/prism_fetch.py`, the NACSE web service) carries the same commercial
+prohibition, and a commercial arrangement is an unpriced custom quote. Rather than pay/negotiate, swap
+the climate dependency for a **U.S.-government / free-for-any-use gridded alternative** — **NOAA
+nClimGrid** (5 km monthly temp+precip, CONUS, federal public domain — the direct PRISM equivalent) is
+the cleanest drop-in; **gridMET** (Univ. of Idaho, 4 km daily, free for commercial use) and **Daymet**
+(ORNL/NASA, 1 km daily) are fallbacks. This unlocks the animated premium tier for **$0 licensing** and
+**removes the PRISM rights gate entirely**. Mirrors the #45 precedent: the climate source is already an
+injectable `ClimateProvider` seam (`src/historical_flow.py`), so only a new `tools/` provider impl
+changes — the offline `yearly_flow_series` engine and every downstream render stay untouched and
+byte-identical.
+
+60. [ ] Public-domain climate provider — a new `tools/` `ClimateProvider` implementation (sibling to
+`tools/historical_flow.PrismClimateProvider`) that samples **NOAA nClimGrid** monthly `tmean`+`ppt` at
+each catchment centroid → `YearlyClimate`, wired into `render_state_yoy.py` / the report builder behind
+the existing `src.historical_flow.ClimateProvider` seam. Includes a `tools/` fetch/stage script (the
+nClimGrid counterpart to `prism_fetch.py`) and honest nodata handling (ocean → precip 0 / temp fallback,
+matching `monthly_flow.py`). The offline `src/` engine and default synthetic-year render stay
+byte-identical (no `src/` change beyond docs); once landed, **retire the PRISM Rights gate** in the Notes
+below (nClimGrid is federal public domain — free to sell with attribution). `M`
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
@@ -744,7 +771,9 @@ dependency.
 >   free to sell — but record the source version + attribution line for every sold art asset. **PRISM
 >   climate data is not public domain**: sale or other commercial use of any PRISM-derived animation or
 >   report (spans #45–#55) requires a written arrangement with the PRISM Climate Group, or replacing the
->   dependency. No PRISM-derived asset ships commercially until that permission is documented.
+>   dependency. No PRISM-derived asset ships commercially until that permission is documented. **Preferred
+>   resolution: Epoch 14 #60** — swap PRISM for public-domain NOAA nClimGrid (free to sell), retiring this
+>   gate at $0 rather than negotiating a PRISM commercial license.
 > - **Revenue gate (commercial expansion).** Catalog/POD, self-serve, subscriptions, and region expansion
 >   beyond OR/WA/CA/ID (Utah #47) are gated on the Epoch 11.5 revenue outcome — proven demand, not shipped
 >   features. Validation-first: prove a buyer will pay before widening the product surface.
