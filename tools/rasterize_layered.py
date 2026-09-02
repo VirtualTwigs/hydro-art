@@ -22,6 +22,15 @@ from PIL import Image
 
 _GROUP_OPEN = re.compile(r'<g id="watershed_\d+"')
 
+#: Opt-in pattern that captures *every* top-level ``<g id="...">`` layer (rivers
+#: plus areal fills, waterbodies, and point glyphs) instead of only the watershed
+#: river groups. Anchored to the two-space top-level indent so nested per-family
+#: groups (e.g. ``    <g id="point_spring">``) are not split out, and excludes the
+#: background group (kept transparent). Used by ``--all-groups`` so an all-features
+#: render rasterizes with its areal/point/waterbody layers intact rather than
+#: dropping everything drawn before the first watershed group.
+_GROUP_OPEN_ALL = re.compile(r'^  <g id="(?!background")[^"]+"')
+
 
 def _rescale_svg_open(svg_open: str, width_px: int, stroke_px: float) -> str:
     """Set a pixel-appropriate ``stroke-width`` on the root ``<svg>`` tag.
@@ -42,9 +51,28 @@ def _rescale_svg_open(svg_open: str, width_px: int, stroke_px: float) -> str:
 
 
 def split_layers(
-    svg_path: Path, work: Path, width_px: int, stroke_px: float, glow_px: float
+    svg_path: Path,
+    work: Path,
+    width_px: int,
+    stroke_px: float,
+    glow_px: float,
+    *,
+    group_open: re.Pattern[str] = _GROUP_OPEN,
+    flow_scale: float = 0.0,
 ) -> tuple[list[Path], str]:
-    """Write one standalone SVG per watershed layer; return (paths, svg_open_tag)."""
+    """Write one standalone SVG per matched layer; return (paths, svg_open_tag).
+
+    ``group_open`` selects which ``<g>`` opens a new layer; it defaults to the
+    watershed river groups (backwards-compatible), or pass :data:`_GROUP_OPEN_ALL`
+    to also capture areal/waterbody/point layers.
+
+    ``flow_scale`` (0 = disabled) rescales every *inline* ``stroke-width`` — the
+    per-path flow widths the ``width_by=flow`` presets author in projected meters,
+    which are otherwise far sub-pixel on a state-scale canvas. Multiplying by
+    ``units_per_px`` cancels the viewBox scale, so the rendered pixel width of a
+    stroke becomes exactly ``meter_value * flow_scale`` (i.e. ``flow_scale`` is
+    pixels-per-meter-of-width). Defs (e.g. hatch patterns) are left untouched.
+    """
     svg_open = ""
     defs_lines: list[str] = []
     in_defs = False
@@ -75,7 +103,7 @@ def split_layers(
             if "</defs>" in line:
                 in_defs = False
                 continue
-            if _GROUP_OPEN.search(line):
+            if group_open.search(line):
                 if current is not None:
                     current.write("</svg>\n")
                     current.close()
@@ -89,6 +117,15 @@ def split_layers(
                 current.write(line)
             elif current is not None:
                 # Skip the shared background rect group entirely (kept transparent).
+                if flow_scale > 0 and 'stroke-width="' in line:
+                    line = re.sub(
+                        r'stroke-width="([\d.]+)"',
+                        lambda m: (
+                            'stroke-width="'
+                            f'{float(m.group(1)) * units_per_px * flow_scale:.4f}"'
+                        ),
+                        line,
+                    )
                 current.write(line)
 
     if current is not None:
@@ -103,13 +140,30 @@ def main() -> int:
     ap.add_argument("--width", type=int, default=8000)
     ap.add_argument("--stroke-px", type=float, default=1.4)
     ap.add_argument("--glow-px", type=float, default=2.5)
+    ap.add_argument(
+        "--all-groups",
+        action="store_true",
+        help="Capture every top-level layer (areal fills, waterbodies, point "
+        "glyphs) too, not just watershed river groups.",
+    )
+    ap.add_argument(
+        "--flow-scale",
+        type=float,
+        default=0.0,
+        help="Rescale inline per-path stroke-widths (authored in projected "
+        "meters) to pixels-per-meter. 0 disables; try 1.4 for flow-width "
+        "presets whose sub-pixel meter widths are otherwise invisible.",
+    )
     args = ap.parse_args()
 
     svg_path = Path(args.svg)
+    group_open = _GROUP_OPEN_ALL if args.all_groups else _GROUP_OPEN
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
         layers, _ = split_layers(
-            svg_path, work, args.width, args.stroke_px, args.glow_px
+            svg_path, work, args.width, args.stroke_px, args.glow_px,
+            group_open=group_open,
+            flow_scale=args.flow_scale,
         )
         print(f"split into {len(layers)} layer SVG(s)")
 
