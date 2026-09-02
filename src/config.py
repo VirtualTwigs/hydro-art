@@ -36,11 +36,19 @@ __all__ = [
     "SUPPORTED_PALETTES",
     "SUPPORTED_COLOR_MODES",
     "SUPPORTED_WIDTH_MODES",
+    "WIDTH_PRESETS",
+    "SUPPORTED_WIDTH_PRESETS",
     "SUPPORTED_GLOW_MODES",
     "SUPPORTED_COASTAL_MODES",
     "SUPPORTED_RENDER_ORDERS",
     "WATERBODY_PRESETS",
     "SUPPORTED_WATERBODY_PRESETS",
+    "PointFeatureSettings",
+    "ArealFeatureSettings",
+    "POINT_FEATURE_PRESETS",
+    "AREAL_FEATURE_PRESETS",
+    "SUPPORTED_POINT_FEATURE_PRESETS",
+    "SUPPORTED_AREAL_FEATURE_PRESETS",
     "SUPPORTED_ELEVATION_SOURCES",
     "SUPPORTED_ELEVATION_TIERS",
     "SUPPORTED_CACHE_POLICIES",
@@ -159,6 +167,72 @@ WATERBODY_PRESETS: dict[str, dict[str, Any]] = {
 #: Allowlist of preset names (for CLI ``choices`` + validation).
 SUPPORTED_WATERBODY_PRESETS: tuple[str, ...] = tuple(WATERBODY_PRESETS)
 
+#: Natural-feature art-direction presets (Item 64), mirroring
+#: :data:`WATERBODY_PRESETS`. A preset is a convenience directive expanding to a
+#: bundle of existing settings fields (precedence ``defaults < preset <
+#: explicit``); it invents no new render behavior and is never stored on the
+#: frozen settings. ``screen`` mirrors the on-screen default (no thinning); the
+#: ``print-*`` presets declutter for ink — points thin to a wider minimum
+#: spacing and tiny areal features are pruned by a positive area threshold.
+#: ``print-state`` is tuned for a whole-state / wall sheet (thins harder);
+#: ``print-county`` is less aggressive so a single county still reads.
+POINT_FEATURE_PRESETS: dict[str, dict[str, Any]] = {
+    "screen": {"min_spacing_m": 0.0, "render_order": "above"},
+    "print-state": {"min_spacing_m": 8_000.0, "render_order": "above"},
+    "print-county": {"min_spacing_m": 2_000.0, "render_order": "above"},
+}
+
+AREAL_FEATURE_PRESETS: dict[str, dict[str, Any]] = {
+    "screen": {"min_area_m2": 0.0, "render_order": "below"},
+    "print-state": {"min_area_m2": 100_000.0, "render_order": "below"},
+    "print-county": {"min_area_m2": 25_000.0, "render_order": "below"},
+}
+
+#: Named scale-aware flow→width presets (Epoch 18). A preset is a convenience
+#: directive: naming one (top-level ``width_preset`` / ``--width-preset``) expands
+#: to this bundle of existing ``width_*`` fields, inventing no new render behavior.
+#: One width mapping cannot serve every extent — discharge spans ~5 orders of
+#: magnitude across a whole state, so ``state`` uses a **logarithmic** ramp (the
+#: only thing that keeps headwaters visible next to the Columbia); ``basin`` and
+#: ``watershed`` cover a smaller range, so a **power-law** ramp (``width_gamma``
+#: 0.45 ≈ ``Q^0.45``; 0.5 ≈ ``√Q``) reads as both legible and geomorphologically
+#: honest (Leopold & Maddock downstream hydraulic geometry ``w ∝ Q^0.5``). Values
+#: are art direction, human-tunable — not a hard contract. Precedence is
+#: ``defaults < preset < explicit``; the preset is consumed at config time and is
+#: NOT stored on :class:`Settings`, so a build without one stays byte-identical.
+WIDTH_PRESETS: dict[str, dict[str, Any]] = {
+    "state": {  # log, ~10:1 dynamic range
+        "width_by": "flow",
+        "width_min": 0.35,
+        "width_max": 3.5,
+        "width_gamma": 1.0,
+        "width_log": True,
+    },
+    "basin": {  # power-law ~Q^0.45, ~6:1
+        "width_by": "flow",
+        "width_min": 0.35,
+        "width_max": 2.1,
+        "width_gamma": 0.45,
+        "width_log": False,
+    },
+    "watershed": {  # √Q hydraulic geometry, ~4:1
+        "width_by": "flow",
+        "width_min": 0.35,
+        "width_max": 1.4,
+        "width_gamma": 0.5,
+        "width_log": False,
+    },
+}
+
+#: Allowlists of preset names (for CLI ``choices`` + validation).
+SUPPORTED_POINT_FEATURE_PRESETS: tuple[str, ...] = tuple(POINT_FEATURE_PRESETS)
+SUPPORTED_AREAL_FEATURE_PRESETS: tuple[str, ...] = tuple(AREAL_FEATURE_PRESETS)
+SUPPORTED_WIDTH_PRESETS: tuple[str, ...] = tuple(WIDTH_PRESETS)
+
+#: Validation pattern for an SVG ``stroke-dasharray`` value (comma/space
+#: separated positive numbers, e.g. ``"4,3"`` or ``"6 2 1"``).
+_DASHARRAY = re.compile(r"^\d+(?:\.\d+)?(?:[,\s]+\d+(?:\.\d+)?)*$")
+
 #: Authoritative elevation sources (Item 11 / Epoch 2). USGS 3DEP bare-earth
 #: DEMs are the only source for the first release; the allowlist leaves room
 #: for lidar/other products later without changing downstream code.
@@ -193,6 +267,7 @@ DEFAULTS: dict[str, Any] = {
     "width_min": 0.35,
     "width_max": 2.0,
     "width_gamma": 1.0,
+    "width_log": False,
     "glow": False,
     "glow_mode": "blur",
     "glow_radius": 2.0,
@@ -205,6 +280,21 @@ DEFAULTS: dict[str, Any] = {
         "min_inland_area_m2": 0.0,
         "min_coastal_area_m2": 0.0,
         "coastal_mode": "conservative",
+        "render_order": "below",
+    },
+    "point_features": {
+        "enabled": False,
+        "color": "",
+        "size": 1.0,
+        "min_spacing_m": 0.0,
+        "render_order": "above",
+    },
+    "areal_features": {
+        "enabled": False,
+        "color": "",
+        "opacity": 0.35,
+        "dash": "4,3",
+        "min_area_m2": 0.0,
         "render_order": "below",
     },
     "elevation": {
@@ -242,6 +332,63 @@ class WaterbodySettings:
     min_inland_area_m2: float
     min_coastal_area_m2: float
     coastal_mode: str
+    render_order: str
+
+
+@dataclass(frozen=True)
+class PointFeatureSettings:
+    """Validated settings for the optional point-glyph layer (Item 64).
+
+    Spring/waterfall/rapids points are rendered as glyphs; this block controls
+    the group-level knobs the pipeline bridges into the rendering layer's
+    per-family styles (:data:`~src.rendering.DEFAULT_POINT_STYLES`).
+
+    Attributes:
+        enabled: Whether point glyphs are rendered (off by default, so a default
+            build is byte-identical).
+        color: Optional single glyph color (hex) overriding every family's
+            default; ``""`` keeps the rendering layer's per-family colors.
+        size: Glyph size multiplier applied over the per-family defaults; > 0.
+        min_spacing_m: Deterministic per-family density cap — the minimum spacing
+            (m) between kept points of the same family; ``0`` keeps every point.
+        render_order: Layer position relative to flowlines (one of
+            :data:`SUPPORTED_RENDER_ORDERS`); ``"above"`` by default.
+    """
+
+    enabled: bool
+    color: str
+    size: float
+    min_spacing_m: float
+    render_order: str
+
+
+@dataclass(frozen=True)
+class ArealFeatureSettings:
+    """Validated settings for the optional areal natural-feature layer (Item 64).
+
+    Wetlands/playas/perennial-ice polygons get differentiated fills; this block
+    controls the group-level knobs the pipeline bridges into the rendering
+    layer's per-family styles (:data:`~src.rendering.DEFAULT_AREAL_STYLES`).
+
+    Attributes:
+        enabled: Whether areal fills are rendered (off by default, so a default
+            build is byte-identical).
+        color: Optional single fill/stroke color (hex) overriding every family's
+            default; ``""`` keeps the rendering layer's per-family colors.
+        opacity: Fill opacity for solid-filled families (perennial ice); in
+            ``(0, 1]``.
+        dash: ``stroke-dasharray`` for dashed-outline families (playa).
+        min_area_m2: Minimum projected area (m²) an areal feature must exceed to
+            be kept; ``0`` keeps every valid feature.
+        render_order: Layer position relative to flowlines (one of
+            :data:`SUPPORTED_RENDER_ORDERS`); ``"below"`` by default.
+    """
+
+    enabled: bool
+    color: str
+    opacity: float
+    dash: str
+    min_area_m2: float
     render_order: str
 
 
@@ -303,6 +450,8 @@ class Settings:
         width_max: Maximum stroke width for ``width_by == "flow"``; must be > 0
             and >= ``width_min``.
         width_gamma: Shaping exponent for the flow→width ramp; must be > 0.
+        width_log: Whether the flow→width ramp normalizes on ``log(metric)``
+            (Epoch 18); ``False`` (default) keeps a linear normalization.
         glow: Whether the optional glow effect is enabled.
         glow_mode: Glow style when enabled (``"vector"`` or ``"blur"``).
         glow_radius: Glow radius in SVG user units; must be > 0.
@@ -311,6 +460,10 @@ class Settings:
         outputs: Set of output formats to produce (subset of
             :data:`SUPPORTED_OUTPUTS`).
         waterbodies: Validated waterbody-outline settings (Item W3).
+        point_features: Validated point-glyph settings (Item 64); disabled by
+            default.
+        areal_features: Validated areal natural-feature settings (Item 64);
+            disabled by default.
         elevation: Validated elevation settings (Item 11); disabled by default.
     """
 
@@ -330,12 +483,15 @@ class Settings:
     width_min: float
     width_max: float
     width_gamma: float
+    width_log: bool
     glow: bool
     glow_mode: str
     glow_radius: float
     png_size: int
     outputs: frozenset[str]
     waterbodies: WaterbodySettings
+    point_features: PointFeatureSettings
+    areal_features: ArealFeatureSettings
     elevation: ElevationSettings
 
 
@@ -552,6 +708,181 @@ def _coerce_waterbodies(value: Any) -> WaterbodySettings:
     )
 
 
+def _coerce_optional_color(value: Any, field: str) -> str:
+    """Validate an optional hex color; ``""``/``None`` means "use defaults"."""
+    if value is None:
+        return ""
+    color = str(value)
+    if color == "":
+        return ""
+    if not _HEX_COLOR.match(color):
+        raise ConfigError(
+            f"Invalid {field}: {color!r}. Expected a hex color like '#2ec4ff' "
+            "(or empty to use the per-family defaults)."
+        )
+    return color
+
+
+def _coerce_preset(
+    provided: dict[str, Any], presets: dict[str, dict[str, Any]], field: str
+) -> dict[str, Any]:
+    """Pop + validate a ``preset`` directive, returning its expansion bundle.
+
+    Mirrors :func:`_coerce_waterbodies`: the preset is consumed here and never
+    stored on the resulting settings, so a build without one is unchanged.
+    """
+    preset_name = provided.pop("preset", None)
+    if preset_name is None:
+        return {}
+    key = str(preset_name).lower()
+    if key not in presets:
+        valid = ", ".join(presets)
+        raise ConfigError(
+            f"Unsupported {field}.preset: {preset_name!r}. Valid: {valid}."
+        )
+    return presets[key]
+
+
+def _coerce_nonneg(value: Any, field: str) -> float:
+    """Coerce ``value`` to a float and require it be >= 0."""
+    try:
+        result = float(value)
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid {field}: {value!r}. Expected a non-negative number."
+        )
+    if result < 0:
+        raise ConfigError(f"{field} must be >= 0, got {result}.")
+    return result
+
+
+def _coerce_render_order(value: Any, field: str) -> str:
+    """Validate a ``render_order`` sub-key against :data:`SUPPORTED_RENDER_ORDERS`."""
+    order = str(value).lower()
+    if order not in SUPPORTED_RENDER_ORDERS:
+        valid = ", ".join(SUPPORTED_RENDER_ORDERS)
+        raise ConfigError(f"Unsupported {field}.render_order: {order!r}. Valid: {valid}.")
+    return order
+
+
+def _coerce_point_features(value: Any) -> PointFeatureSettings:
+    """Validate the ``point_features`` block into :class:`PointFeatureSettings`.
+
+    A partial mapping is tolerated (omitted sub-keys fall back to
+    :data:`DEFAULTS`); a ``preset`` directive expands a named
+    :data:`POINT_FEATURE_PRESETS` bundle with precedence
+    ``defaults < preset < explicit``. Mirrors :func:`_coerce_waterbodies`.
+
+    Raises:
+        ConfigError: If any provided sub-value (or the preset name) is invalid.
+    """
+    defaults = DEFAULTS["point_features"]
+    if value is None:
+        provided: dict[str, Any] = {}
+    elif isinstance(value, Mapping):
+        provided = dict(value)
+    else:
+        raise ConfigError(
+            f"Invalid 'point_features' value: {value!r}. Expected a mapping."
+        )
+
+    preset_values = _coerce_preset(provided, POINT_FEATURE_PRESETS, "point_features")
+    merged = {**defaults, **preset_values, **provided}
+
+    enabled = bool(merged.get("enabled", defaults["enabled"]))
+    color = _coerce_optional_color(merged.get("color", defaults["color"]), "point_features.color")
+
+    try:
+        size = float(merged.get("size", defaults["size"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid point_features.size: {merged.get('size')!r}. "
+            "Expected a positive number."
+        )
+    if size <= 0:
+        raise ConfigError(f"point_features.size must be greater than 0, got {size}.")
+
+    min_spacing_m = _coerce_nonneg(
+        merged.get("min_spacing_m", defaults["min_spacing_m"]),
+        "point_features.min_spacing_m",
+    )
+    render_order = _coerce_render_order(
+        merged.get("render_order", defaults["render_order"]), "point_features"
+    )
+
+    return PointFeatureSettings(
+        enabled=enabled,
+        color=color,
+        size=size,
+        min_spacing_m=min_spacing_m,
+        render_order=render_order,
+    )
+
+
+def _coerce_areal_features(value: Any) -> ArealFeatureSettings:
+    """Validate the ``areal_features`` block into :class:`ArealFeatureSettings`.
+
+    A partial mapping is tolerated (omitted sub-keys fall back to
+    :data:`DEFAULTS`); a ``preset`` directive expands a named
+    :data:`AREAL_FEATURE_PRESETS` bundle with precedence
+    ``defaults < preset < explicit``. Mirrors :func:`_coerce_waterbodies`.
+
+    Raises:
+        ConfigError: If any provided sub-value (or the preset name) is invalid.
+    """
+    defaults = DEFAULTS["areal_features"]
+    if value is None:
+        provided: dict[str, Any] = {}
+    elif isinstance(value, Mapping):
+        provided = dict(value)
+    else:
+        raise ConfigError(
+            f"Invalid 'areal_features' value: {value!r}. Expected a mapping."
+        )
+
+    preset_values = _coerce_preset(provided, AREAL_FEATURE_PRESETS, "areal_features")
+    merged = {**defaults, **preset_values, **provided}
+
+    enabled = bool(merged.get("enabled", defaults["enabled"]))
+    color = _coerce_optional_color(merged.get("color", defaults["color"]), "areal_features.color")
+
+    try:
+        opacity = float(merged.get("opacity", defaults["opacity"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid areal_features.opacity: {merged.get('opacity')!r}. "
+            "Expected a number in (0, 1]."
+        )
+    if not 0 < opacity <= 1:
+        raise ConfigError(
+            f"areal_features.opacity must be in (0, 1], got {opacity}."
+        )
+
+    dash = str(merged.get("dash", defaults["dash"]))
+    if not _DASHARRAY.match(dash):
+        raise ConfigError(
+            f"Invalid areal_features.dash: {dash!r}. Expected a stroke-dasharray "
+            "like '4,3'."
+        )
+
+    min_area_m2 = _coerce_nonneg(
+        merged.get("min_area_m2", defaults["min_area_m2"]),
+        "areal_features.min_area_m2",
+    )
+    render_order = _coerce_render_order(
+        merged.get("render_order", defaults["render_order"]), "areal_features"
+    )
+
+    return ArealFeatureSettings(
+        enabled=enabled,
+        color=color,
+        opacity=opacity,
+        dash=dash,
+        min_area_m2=min_area_m2,
+        render_order=render_order,
+    )
+
+
 def _coerce_elevation(value: Any) -> ElevationSettings:
     """Validate the ``elevation`` block into an :class:`ElevationSettings`.
 
@@ -731,7 +1062,31 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             "Expected a hex color like '#00ffff'."
         )
 
-    width_by = str(values.get("width_by", DEFAULTS["width_by"])).lower()
+    # Scale-aware flow→width preset (Epoch 18). A top-level ``width_preset``
+    # expands to a bundle of ``width_*`` fields with precedence
+    # ``defaults < preset < explicit``. Because production always passes a
+    # DEFAULTS-spread mapping (see :func:`cli.settings_from_args`), "explicit"
+    # is detected by comparison against the default: a field that differs from
+    # its default is an explicit override and wins; otherwise the preset (if any)
+    # supplies the value. The directive is consumed here, never stored.
+    width_preset_name = values.get("width_preset")
+    width_preset_values: dict[str, Any] = {}
+    if width_preset_name is not None:
+        key = str(width_preset_name).lower()
+        if key not in WIDTH_PRESETS:
+            valid = ", ".join(SUPPORTED_WIDTH_PRESETS)
+            raise ConfigError(
+                f"Unsupported width_preset: {width_preset_name!r}. Valid: {valid}."
+            )
+        width_preset_values = WIDTH_PRESETS[key]
+
+    def _width_value(field: str) -> Any:
+        provided = values.get(field, DEFAULTS[field])
+        if provided != DEFAULTS[field]:
+            return provided  # explicit override (differs from default) wins
+        return width_preset_values.get(field, DEFAULTS[field])
+
+    width_by = str(_width_value("width_by")).lower()
     if width_by not in SUPPORTED_WIDTH_MODES:
         valid = ", ".join(SUPPORTED_WIDTH_MODES)
         raise ConfigError(
@@ -739,20 +1094,20 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         )
 
     try:
-        width_min = float(values.get("width_min", DEFAULTS["width_min"]))
+        width_min = float(_width_value("width_min"))
     except (TypeError, ValueError):
         raise ConfigError(
-            f"Invalid width_min: {values.get('width_min')!r}. "
+            f"Invalid width_min: {_width_value('width_min')!r}. "
             "Expected a positive number."
         )
     if width_min <= 0:
         raise ConfigError(f"width_min must be greater than 0, got {width_min}.")
 
     try:
-        width_max = float(values.get("width_max", DEFAULTS["width_max"]))
+        width_max = float(_width_value("width_max"))
     except (TypeError, ValueError):
         raise ConfigError(
-            f"Invalid width_max: {values.get('width_max')!r}. "
+            f"Invalid width_max: {_width_value('width_max')!r}. "
             "Expected a positive number."
         )
     if width_max <= 0:
@@ -764,16 +1119,18 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         )
 
     try:
-        width_gamma = float(values.get("width_gamma", DEFAULTS["width_gamma"]))
+        width_gamma = float(_width_value("width_gamma"))
     except (TypeError, ValueError):
         raise ConfigError(
-            f"Invalid width_gamma: {values.get('width_gamma')!r}. "
+            f"Invalid width_gamma: {_width_value('width_gamma')!r}. "
             "Expected a positive number."
         )
     if width_gamma <= 0:
         raise ConfigError(
             f"width_gamma must be greater than 0, got {width_gamma}."
         )
+
+    width_log = bool(_width_value("width_log"))
 
     glow = bool(values.get("glow", DEFAULTS["glow"]))
 
@@ -812,6 +1169,12 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         raise ConfigError("At least one output format must be enabled.")
 
     waterbodies = _coerce_waterbodies(values.get("waterbodies", DEFAULTS["waterbodies"]))
+    point_features = _coerce_point_features(
+        values.get("point_features", DEFAULTS["point_features"])
+    )
+    areal_features = _coerce_areal_features(
+        values.get("areal_features", DEFAULTS["areal_features"])
+    )
     elevation = _coerce_elevation(values.get("elevation", DEFAULTS["elevation"]))
 
     return Settings(
@@ -837,6 +1200,8 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         png_size=png_size,
         outputs=outputs,
         waterbodies=waterbodies,
+        point_features=point_features,
+        areal_features=areal_features,
         elevation=elevation,
     )
 

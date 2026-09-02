@@ -17,25 +17,38 @@ from typing import Any, Callable
 
 from rich.console import Console
 
+from src.areal_features import classify_areal_layer
+from src.areal_selection import (
+    ArealSelectionPolicy,
+    PointSelectionPolicy,
+    process_areal_features,
+    process_point_features,
+)
 from src.cache import Cache, DownloaderLike, ensure_cached, extract_all
-from src.config import ConfigError, Settings
-from src.datasets import resolve_required_files
 from src.clipping import clip_layers, region_boundary
 from src.coloring import assign_colors
+from src.config import ConfigError, Settings
 from src.counties import (
     CensusCountyProvider,
     CountyBoundaryProvider,
     county_boundary,
 )
+from src.datasets import resolve_required_files
 from src.download import Downloader, UrllibFetcher
 from src.export import Exporter, FileExporter
 from src.geometry import RepairStats, repair_layer
 from src.graph import build_graph
 from src.loading import LayerLoader, PyogrioLayerLoader
-from src.optimize import SvgOptimizer, SvgoOptimizer
+from src.optimize import SvgoOptimizer, SvgOptimizer
 from src.ordering import assign_stream_order
+from src.point_features import classify_point_layer
 from src.projection import reproject_layer
-from src.rendering import render_svg, scaled_widths
+from src.rendering import (
+    DEFAULT_AREAL_STYLES,
+    DEFAULT_POINT_STYLES,
+    render_svg,
+    scaled_widths,
+)
 from src.waterbodies import classify_layer
 from src.waterbody_selection import (
     WaterbodySelectionPolicy,
@@ -140,11 +153,15 @@ def _validate_stage(ctx: RunContext) -> None:
     total = sum(len(layer.geometries) for layer in layers)
     ctx.log(f"[bold]validate[/bold] loaded {len(layers)} layer(s), {total} geometries")
 
-    # Areal-water is an additive layer: only loaded when enabled AND the loader
-    # supports it, so river-only loaders (and disabled builds) stay untouched.
-    if ctx.settings.waterbodies.enabled and hasattr(
-        ctx.loader, "load_waterbody_layers"
-    ):
+    # The NHDWaterbody polygon load is additive: only loaded when the loader
+    # supports it AND a consumer is enabled, so river-only loaders (and fully
+    # disabled builds) stay untouched. Both the waterbody-outline layer (Item W3)
+    # and the areal natural-feature layer (Item 64) classify this same load
+    # through complementary taxonomies, so either one enabled pulls it.
+    needs_waterbody = (
+        ctx.settings.waterbodies.enabled or ctx.settings.areal_features.enabled
+    )
+    if needs_waterbody and hasattr(ctx.loader, "load_waterbody_layers"):
         wb_layers = []
         for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
             wb_layers.extend(
@@ -157,6 +174,25 @@ def _validate_stage(ctx: RunContext) -> None:
         ctx.log(
             f"[bold]validate[/bold] loaded {len(wb_layers)} waterbody layer(s), "
             f"{wb_total} polygons"
+        )
+
+    # NHDPoint is a separate additive load (springs/waterfalls/rapids), gated the
+    # same way and independent of the waterbody path (Item 64).
+    if ctx.settings.point_features.enabled and hasattr(
+        ctx.loader, "load_point_features"
+    ):
+        pt_layers = []
+        for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
+            pt_layers.extend(
+                ctx.loader.load_point_features(
+                    dataset_dir, descriptor.dataset_id, descriptor.huc4
+                )
+            )
+        ctx.artifacts["point_layers"] = pt_layers
+        pt_total = sum(len(layer.geometries) for layer in pt_layers)
+        ctx.log(
+            f"[bold]validate[/bold] loaded {len(pt_layers)} point layer(s), "
+            f"{pt_total} points"
         )
 
 
@@ -350,10 +386,14 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     }
 
     waterbody_items = _select_waterbody_outlines(ctx)
+    areal_items = _select_areal_features(ctx)
+    point_items = _select_point_glyphs(ctx)
 
     stroke_widths = _resolve_stroke_widths(ctx)
 
     wb = ctx.settings.waterbodies
+    pf = ctx.settings.point_features
+    af = ctx.settings.areal_features
     svg = render_svg(
         geometries,
         segment_colors,
@@ -368,6 +408,11 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         waterbody_color=wb.color,
         waterbody_stroke_width=wb.stroke_width,
         waterbody_order=wb.render_order,
+        areal_features=areal_items or None,
+        areal_feature_styles=_areal_feature_styles(af) if areal_items else None,
+        point_features=point_items or None,
+        point_feature_styles=_point_feature_styles(pf) if point_items else None,
+        point_feature_order=pf.render_order,
     )
     ctx.artifacts["svg"] = svg
 
@@ -376,7 +421,8 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     )
     ctx.log(
         f"[bold]generate_svg[/bold] rendered {len(geometries)} path(s) in "
-        f"{groups} watershed layer(s), {len(waterbody_items)} waterbody outline(s); "
+        f"{groups} watershed layer(s), {len(waterbody_items)} waterbody outline(s), "
+        f"{len(areal_items)} areal + {len(point_items)} point feature(s); "
         f"{len(svg)} bytes"
     )
 
@@ -413,6 +459,112 @@ def _select_waterbody_outlines(ctx: RunContext) -> list[tuple]:
         feature_id = feat.source_id or f"wb{index}"
         items.append((feature_id, feat.geometry, feat.wb_class))
     return items
+
+
+def _select_areal_features(ctx: RunContext) -> list[tuple]:
+    """Classify + select the NHDWaterbody load into areal render items (Item 64).
+
+    Reuses the ``waterbody_layers`` artifact (the shared NHDWaterbody load),
+    classifying it through the complementary areal taxonomy. Returns a list of
+    ``(feature_id, geometry, ar_class)`` tuples and stashes the
+    :class:`~src.areal_selection.ArealSelection` report in
+    ``artifacts["areal_selection"]``. Returns ``[]`` when disabled or when no
+    polygons were loaded, leaving the render unchanged.
+    """
+    af = ctx.settings.areal_features
+    layers = ctx.artifacts.get("waterbody_layers")
+    if not af.enabled or not layers:
+        return []
+
+    features = [feat for layer in layers for feat in classify_areal_layer(layer)]
+    policy = ArealSelectionPolicy(default_min_area_m2=af.min_area_m2)
+    selection = process_areal_features(
+        features,
+        boundary=ctx.artifacts.get("region_boundary"),
+        policy=policy,
+        target_crs=ctx.settings.projection,
+    )
+    ctx.artifacts["areal_selection"] = selection
+
+    items: list[tuple] = []
+    for index, feat in enumerate(selection.selected):
+        feature_id = feat.source_id or f"ar{index}"
+        items.append((feature_id, feat.geometry, feat.ar_class))
+    return items
+
+
+def _select_point_glyphs(ctx: RunContext) -> list[tuple]:
+    """Classify + select loaded NHDPoint layers into glyph render items (Item 64).
+
+    Returns a list of ``(feature_id, geometry, pt_class)`` tuples for the kept
+    points and stashes the :class:`~src.areal_selection.PointSelection` report in
+    ``artifacts["point_selection"]``. Returns ``[]`` when disabled or when no
+    point layers were loaded, leaving the render unchanged.
+    """
+    pf = ctx.settings.point_features
+    layers = ctx.artifacts.get("point_layers")
+    if not pf.enabled or not layers:
+        return []
+
+    features = [feat for layer in layers for feat in classify_point_layer(layer)]
+    policy = PointSelectionPolicy(default_min_spacing_m=pf.min_spacing_m)
+    selection = process_point_features(
+        features,
+        boundary=ctx.artifacts.get("region_boundary"),
+        policy=policy,
+        target_crs=ctx.settings.projection,
+    )
+    ctx.artifacts["point_selection"] = selection
+
+    items: list[tuple] = []
+    for index, feat in enumerate(selection.selected):
+        feature_id = feat.source_id or f"pt{index}"
+        items.append((feature_id, feat.geometry, feat.pt_class))
+    return items
+
+
+def _point_feature_styles(pf) -> dict[str, dict[str, Any]] | None:
+    """Bridge group-level ``PointFeatureSettings`` into per-family render styles.
+
+    Only emits overrides that differ from the rendering defaults, so an enabled
+    build with default knobs (``color=""``, ``size=1.0``, default ``render_order``)
+    yields ``None`` and inherits :data:`~src.rendering.DEFAULT_POINT_STYLES`.
+    ``size`` is a multiplier over each family's default glyph size.
+    """
+    styles: dict[str, dict[str, Any]] = {}
+    for family, base in DEFAULT_POINT_STYLES.items():
+        override: dict[str, Any] = {}
+        if pf.color:
+            override["color"] = pf.color
+        if pf.size != 1.0:
+            override["size"] = float(base.get("size", 1.5)) * pf.size
+        if override:
+            styles[family] = override
+    return styles or None
+
+
+def _areal_feature_styles(af) -> dict[str, dict[str, Any]] | None:
+    """Bridge group-level ``ArealFeatureSettings`` into per-family render styles.
+
+    Only emits overrides that differ from the rendering defaults (``opacity`` for
+    solid-filled families, ``dash`` for outline-only families, ``render_order``
+    for all), so an enabled build with default knobs inherits
+    :data:`~src.rendering.DEFAULT_AREAL_STYLES`.
+    """
+    styles: dict[str, dict[str, Any]] = {}
+    for family, base in DEFAULT_AREAL_STYLES.items():
+        override: dict[str, Any] = {}
+        if af.color:
+            override["color"] = af.color
+        if base.get("fill") == "solid" and af.opacity != base.get("opacity"):
+            override["opacity"] = af.opacity
+        if base.get("fill") == "none" and af.dash != base.get("dash"):
+            override["dash"] = af.dash
+        if af.render_order != base.get("render_order", "below"):
+            override["render_order"] = af.render_order
+        if override:
+            styles[family] = override
+    return styles or None
 
 
 def _optimize_svg_stage(ctx: RunContext) -> None:

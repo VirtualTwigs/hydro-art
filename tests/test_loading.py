@@ -4,13 +4,18 @@ import warnings
 
 from shapely.geometry import LineString
 
+from shapely.geometry import Point
+
 from src.loading import (
     HYDRO_LAYER_ALLOWLIST,
+    POINT_ATTRIBUTE_FIELDS,
+    POINT_LAYER_ALLOWLIST,
     WATERBODY_LAYER_ALLOWLIST,
     Layer,
     LayerLoader,
     PyogrioLayerLoader,
     discover_layers,
+    discover_point_layers,
     discover_waterbody_layers,
 )
 
@@ -71,3 +76,51 @@ def test_waterbody_allowlist_is_separate_from_flowline_discovery():
 def test_discover_waterbody_layers_filters_case_insensitively():
     available = ["NHDFlowline", "NHDWaterbody", "nhdarea", "WBDHU8"]
     assert discover_waterbody_layers(available) == ["NHDWaterbody", "nhdarea"]
+
+
+class FakePointLoader:
+    """In-memory loader exposing the point-feature seam without GDAL."""
+
+    def load_point_features(self, dataset_dir, dataset_id, huc4):
+        return [
+            Layer(
+                name="NHDPoint",
+                dataset_id=dataset_id,
+                huc4=huc4,
+                geometries=(Point(0, 0), Point(1, 1)),
+                crs="EPSG:4269",
+                attributes=(
+                    {"FType": 458, "Permanent_Identifier": "sp-1"},
+                    {"FType": 487, "Permanent_Identifier": "wf-2"},
+                ),
+            )
+        ]
+
+
+def test_point_allowlist_is_separate_from_flowline_and_waterbody_paths():
+    # NHDPoint features must not leak into the flowline/graph or waterbody loads.
+    assert "NHDPoint" in POINT_LAYER_ALLOWLIST
+    assert "NHDPoint" not in HYDRO_LAYER_ALLOWLIST
+    assert "NHDPoint" not in WATERBODY_LAYER_ALLOWLIST
+
+
+def test_point_attribute_fields_carry_provenance_but_not_area():
+    # Points have no area; the field set carries id/name/code provenance only.
+    assert "FType" in POINT_ATTRIBUTE_FIELDS
+    assert "Permanent_Identifier" in POINT_ATTRIBUTE_FIELDS
+    assert "AreaSqKm" not in POINT_ATTRIBUTE_FIELDS
+
+
+def test_discover_point_layers_filters_case_insensitively():
+    available = ["NHDFlowline", "nhdpoint", "NHDWaterbody", "NHDArea"]
+    assert discover_point_layers(available) == ["nhdpoint"]
+
+
+def test_fake_point_loader_seam_preserves_geometry_and_attributes():
+    loader = FakePointLoader()
+    layers = loader.load_point_features("/anything", "nhdplus_hr", "1807")
+    assert len(layers) == 1
+    layer = layers[0]
+    assert layer.name == "NHDPoint"
+    assert len(layer.geometries) == len(layer.attributes) == 2
+    assert layer.attributes[0]["FType"] == 458

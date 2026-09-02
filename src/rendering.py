@@ -35,6 +35,9 @@ __all__ = [
     "widths_on_span",
     "monthly_width_frames",
     "hypsometric_colors",
+    "POINT_GLYPHS",
+    "DEFAULT_POINT_STYLES",
+    "DEFAULT_AREAL_STYLES",
 ]
 
 Coord = tuple[float, float]
@@ -225,6 +228,206 @@ def _waterbody_lines(
     return lines
 
 
+#: Default glyph shape per point family: springs=dots, waterfalls=chevrons,
+#: rapids=tick/zigzag marks (spec Item 63; shapes echo ``tools/overlay_facilities``).
+POINT_GLYPHS: dict[str, str] = {
+    "spring": "dot",
+    "waterfall": "chevron",
+    "rapids": "tick",
+}
+
+#: Per-family point defaults (color/size/z-order). Callers (the config layer)
+#: override these; kept here so ``render_svg`` is usable standalone in tests.
+DEFAULT_POINT_STYLES: dict[str, dict[str, Any]] = {
+    "spring": {"color": "#7fe3ff", "size": 1.5},
+    "waterfall": {"color": "#eaf6ff", "size": 2.0},
+    "rapids": {"color": "#bfefff", "size": 2.0},
+}
+
+#: Per-family areal defaults. ``fill`` is ``"hatch"`` (pattern), ``"solid"``
+#: (with ``opacity``), or ``"none"`` (dashed outline). ``render_order`` places
+#: the family ``"below"`` (default) or ``"above"`` the flowline/waterbody stack.
+DEFAULT_AREAL_STYLES: dict[str, dict[str, Any]] = {
+    "wetland": {"color": "#4fae86", "fill": "hatch", "render_order": "below"},
+    "perennial_ice": {
+        "color": "#dbeeff", "fill": "solid", "opacity": 0.35, "render_order": "below",
+    },
+    "playa": {"color": "#c9a86a", "fill": "none", "dash": "4,3", "render_order": "below"},
+}
+
+
+def _group_by_family(items: list[tuple]) -> dict[str, list[tuple]]:
+    """Group ``(feature_id, geometry, family)`` items by family, preserving order."""
+    groups: dict[str, list[tuple]] = {}
+    for feature_id, geom, family in items:
+        groups.setdefault(family, []).append((feature_id, geom))
+    return groups
+
+
+def _merge_style(defaults: dict[str, dict], family: str, styles: Mapping | None) -> dict:
+    """Merge per-family default style with a caller override (override wins)."""
+    merged = dict(defaults.get(family, {}))
+    override = (styles or {}).get(family) if styles else None
+    if override:
+        merged.update(override)
+    return merged
+
+
+def _point_xy(geom: Any, min_x: float, max_y: float) -> tuple[float, float]:
+    """Transform a point geometry to the flipped, origin-shifted SVG frame."""
+    x, y = tuple(geom.coords[0])[:2]
+    return (x - min_x, max_y - y)
+
+
+def _point_bounds(items: list[tuple]) -> tuple[float, float, float, float] | None:
+    """Return ``(min_x, min_y, max_x, max_y)`` over point geometries, or ``None``."""
+    min_x = min_y = float("inf")
+    max_x = max_y = float("-inf")
+    seen = False
+    for _feature_id, geom, _family in items:
+        if geom is None or geom.is_empty:
+            continue
+        x, y = tuple(geom.coords[0])[:2]
+        seen = True
+        min_x, min_y = min(min_x, x), min(min_y, y)
+        max_x, max_y = max(max_x, x), max(max_y, y)
+    return (min_x, min_y, max_x, max_y) if seen else None
+
+
+def _glyph_element(
+    shape: str, element_id: str, cx: float, cy: float, size: float, precision: int
+) -> str:
+    """Serialize one point glyph (``<circle>`` dot or stroked ``<path>``)."""
+    def f(value: float) -> str:
+        return format_number(value, precision)
+
+    if shape == "dot":
+        r = format_number(size, _WIDTH_PRECISION)
+        return f'      <circle id="{element_id}" cx="{f(cx)}" cy="{f(cy)}" r="{r}"/>'
+    if shape == "chevron":
+        # An upward chevron "v" with its vertex at the point.
+        d = f"M {f(cx - size)},{f(cy - size)} L {f(cx)},{f(cy)} L {f(cx + size)},{f(cy - size)}"
+    else:  # tick / zigzag
+        pts = [
+            (cx - size, cy), (cx - size / 2, cy - size), (cx, cy),
+            (cx + size / 2, cy - size), (cx + size, cy),
+        ]
+        d = f"M {f(pts[0][0])},{f(pts[0][1])} " + " ".join(
+            f"L {f(x)},{f(y)}" for x, y in pts[1:]
+        )
+    return f'      <path id="{element_id}" d="{d}"/>'
+
+
+def _point_features_lines(
+    items: list[tuple],
+    styles: Mapping | None,
+    min_x: float,
+    max_y: float,
+    precision: int,
+) -> list[str]:
+    """Serialize ``<g id="point_features">`` with one child ``<g>`` per family."""
+    groups = _group_by_family(items)
+    lines = ['  <g id="point_features">']
+    for family in sorted(groups):
+        style = _merge_style(DEFAULT_POINT_STYLES, family, styles)
+        color = style.get("color", DEFAULT_FALLBACK_COLOR)
+        size = float(style.get("size", 1.5))
+        shape = style.get("marker") or POINT_GLYPHS.get(family, "dot")
+        if shape == "dot":
+            group_attrs = f'id="point_{family}" fill="{color}"'
+        else:
+            sw = format_number(max(size * 0.4, 0.1), _WIDTH_PRECISION)
+            group_attrs = (
+                f'id="point_{family}" fill="none" stroke="{color}" '
+                f'stroke-width="{sw}"'
+            )
+        lines.append(f"    <g {group_attrs}>")
+        for feature_id, geom in groups[family]:
+            cx, cy = _point_xy(geom, min_x, max_y)
+            lines.append(
+                _glyph_element(
+                    shape, f"point_{family}_{feature_id}", cx, cy, size, precision
+                )
+            )
+        lines.append("    </g>")
+    lines.append("  </g>")
+    return lines
+
+
+def _areal_pattern_defs(items: list[tuple], styles: Mapping | None) -> list[str]:
+    """Return ``<pattern>`` def lines for areal families using a hatch fill."""
+    out: list[str] = []
+    for family in sorted({family for _fid, _geom, family in items}):
+        style = _merge_style(DEFAULT_AREAL_STYLES, family, styles)
+        if style.get("fill") != "hatch":
+            continue
+        color = style.get("color", "#4fae86")
+        out.extend(
+            [
+                f'    <pattern id="areal_{family}_hatch" width="4" height="4" '
+                'patternUnits="userSpaceOnUse">',
+                f'      <path d="M 0,4 L 4,0" stroke="{color}" '
+                'stroke-width="0.5" fill="none"/>',
+                "    </pattern>",
+            ]
+        )
+    return out
+
+
+def _areal_family_lines(
+    family: str,
+    feats: list[tuple],
+    style: dict,
+    min_x: float,
+    max_y: float,
+    precision: int,
+) -> list[str]:
+    """Serialize one ``<g id="areal_<family>">`` group with its differentiated fill."""
+    fill_mode = style.get("fill", "none")
+    color = style.get("color", "#888888")
+    attrs = [f'id="areal_{family}"', f'data-class="{family}"']
+    if fill_mode == "hatch":
+        attrs.append(f'fill="url(#areal_{family}_hatch)"')
+        attrs.append('fill-rule="evenodd"')
+        attrs.append(f'stroke="{color}"')
+    elif fill_mode == "solid":
+        attrs.append(f'fill="{color}"')
+        attrs.append(f'fill-opacity="{format_number(float(style.get("opacity", 1.0)), 2)}"')
+        attrs.append('fill-rule="evenodd"')
+    else:  # outline only
+        attrs.append('fill="none"')
+        attrs.append(f'stroke="{color}"')
+        dash = style.get("dash")
+        if dash:
+            attrs.append(f'stroke-dasharray="{dash}"')
+    lines = [f"  <g {' '.join(attrs)}>"]
+    for feature_id, geom in feats:
+        d = polygon_path_d(geom, min_x, max_y, precision)
+        lines.append(f'    <path id="areal_{family}_{feature_id}" d="{d}"/>')
+    lines.append("  </g>")
+    return lines
+
+
+def _areal_lines_for_order(
+    groups: dict[str, list[tuple]],
+    styles: Mapping | None,
+    order: str,
+    min_x: float,
+    max_y: float,
+    precision: int,
+) -> list[str]:
+    """Serialize the areal families whose ``render_order`` matches ``order``."""
+    lines: list[str] = []
+    for family in sorted(groups):
+        style = _merge_style(DEFAULT_AREAL_STYLES, family, styles)
+        if style.get("render_order", "below") != order:
+            continue
+        lines.extend(
+            _areal_family_lines(family, groups[family], style, min_x, max_y, precision)
+        )
+    return lines
+
+
 def _path_element(
     segment_id: int,
     geom: Any,
@@ -336,6 +539,11 @@ def render_svg(
     waterbody_color: str = "#2ec4ff",
     waterbody_stroke_width: float = 0.45,
     waterbody_order: str = "below",
+    areal_features: Iterable[tuple] | None = None,
+    areal_feature_styles: Mapping[str, Mapping] | None = None,
+    point_features: Iterable[tuple] | None = None,
+    point_feature_styles: Mapping[str, Mapping] | None = None,
+    point_feature_order: str = "above",
 ) -> str:
     """Render the colored river network as a single layered SVG document.
 
@@ -373,21 +581,52 @@ def render_svg(
         waterbody_stroke_width: Stroke width for the waterbody outline layer.
         waterbody_order: ``"below"`` places the waterbody layer beneath the
             flowline layers (rivers stay legible); ``"above"`` places it on top.
+        areal_features: Optional iterable of ``(feature_id, geometry, family)``
+            polygons (wetland/playa/perennial_ice) rendered as per-family
+            ``<g id="areal_<family>">`` groups with differentiated fills. Each
+            family's ``render_order`` (``"below"`` default / ``"above"``) is read
+            from ``areal_feature_styles``. ``None``/empty leaves output unchanged.
+        areal_feature_styles: Optional per-family style overrides (color, fill
+            mode, opacity, dash, render_order); merged over
+            :data:`DEFAULT_AREAL_STYLES`.
+        point_features: Optional iterable of ``(feature_id, geometry, family)``
+            points (spring/waterfall/rapids) rendered as glyphs under a single
+            ``<g id="point_features">`` layer. ``None``/empty leaves output
+            unchanged.
+        point_feature_styles: Optional per-family style overrides (color, size,
+            marker); merged over :data:`DEFAULT_POINT_STYLES`.
+        point_feature_order: ``"above"`` (default) draws point glyphs on top of
+            everything; ``"below"`` draws them beneath the flowline layers.
 
     Returns:
         The SVG document as a string (trailing newline included). With
         ``glow=False`` the output is identical to the un-glowed render.
     """
     waterbody_items = list(waterbodies) if waterbodies else []
+    areal_items = list(areal_features) if areal_features else []
+    point_items = list(point_features) if point_features else []
     min_x, min_y, max_x, max_y = bounds(geometries.values())
+    extra_boxes: list[tuple[float, float, float, float]] = []
     if waterbody_items:
         pb = polygon_bounds(item[1] for item in waterbody_items)
         if pb is not None:
-            if not geometries:
-                min_x, min_y, max_x, max_y = pb
-            else:
-                min_x, min_y = min(min_x, pb[0]), min(min_y, pb[1])
-                max_x, max_y = max(max_x, pb[2]), max(max_y, pb[3])
+            extra_boxes.append(pb)
+    if areal_items:
+        pb = polygon_bounds(item[1] for item in areal_items)
+        if pb is not None:
+            extra_boxes.append(pb)
+    if point_items:
+        pb = _point_bounds(point_items)
+        if pb is not None:
+            extra_boxes.append(pb)
+    seeded = bool(geometries)
+    for pb in extra_boxes:
+        if not seeded:
+            min_x, min_y, max_x, max_y = pb
+            seeded = True
+        else:
+            min_x, min_y = min(min_x, pb[0]), min(min_y, pb[1])
+            max_x, max_y = max(max_x, pb[2]), max(max_y, pb[3])
     width = format_number(max_x - min_x, precision)
     height = format_number(max_y - min_y, precision)
     base_width = format_number(line_width, _WIDTH_PRECISION)
@@ -404,9 +643,14 @@ def render_svg(
         'fill="none" stroke-linecap="round" stroke-linejoin="round" '
         f'stroke-width="{base_width}">'
     )
+    def_body: list[str] = []
     if blur_glow:
+        def_body.extend(_glow_filter_lines(glow_radius))
+    if areal_items:
+        def_body.extend(_areal_pattern_defs(areal_items, areal_feature_styles))
+    if def_body:
         lines.append("  <defs>")
-        lines.extend(_glow_filter_lines(glow_radius))
+        lines.extend(def_body)
         lines.append("  </defs>")
     else:
         lines.append("  <defs/>")
@@ -416,12 +660,27 @@ def render_svg(
     )
     lines.append("  </g>")
 
+    areal_groups = _group_by_family(areal_items)
+
+    # Areal families default beneath everything (before waterbodies + rivers).
+    if areal_items:
+        lines.extend(
+            _areal_lines_for_order(
+                areal_groups, areal_feature_styles, "below", min_x, max_y, precision
+            )
+        )
+
     if waterbody_items and waterbody_order == "below":
         lines.extend(
             _waterbody_lines(
                 waterbody_items, waterbody_color, waterbody_stroke_width,
                 min_x, max_y, precision,
             )
+        )
+
+    if point_items and point_feature_order == "below":
+        lines.extend(
+            _point_features_lines(point_items, point_feature_styles, min_x, max_y, precision)
         )
 
     grouped: set[int] = set().union(*watersheds.values()) if watersheds else set()
@@ -459,6 +718,18 @@ def render_svg(
                 waterbody_items, waterbody_color, waterbody_stroke_width,
                 min_x, max_y, precision,
             )
+        )
+
+    if areal_items:
+        lines.extend(
+            _areal_lines_for_order(
+                areal_groups, areal_feature_styles, "above", min_x, max_y, precision
+            )
+        )
+
+    if point_items and point_feature_order == "above":
+        lines.extend(
+            _point_features_lines(point_items, point_feature_styles, min_x, max_y, precision)
         )
 
     lines.append("</svg>")

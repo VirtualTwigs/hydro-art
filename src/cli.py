@@ -16,6 +16,8 @@ from typing import Any, Sequence
 
 from src.config import (
     DEFAULTS,
+    SUPPORTED_AREAL_FEATURE_PRESETS,
+    SUPPORTED_POINT_FEATURE_PRESETS,
     SUPPORTED_WATERBODY_PRESETS,
     Settings,
     build_settings,
@@ -170,6 +172,34 @@ def build_parser() -> argparse.ArgumentParser:
         "waterbody options; explicit --waterbody-* flags still win).",
     )
     parser.add_argument(
+        "--point-features",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Render natural point glyphs — springs/waterfalls/rapids (use "
+        "--no-point-features to disable).",
+    )
+    parser.add_argument(
+        "--point-feature-preset",
+        choices=SUPPORTED_POINT_FEATURE_PRESETS,
+        default=None,
+        help="Named point-feature preset (expands to a density/z-order bundle; "
+        "explicit point-feature settings still win).",
+    )
+    parser.add_argument(
+        "--areal-features",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Render natural areal fills — wetlands/playas/perennial ice (use "
+        "--no-areal-features to disable).",
+    )
+    parser.add_argument(
+        "--areal-feature-preset",
+        choices=SUPPORTED_AREAL_FEATURE_PRESETS,
+        default=None,
+        help="Named areal-feature preset (expands to an area-threshold/z-order "
+        "bundle; explicit areal-feature settings still win).",
+    )
+    parser.add_argument(
         "--elevation",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -288,6 +318,24 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
     if waterbodies:
         overrides["waterbodies"] = waterbodies
 
+    # Point/areal natural-feature sub-keys are collected under nested mappings so
+    # precedence can deep-merge them onto YAML/defaults (see `resolve_settings`).
+    point_features: dict[str, Any] = {}
+    if args.point_feature_preset is not None:
+        point_features["preset"] = args.point_feature_preset
+    if args.point_features is not None:
+        point_features["enabled"] = args.point_features
+    if point_features:
+        overrides["point_features"] = point_features
+
+    areal_features: dict[str, Any] = {}
+    if args.areal_feature_preset is not None:
+        areal_features["preset"] = args.areal_feature_preset
+    if args.areal_features is not None:
+        areal_features["enabled"] = args.areal_features
+    if areal_features:
+        overrides["areal_features"] = areal_features
+
     # Elevation sub-keys are collected under a nested mapping so precedence can
     # deep-merge them onto YAML/defaults (see :func:`resolve_settings`).
     elevation: dict[str, Any] = {}
@@ -352,6 +400,17 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
         if isinstance(block, dict):
             waterbodies.update(block)
     merged["waterbodies"] = waterbodies
+
+    # `point_features` / `areal_features` are nested blocks like `waterbodies`;
+    # deep-merge their sub-keys from `{}` (not seeded defaults) so a `preset`
+    # bundle isn't shadowed by pre-seeded explicit values (mirrors Item W4).
+    for block_key in ("point_features", "areal_features"):
+        block_merged: dict[str, Any] = {}
+        for layer in (yaml_values, overrides):
+            block = layer.get(block_key)
+            if isinstance(block, dict):
+                block_merged.update(block)
+        merged[block_key] = block_merged
 
     # `elevation` is likewise a nested block; deep-merge its sub-keys so
     # YAML < CLI precedence holds per sub-key (e.g. --elevation keeps a YAML

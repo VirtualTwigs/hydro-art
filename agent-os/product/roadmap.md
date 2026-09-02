@@ -762,6 +762,155 @@ matching `monthly_flow.py`). The offline `src/` engine and default synthetic-yea
 byte-identical (no `src/` change beyond docs); once landed, **retire the PRISM Rights gate** in the Notes
 below (nClimGrid is federal public domain — free to sell with attribution). `M`
 
+## Epoch 15 — Natural water features beyond waterbodies · proposed
+
+Extend the water-only art vocabulary past lake/pond/reservoir/bay/inlet *outlines* (Epoch 1.5) to
+the **other natural water features USGS already ships in the same GDBs**: springs/seeps, waterfalls
+and rapids, wetlands (marsh/swamp), playas, and perennial ice (glacier/snowfield). These are native
+`FType`-coded features in NHD `NHDPoint` / `NHDArea` (and `NHDFlowline` for falls/rapids on the
+network), so this needs **no new data source and no new rights gate** — USGS NHD is federal public
+domain, sellable with attribution, exactly like today's flowlines and waterbodies. Deliberately
+**water-only**: no roads, no political basemap. Mirrors the Epoch 1.5 waterbody template beat for
+beat — versioned taxonomy → repair/reproject/clip/select → dedicated fill-free/point SVG layers →
+QA + screen/print presets — and integrates **additively** into `PIPELINE_STAGES` (loaded in
+`validate`, selected in `generate_svg`) so a build stays byte-identical when the features are
+disabled (the default).
+
+**Phase 15.1 — Point water-feature ingestion & taxonomy**
+
+61. [ ] Point-feature source layers and classification — Load NHD `NHDPoint` (and any `NHDArea`
+point-like) features and define a reviewed, versioned inclusion taxonomy (spring/seep, waterfall,
+rapids, sinkhole/spring-fed, well) the way `src/waterbodies.py` did for polygons: FType-driven,
+name only refining, missing FType → excluded/never guessed. Add a `NHDPoint` allowlist + attribute
+fields to `src/loading.py` and a `load_point_features` loader seam mirroring `load_waterbody_layers`.
+`M`
+
+**Phase 15.2 — Areal natural features (wetlands, playas, ice)**
+
+62. [ ] Wetland / playa / perennial-ice ingestion, selection & clipping — Classify and select
+`NHDArea` (or optional NWI) marsh/swamp, playa, inundation-area, and glacier/snowfield polygons;
+repair → reproject(EPSG:5070) → region-clip → area-select with configurable thresholds, reusing
+`src/geometry` + `src/clipping` and the `WaterbodySelectionPolicy` pattern (holes + multipart
+preserved, provenance retained). `L`
+
+**Phase 15.3 — Point-glyph & areal rendering**
+
+63. [ ] Water-feature rendering — Extend `src/rendering.py` with (a) a point-glyph layer (stable
+ids, configurable marker/size/color, e.g. spring dots, waterfall chevrons) and (b) a distinct
+areal treatment for wetlands/ice (hatch or low-opacity fill vs. the fill-free waterbody outlines),
+each as its own `<g>` with configurable z-order so flowlines and waterbodies stay legible at
+overlaps. `M`
+
+**Phase 15.4 — QA & art direction**
+
+64. [ ] Feature QA and presets — Validate fixture and real Oregon/Washington output (point
+placement, wetland holes/multipolygons, coastal/boundary clipping, duplicate suppression, density
+thresholds); add `screen` / `print-state` / `print-county` preset entries alongside the waterbody
+presets so tiny features don't clutter at small scale. `M`
+
+Epoch gate: a build can render source-traceable springs, waterfalls/rapids, wetlands, playas, and
+perennial ice as dedicated, editable, water-only layers over the existing flowline + waterbody art,
+with screen/print presets controlling density; the default (features disabled) output stays
+byte-for-byte identical.
+
+## Epoch 16 — Hydro-infrastructure layers · proposed
+
+Add the **engineered water infrastructure NHD already encodes** — dams/weirs, gates, lock chambers,
+spillways, gaging stations, and water intakes/outflows (`NHDPoint` / `NHDLine` / `NHDArea` FTypes),
+plus canals/ditches, aqueducts, and pipelines distinguished from natural channels on the
+`NHDFlowline` network (FType `CanalDitch` / `Pipeline` / `ArtificialPath`). Still strictly
+**water-related** and still **USGS public domain** (sellable, no new rights gate). Reuses the
+point/line/area rendering seams built in Epoch 15, so this epoch is mostly taxonomy + symbology +
+network styling. This is the layer that turns the art into a story about *how people use the water*
+— dams, diversions, and gauges on the network — without importing any non-hydro basemap.
+
+**Phase 16.1 — Structure ingestion & taxonomy**
+
+65. [ ] Hydro-structure source layers and classification — Load and classify engineered-water
+FTypes across `NHDLine` (dam/weir, gate, lock chamber), `NHDPoint` (gaging station, dam/weir, water
+intake/outflow), and `NHDArea` (canal/ditch, lock chamber, spillway, reservoir-as-structure) into a
+versioned `HYDRO_STRUCTURE_POLICY_VERSION` taxonomy; extend the `src/loading.py` allowlists +
+attribute fields. `M`
+
+**Phase 16.2 — Engineered channels on the network**
+
+66. [ ] Canal / ditch / aqueduct / pipeline styling — Flag `NHDFlowline` engineered FTypes
+(`CanalDitch`, `Pipeline`, `ArtificialPath`, `Connector`, `UndergroundConduit`) so they can be
+styled distinctly from natural streams (e.g. dashed/second color) or optionally excluded — a
+config-driven split of the existing flowline layer, deterministic and byte-identical when off. `M`
+
+**Phase 16.3 — Infrastructure symbology & rendering**
+
+67. [ ] Infrastructure rendering — Symbol set for structures: dam/weir line symbols, gaging-station
+and intake point markers, spillway/lock areal treatment; dedicated `<g>` layers with z-order above
+water so a dam reads on the channel it crosses. Reuses the Epoch 15 point-glyph seam. `M`
+
+**Phase 16.4 — QA & presets**
+
+68. [ ] Infrastructure QA and presets — Fixture + real Oregon/Washington/Clark County validation
+(structure-on-network placement, duplicate suppression, canal/natural separation) and screen/print
+presets tuned so infrastructure enriches rather than clutters. `M`
+
+Epoch gate: a build can overlay source-traceable dams, weirs, locks, gaging stations, intakes, and
+distinctly-styled engineered channels on the water art, controllable by preset, with the default
+(infrastructure disabled) output byte-for-byte identical.
+
+## Epoch 17 — Watershed report: creative analytics · proposed
+
+Deepen the Epoch 12 watershed report from its current seven figures into a richer, more *engaging*
+story, drawing almost entirely on **statistics the engine already computes** (`src/flow_metrics.py`)
+and data already staged (`{year:[n,12]}` monthly flow back to 1895, USGS gauges, ONI/PDO indices).
+Mirrors the Epoch 12 precedent exactly: **promote pure, numpy-only stats into `src/`, keep heavy
+external reads in `tools/` behind provider seams, add figures via `tools/report_common.py`, and
+surface them in `web/report.html`** — none of it in `PIPELINE_STAGES`; the 2D pipeline's
+byte-identical default output is untouched. Same commercialization + climate rights posture as
+Epoch 12/14: the default `--climate-source nclimgrid` path is public-domain and sellable with
+attribution; PRISM stays A/B-only and non-sellable.
+
+**Phase 17.1 — Regime & timing signals**
+
+69. [ ] Snow-vs-rain regime signature — Surface the snow bucket the disaggregation already models
+(`src/monthly_flow.snow_available_water`) as a returned diagnostic (new pure function, no change to
+existing outputs) and classify each watershed snowmelt-dominated / rain-dominated / transitional,
+with melt-pulse timing shift across decades. The "your river is becoming a rain river" story. `M`
+70. [ ] Center-of-timing drift as a hero metric — Promote the existing `center_of_timing()` into a
+dedicated trend panel (Mann-Kendall + Sen's slope on CT itself): "the peak arrives N days earlier
+per decade," one of the most legible western-hydrology climate signals. `S`
+
+**Phase 17.2 — Records & distribution**
+
+71. [ ] Analog-year finder — Rank the most-similar historical years to any target year via
+`correlate()`/`pearson_r()` over monthly-shape vectors ("2015 looked most like 1934") — a
+personal, engaging hook for a buyer's own watershed. `S`
+72. [ ] Drought / flood record book — Rank years by summer-low and by peak using `percentile_rank()`
+("driest summer in 130 years," "top-5 wettest") over the full 1895– record. `S`
+73. [ ] Flow-duration-curve panel — Plot the already-computed `flow_duration()` as a log-scale FDC
+with decade overlays, showing how the whole distribution shifts, not just the mean. `S`
+
+**Phase 17.3 — Climate framing**
+
+74. [ ] ENSO / PDO composite hydrographs — Using the per-year ONI/PDO series already fetched, overlay
+the mean El Niño-year vs La Niña-year hydrograph ("here's what your river does in each phase") —
+more actionable than a single correlation coefficient. `S`
+
+**Phase 17.4 — Longitudinal story**
+
+75. [ ] Longitudinal flow-accumulation animation — Animate `longitudinal_profile()` walking
+accumulated flow down the mainstem — a direct visual bridge between the *art* and the *data*. `M`
+
+**Phase 17.5 — Assembly & web surfacing**
+
+76. [ ] Report assembly & web view — Fold the new panels into `tools/report_common.py` +
+`tools/build_watershed_report.py` (figures to `notebooks/figures/`) and surface the new metrics/
+toggles in `web/report.html` on the shared `web/shared/*` foundation (no per-page duplication,
+honoring the Epoch 9 anti-drift rule). `M`
+
+Epoch gate: from a single watershed selection, the report additionally shows a snow-vs-rain regime
+verdict, a center-of-timing drift trend, an analog-year match, a drought/flood record book, a
+flow-duration curve, ENSO/PDO composite hydrographs, and a longitudinal flow animation — all from
+offline-tested `src/` statistics fed by already-staged data, surfaced in the shared web report; the
+2D pipeline and its byte-for-byte default output are unchanged.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal
