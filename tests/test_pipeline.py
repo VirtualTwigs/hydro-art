@@ -16,14 +16,17 @@ import io
 import pytest
 from rich.console import Console
 
+from src.config import build_settings
 from src.pipeline import (
     PIPELINE_STAGES,
     Pipeline,
     RunContext,
     Stage,
     _STAGE_FUNCS,
+    _resolve_stroke_widths,
     _stub,
 )
+from src.rendering import scaled_widths
 
 CANONICAL_ORDER = (
     "download",
@@ -59,6 +62,55 @@ def _fake_context() -> RunContext:
         optimizer=object(),  # type: ignore[arg-type]
         exporter=object(),  # type: ignore[arg-type]
     )
+
+
+def _flow_context(settings, orders) -> RunContext:
+    ctx = _fake_context()
+    ctx.settings = settings
+    ctx.artifacts["stream_orders"] = orders
+    return ctx
+
+
+def test_resolve_stroke_widths_respects_width_log():
+    # roadmap #77: the newly-exposed `width_log` knob reaches scaled_widths.
+    orders = {0: 1.0, 1: 2.0, 2: 4.0, 3: 7.0}
+    log_settings = build_settings(
+        {
+            "region": ["Oregon"],
+            "width_by": "flow",
+            "width_log": True,
+            "width_min": 0.5,
+            "width_max": 3.0,
+        }
+    )
+    lin_settings = build_settings(
+        {
+            "region": ["Oregon"],
+            "width_by": "flow",
+            "width_log": False,
+            "width_min": 0.5,
+            "width_max": 3.0,
+        }
+    )
+    got_log = _resolve_stroke_widths(_flow_context(log_settings, orders))
+    got_lin = _resolve_stroke_widths(_flow_context(lin_settings, orders))
+
+    assert got_log == scaled_widths(
+        orders, width_min=0.5, width_max=3.0, gamma=1.0, log=True
+    )
+    assert got_lin == scaled_widths(
+        orders, width_min=0.5, width_max=3.0, gamma=1.0, log=False
+    )
+    # log vs linear normalization differ for this non-degenerate order set.
+    assert got_log != got_lin
+
+
+def test_resolve_stroke_widths_uniform_returns_none_regardless_of_log():
+    settings = build_settings(
+        {"region": ["Oregon"], "width_by": "uniform", "width_log": True}
+    )
+    ctx = _flow_context(settings, {0: 1.0, 1: 3.0})
+    assert _resolve_stroke_widths(ctx) is None
 
 
 def test_pipeline_stages_are_canonical_order():

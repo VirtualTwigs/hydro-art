@@ -4,7 +4,14 @@ import dataclasses
 
 import pytest
 
-from src.config import DEFAULTS, ConfigError, Settings, build_settings
+from src.config import (
+    DEFAULTS,
+    SUPPORTED_WIDTH_PRESETS,
+    WIDTH_PRESETS,
+    ConfigError,
+    Settings,
+    build_settings,
+)
 
 
 def test_defaults_build_valid_settings():
@@ -99,6 +106,74 @@ def test_width_max_below_width_min_raises():
 def test_non_positive_width_gamma_raises():
     with pytest.raises(ConfigError, match="width_gamma must be greater than 0"):
         build_settings({**DEFAULTS, "width_gamma": 0})
+
+
+# --- Scale-aware flow-width presets + width_log (roadmap #77) ----------------
+
+
+def test_width_log_defaults_false():
+    settings = build_settings(DEFAULTS)
+    assert settings.width_log is False
+    assert isinstance(settings.width_log, bool)
+
+
+def test_width_log_accepted_and_coerced_to_bool():
+    settings = build_settings({**DEFAULTS, "width_log": True})
+    assert settings.width_log is True
+    assert isinstance(settings.width_log, bool)
+
+
+def test_width_presets_table_shape():
+    assert set(WIDTH_PRESETS) == {"state", "basin", "watershed"}
+    assert SUPPORTED_WIDTH_PRESETS == tuple(WIDTH_PRESETS)
+
+
+def test_width_preset_state_expands_to_log_bundle():
+    settings = build_settings({**DEFAULTS, "width_preset": "state"})
+    assert settings.width_by == "flow"
+    assert settings.width_log is True
+    assert settings.width_max == 3.5
+    assert settings.width_gamma == 1.0
+
+
+def test_width_preset_basin_and_watershed_bundles():
+    basin = build_settings({**DEFAULTS, "width_preset": "basin"})
+    assert basin.width_by == "flow"
+    assert basin.width_gamma == 0.45
+    assert basin.width_log is False
+
+    watershed = build_settings({**DEFAULTS, "width_preset": "watershed"})
+    assert watershed.width_gamma == 0.5
+    assert watershed.width_max == 1.4
+    assert watershed.width_log is False
+
+
+def test_width_preset_explicit_override_wins():
+    # Precedence: defaults < preset < explicit. An explicit value that differs
+    # from the default beats the preset; an unspecified field still comes from it.
+    settings = build_settings(
+        {**DEFAULTS, "width_preset": "basin", "width_gamma": 0.8, "width_max": 5.0}
+    )
+    assert settings.width_gamma == 0.8
+    assert settings.width_max == 5.0
+    assert settings.width_by == "flow"  # unspecified → from preset
+
+
+def test_unknown_width_preset_raises():
+    with pytest.raises(ConfigError, match="width_preset"):
+        build_settings({**DEFAULTS, "width_preset": "galactic"})
+
+
+def test_width_preset_not_stored_on_settings():
+    settings = build_settings({**DEFAULTS, "width_preset": "state"})
+    assert not hasattr(settings, "width_preset")
+
+
+def test_default_build_keeps_uniform_and_no_log():
+    # Byte-identical guard: no preset → uniform width, log off.
+    settings = build_settings(DEFAULTS)
+    assert settings.width_by == "uniform"
+    assert settings.width_log is False
 
 
 # --- County scope (roadmap #24) ---------------------------------------------

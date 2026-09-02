@@ -82,6 +82,35 @@ def test_unset_art_direction_flags_keep_yaml(tmp_path):
     assert settings.width_by == "flow"
 
 
+def test_cli_width_preset_flag(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings(["--config", path, "--width-preset", "watershed"])
+    assert settings.width_by == "flow"
+    assert settings.width_gamma == 0.5
+    assert settings.width_log is False
+
+
+def test_cli_width_log_flags(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    on = resolve_settings(["--config", path, "--width-log"])
+    assert on.width_log is True
+    off = resolve_settings(["--config", path, "--no-width-log"])
+    assert off.width_log is False
+
+
+def test_unset_width_log_keeps_yaml(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\nwidth_log: true\n")
+    # --width-log not passed; YAML's value must survive.
+    settings = resolve_settings(["--config", path])
+    assert settings.width_log is True
+
+
+def test_invalid_width_preset_rejected(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    with pytest.raises(SystemExit):
+        resolve_settings(["--config", path, "--width-preset", "bogus"])
+
+
 def test_cli_county_flag(tmp_path):
     path = _write(tmp_path, "region:\n  - Washington\n")
     settings = resolve_settings(["--config", path, "--county", "Clark"])

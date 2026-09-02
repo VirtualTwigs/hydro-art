@@ -19,6 +19,7 @@ from src.config import (
     SUPPORTED_AREAL_FEATURE_PRESETS,
     SUPPORTED_POINT_FEATURE_PRESETS,
     SUPPORTED_WATERBODY_PRESETS,
+    SUPPORTED_WIDTH_PRESETS,
     Settings,
     build_settings,
     load_yaml,
@@ -107,6 +108,20 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help="Shaping exponent for the flow-to-width ramp (positive number).",
+    )
+    parser.add_argument(
+        "--width-preset",
+        choices=SUPPORTED_WIDTH_PRESETS,
+        default=None,
+        help="Named scale-aware flow-width preset (state basin watershed); "
+        "expands to a bundle of --width-* options, explicit flags still win.",
+    )
+    parser.add_argument(
+        "--width-log",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Normalize the flow-to-width ramp on log(metric) (--no-width-log "
+        "keeps linear).",
     )
     parser.add_argument(
         "--stream-method",
@@ -289,6 +304,10 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["width_max"] = args.width_max
     if args.width_gamma is not None:
         overrides["width_gamma"] = args.width_gamma
+    if args.width_preset is not None:
+        overrides["width_preset"] = args.width_preset
+    if args.width_log is not None:
+        overrides["width_log"] = args.width_log
     if args.stream_method is not None:
         overrides["stream_method"] = args.stream_method
     if args.huc_level is not None:

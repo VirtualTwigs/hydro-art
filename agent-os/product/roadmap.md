@@ -911,6 +911,41 @@ flow-duration curve, ENSO/PDO composite hydrographs, and a longitudinal flow ani
 offline-tested `src/` statistics fed by already-staged data, surfaced in the shared web report; the
 2D pipeline and its byte-for-byte default output are unchanged.
 
+## Epoch 18 — Scale-aware flow-width presets · proposed
+
+Turn the flow→width mapping from a set of raw numeric knobs (`width_min`/`width_max`/`width_gamma`)
+into **named, scale-appropriate presets** the way Epoch 1.5 did for waterbodies. The insight is that
+one width mapping cannot serve every extent: discharge spans ~5 orders of magnitude across a whole
+state (a Cascade trickle → the Columbia), so a **logarithmic** mapping is the only thing that keeps
+headwaters visible next to the trunk; but for a single basin or watershed the dynamic range is small
+enough that a **power-law** mapping (`w ∝ Qᵇ`) reads as both legible *and* geomorphologically honest
+— real rivers obey downstream hydraulic geometry `w ∝ Q^0.5` (Leopold & Maddock). This epoch encodes
+three presets — `state` (log, ~10:1), `basin` (`Q^0.45`), `watershed` (`√Q`) — plus **exposes the
+`scaled_widths` `log` knob** that `Settings` currently hides. It reuses the existing `width_by=flow`
+seam and `WATERBODY_PRESETS`/`_coerce_waterbodies` template exactly; it adds no new render behavior,
+stays fully offline-tested, and is **byte-for-byte identical when no preset is named** (default
+`width_by=uniform`, `width_log=False`).
+
+**Phase 18.1 — Expose the log knob & preset table**
+
+77. [ ] `width_log` setting + `WIDTH_PRESETS` — Add a validated `width_log: bool` field to `Settings`
+(default `False`, wired through `_resolve_stroke_widths` into `scaled_widths(log=...)`) and a
+`WIDTH_PRESETS` table (`state`/`basin`/`watershed`) + `SUPPORTED_WIDTH_PRESETS` allowlist, mirroring
+`WATERBODY_PRESETS`. Each preset bundles `width_by`/`width_min`/`width_max`/`width_gamma`/`width_log`.
+Fail-fast `ConfigError` validation; preset expansion (`defaults < preset < explicit`) happens at
+config time and is not stored on frozen `Settings`, so a no-preset build stays byte-identical. `S`
+
+**Phase 18.2 — CLI surface**
+
+78. [ ] `--width-preset` flag — Add `--width-preset {state,basin,watershed}` to `src/cli.py` with the
+usual precedence (`defaults < config.yaml < CLI`; unset argparse flag defaults to `None` so YAML is
+never clobbered), mirroring the waterbody-preset flag wiring. `XS`
+
+Epoch gate: a build can select `state` / `basin` / `watershed` flow-width presets (via config or
+`--width-preset`) that shape the flow→width ramp appropriately for the extent — including the
+newly-exposed logarithmic mapping — with fail-fast validation; the default (no preset,
+`width_by=uniform`) output stays byte-for-byte identical.
+
 > Notes
 > - Epochs are gated by a demonstrable artifact, not calendar dates.
 > - “Accurate” always means sampled from a documented bare-earth DEM with stated horizontal

@@ -307,6 +307,11 @@ DEFAULTS: dict[str, Any] = {
     },
 }
 
+#: Top-level config keys that are consumed directives, not stored defaults (Epoch
+#: 18). They are valid in a config file / CLI but expand into other fields, so
+#: :func:`load_yaml` must not flag them as unknown.
+_CONFIG_DIRECTIVES: frozenset[str] = frozenset({"width_preset"})
+
 
 @dataclass(frozen=True)
 class WaterbodySettings:
@@ -1194,6 +1199,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         width_min=width_min,
         width_max=width_max,
         width_gamma=width_gamma,
+        width_log=width_log,
         glow=glow,
         glow_mode=glow_mode,
         glow_radius=glow_radius,
@@ -1227,7 +1233,7 @@ def load_yaml(path: str | Path) -> dict[str, Any]:
         raise ConfigError(
             f"Config file {p} must contain a mapping at the top level."
         )
-    unknown = set(raw) - set(DEFAULTS)
+    unknown = set(raw) - set(DEFAULTS) - _CONFIG_DIRECTIVES
     if unknown:
         # Warn, don't fail: surface likely typos without blocking the run.
         import warnings

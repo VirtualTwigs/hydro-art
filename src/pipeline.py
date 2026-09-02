@@ -364,6 +364,7 @@ def _resolve_stroke_widths(ctx: RunContext) -> dict[int, float] | None:
         width_min=ctx.settings.width_min,
         width_max=ctx.settings.width_max,
         gamma=ctx.settings.width_gamma,
+        log=ctx.settings.width_log,
     )
 
 
