@@ -27,9 +27,10 @@
     { id: "Oregon",     label: "Oregon",     huc4: ["1707","1708","1709","1710","1712","1801"] },
     { id: "Washington", label: "Washington", huc4: ["1701","1702","1703","1707","1708","1710","1711"] },
     { id: "California", label: "California", huc4: ["1710","1712","1801","1802","1803","1804","1805","1806","1807","1808","1809","1810"] },
+    { id: "Idaho",      label: "Idaho",      huc4: ["1701","1704","1705","1706"] },
   ];
 
-  // Real county rosters (Census) for the two supported states. `render_county_clip`
+  // Real county rosters (Census) for the supported states. `render_county_clip`
   // clips to one of these polygons. Clark County, WA is the pipeline's demo county.
   const COUNTIES = {
     Oregon: ["Baker","Benton","Clackamas","Clatsop","Columbia","Coos","Crook","Curry",
@@ -50,6 +51,11 @@
       "San Mateo","Santa Barbara","Santa Clara","Santa Cruz","Shasta","Sierra","Siskiyou",
       "Solano","Sonoma","Stanislaus","Sutter","Tehama","Trinity","Tulare","Tuolumne","Ventura",
       "Yolo","Yuba"],
+    Idaho: ["Ada","Adams","Bannock","Bear Lake","Benewah","Bingham","Blaine","Boise","Bonner",
+      "Bonneville","Boundary","Butte","Camas","Canyon","Caribou","Cassia","Clark","Clearwater",
+      "Custer","Elmore","Franklin","Fremont","Gem","Gooding","Idaho","Jefferson","Jerome",
+      "Kootenai","Latah","Lemhi","Lewis","Lincoln","Madison","Minidoka","Nez Perce","Oneida",
+      "Owyhee","Payette","Power","Shoshone","Teton","Twin Falls","Valley","Washington"],
   };
 
   // Palettes. `neon` is the one shipped in src/coloring.PALETTES (config allows
@@ -214,7 +220,7 @@
     if (state.scope === "county" && state.county) return `county:${state.county},${stateAbbr(state.state)}`;
     return `region:${state.state}`;
   }
-  function stateAbbr(name){ return {Washington:"WA", Oregon:"OR", California:"CA"}[name] || name; }
+  function stateAbbr(name){ return {Washington:"WA", Oregon:"OR", California:"CA", Idaho:"ID"}[name] || name; }
 
   function monthsToken(state){
     if (state.timeMode === "annual") return "annual (mean QAMA)";
