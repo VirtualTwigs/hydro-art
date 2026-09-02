@@ -48,6 +48,10 @@ def main() -> int:
     ap.add_argument("--root", default=DEFAULT_ROOT,
                     help="External root holding prism/, nwis/, climate/ snapshots.")
     ap.add_argument("--min-order", type=int, default=1)
+    ap.add_argument("--climate-source", choices=["nclimgrid", "prism"],
+                    default="nclimgrid",
+                    help="Climate source: nclimgrid (public domain, default) or "
+                         "prism (legacy, rights-gated).")
     ap.add_argument("--out-dir", default=str(FIG_DIR))
     args = ap.parse_args()
 
@@ -55,6 +59,7 @@ def main() -> int:
     ws = load_watershed_series(
         args.huc4, args.huc12, args.name, args.start, args.end,
         root=args.root, min_order=args.min_order,
+        climate_source=args.climate_source,
     )
     print(f"  {ws.n} reaches; outlet reach idx {ws.outlet_idx}; "
           f"peak month {ws.peak_month + 1}")

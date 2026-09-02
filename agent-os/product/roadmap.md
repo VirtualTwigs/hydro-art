@@ -753,7 +753,7 @@ injectable `ClimateProvider` seam (`src/historical_flow.py`), so only a new `too
 changes — the offline `yearly_flow_series` engine and every downstream render stay untouched and
 byte-identical.
 
-60. [ ] Public-domain climate provider — a new `tools/` `ClimateProvider` implementation (sibling to
+60. [x] Public-domain climate provider — a new `tools/` `ClimateProvider` implementation (sibling to
 `tools/historical_flow.PrismClimateProvider`) that samples **NOAA nClimGrid** monthly `tmean`+`ppt` at
 each catchment centroid → `YearlyClimate`, wired into `render_state_yoy.py` / the report builder behind
 the existing `src.historical_flow.ClimateProvider` seam. Includes a `tools/` fetch/stage script (the
@@ -768,12 +768,15 @@ below (nClimGrid is federal public domain — free to sell with attribution). `M
 >   and vertical CRS/units. Vertical exaggeration is display-only and never overwrites source Z.
 > - Effort scale: XS=1 day, S=2–3 days, M=1 week, L=2 weeks, XL=3+ weeks.
 > - **Rights gate (commercial data use).** USGS NHDPlus HR / NHD / WBD are U.S. federal public domain and
->   free to sell — but record the source version + attribution line for every sold art asset. **PRISM
->   climate data is not public domain**: sale or other commercial use of any PRISM-derived animation or
->   report (spans #45–#55) requires a written arrangement with the PRISM Climate Group, or replacing the
->   dependency. No PRISM-derived asset ships commercially until that permission is documented. **Preferred
->   resolution: Epoch 14 #60** — swap PRISM for public-domain NOAA nClimGrid (free to sell), retiring this
->   gate at $0 rather than negotiating a PRISM commercial license.
+>   free to sell — but record the source version + attribution line for every sold art asset. **The PRISM
+>   climate Rights gate is RETIRED (Epoch 14 #60, 2026-09-01):** the year-over-year / watershed-report
+>   climate dependency now defaults to **NOAA NCEI nClimGrid-Monthly, which is U.S. federal public
+>   domain** — free to sell with attribution *"Climate data: NOAA NCEI nClimGrid-Monthly (public
+>   domain)."* The default `--climate-source nclimgrid` path (spans #45–#55) is therefore commercially
+>   clear at $0. PRISM stays selectable via `--climate-source prism` for A/B comparison **only**; **any
+>   PRISM-derived asset remains non-sellable** (PRISM is not public domain and its commercial use needs a
+>   written PRISM Climate Group arrangement) — so never ship a `--climate-source prism` render
+>   commercially.
 > - **Revenue gate (commercial expansion).** Catalog/POD, self-serve, subscriptions, and region expansion
 >   beyond OR/WA/CA/ID (Utah #47) are gated on the Epoch 11.5 revenue outcome — proven demand, not shipped
 >   features. Validation-first: prove a buyer will pay before widening the product surface.

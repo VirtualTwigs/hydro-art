@@ -1,14 +1,36 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-08-31, after Epoch 12 (watershed report analytics, #48–#55) close-out
+_Last updated: 2026-09-01, after Epoch 14 (license-free climate source, #60 — PRISM Rights
+gate retired) close-out. Prior: Epoch 12 (watershed report analytics, #48–#55) close-out
 and the Epoch 10 roadmap reconciliation (#39/#42-offline/#43 landed in `87c64fd`). Prior:
 Epoch 11.5 #56/#57 order-fulfillment core, Epoch 8 (terrain-aware print, #30–#32) and
 Epoch 9 (codebase health, #33–#38), each with a closeout note under
 `agent-os/retrospectives/`. See the per-item bullets below for the full trail back through
 Epochs 5–7._
 
-## Current state (2026-08-31)
+## Current state (2026-09-01)
 
+- **Epoch 14 DONE (2026-09-01) — license-free climate source (#60), PRISM Rights gate
+  RETIRED.** Swapped the year-over-year / watershed-report climate dependency from PRISM
+  (not public domain — its commercial-use gate blocked selling any PRISM-derived asset) to
+  **NOAA NCEI nClimGrid-Monthly** (U.S. federal public domain, free to sell with attribution).
+  New pure offline **`src/climate_grid.py`** (numpy-only: `band_for_month` /
+  `cells_from_lonlat` / `fill_nodata`, `ClimateGridError`) holds the sampling math so it's
+  offline-testable under the "tests never import `tools/`" rule — **`tests/test_climate_grid.py`
+  (9 tests)**. New non-offline **`tools/nclimgrid_flow.py`** `NClimGridClimateProvider(root,
+  lon,lat)` — drop-in for `PrismClimateProvider` behind the existing
+  `src.historical_flow.ClimateProvider` seam; nClimGrid is a stacked NetCDF addressed by band
+  (GDAL NETCDF driver), rasterio **lazy-imported** so the module is GDAL-free at import. New
+  **`tools/nclimgrid_fetch.py`** stages the two NetCDFs (`prcp` 1.47 GB + `tavg` 1.06 GB, 1579
+  bands = Jan 1895 → Jul 2026) with a Content-Length check (caught + fixed a silent truncation).
+  Provider is selectable via **`--climate-source {nclimgrid,prism}` (default nclimgrid)** through
+  one `_make_provider` factory in `render_state_yoy.py`, threaded into
+  `report_common.load_watershed_series` / `build_watershed_report.py`. **Real-data validation:**
+  nClimGrid-vs-PRISM Dec-2017 Salmon Creek precip agree to **0.6%** (254.4 vs 255.8 mm); full
+  engine peak-flow ratios 0.987 (2017) / 1.091 (2015). Suite **666 passing** (+9); no
+  `PIPELINE_STAGES` / `src.historical_flow` / `src.monthly_flow` edit → default render
+  byte-identical. Spec `agent-os/specs/2026-09-01-license-free-climate/`. PRISM stays A/B-only via
+  `--climate-source prism` and remains **non-sellable**.
 - **#40 DONE (2026-08-31) — golden-output fixtures (Phase 10.1 close).** Gave the #39
   verifier a committed fixture + a second checksum dimension. **`src/raster.grid_checksum`**
   (pure/offline: versioned header + crs + canonical-LE transform/shape + nodata sentinel +

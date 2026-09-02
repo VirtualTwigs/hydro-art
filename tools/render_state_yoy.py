@@ -42,10 +42,26 @@ from src.historical_flow import (
 from src.rendering import bounds, fixed_flow_span, render_svg, widths_on_span
 from tools.historical_flow import DEFAULT_ROOT, PrismClimateProvider
 from tools.monthly_flow import MONTH_ABBR
+from tools.nclimgrid_flow import NClimGridClimateProvider
 from tools.render_common import STATE_HUC4, gdb_paths
 from tools.render_state_mono import BG, elevation_colors, rasterize_whole
 
 FLOOR = 1e-2
+
+
+def _make_provider(source: str, root, lon, lat):
+    """Construct the climate provider for the chosen source (the one swap point).
+
+    ``nclimgrid`` (default) is NOAA nClimGrid-Monthly — federal public domain, free
+    to sell (roadmap #60); ``prism`` keeps the original PRISM path for A/B
+    comparison. Both share the ``(root, lon, lat)`` constructor + ``climate_for_year``
+    seam, so nothing downstream branches on source.
+    """
+    if source == "nclimgrid":
+        return NClimGridClimateProvider(root, lon, lat)
+    if source == "prism":
+        return PrismClimateProvider(root, lon, lat)
+    raise SystemExit(f"unknown --climate-source {source!r} (nclimgrid|prism)")
 
 
 def build_network(gdb: str):
@@ -86,11 +102,12 @@ def build_network(gdb: str):
     )
 
 
-def yearly_flow_by_id(spec, years, root, *, latest):
+def yearly_flow_by_id(spec, years, root, *, latest, climate_source="nclimgrid"):
     """Per-basin true year-over-year flow, merged to ``{year: {id: flow[12]}}``.
 
-    For each HUC4 GDB in ``spec``: build the network, wrap the staged PRISM grids
-    in a :class:`PrismClimateProvider`, and run the shared
+    For each HUC4 GDB in ``spec``: build the network, wrap the staged climate grids
+    in the provider chosen by ``climate_source`` (``nclimgrid`` default, ``prism``
+    optional — see :func:`_make_provider`), and run the shared
     :func:`src.historical_flow.yearly_flow_series` (real per-year disaggregation).
     """
     out: dict[int, dict[int, np.ndarray]] = {y: {} for y in years}
@@ -111,7 +128,7 @@ def yearly_flow_by_id(spec, years, root, *, latest):
             cache.write_bytes(
                 pickle.dumps((ids, q_incr, hydroseq, dnhydroseq, lon, lat))
             )
-        provider = PrismClimateProvider(root, lon, lat)
+        provider = _make_provider(climate_source, root, lon, lat)
         series = yearly_flow_series(
             provider, years, q_incr=q_incr, hydroseq=hydroseq,
             dnhydroseq=dnhydroseq, latest=latest,
@@ -151,7 +168,11 @@ def main() -> int:
     ap.add_argument("--start", type=int, default=2014)
     ap.add_argument("--end", type=int, default=2023)
     ap.add_argument("--root", default=DEFAULT_ROOT,
-                    help="External root holding prism/<var>/ grids.")
+                    help="External root holding the staged climate grids.")
+    ap.add_argument("--climate-source", choices=["nclimgrid", "prism"],
+                    default="nclimgrid",
+                    help="Climate source: nclimgrid (public domain, default) or "
+                         "prism (legacy, rights-gated).")
     ap.add_argument("--min-order", type=int, default=4,
                     help="Peakcache Strahler filter (must match a staged cache).")
     ap.add_argument("--width", type=int, default=5000)
@@ -181,8 +202,10 @@ def main() -> int:
     print(f"{len(geoms)} kept reaches (min_order {args.min_order})")
 
     years = normalize_years(range(args.start, args.end + 1), latest=args.end)
-    print(f"disaggregating {len(years)} yrs {years[0]}..{years[-1]} from PRISM ...")
-    by_id = yearly_flow_by_id(spec, years, args.root, latest=args.end)
+    print(f"disaggregating {len(years)} yrs {years[0]}..{years[-1]} "
+          f"from {args.climate_source} ...")
+    by_id = yearly_flow_by_id(spec, years, args.root, latest=args.end,
+                              climate_source=args.climate_source)
 
     # Baseline monthly (from the still cache) is the fallback for reaches absent
     # from the topology read; flat QAMA if even that is missing.
@@ -205,7 +228,7 @@ def main() -> int:
             else:
                 mat[k] = base[k]
         per_year[y] = mat
-        print(f"  {y}: {hit}/{n} reaches with PRISM flow")
+        print(f"  {y}: {hit}/{n} reaches with {args.climate_source} flow")
 
     # Fixed peak month = month of max total flow across the decade-mean network.
     decade_mean = np.mean([per_year[y] for y in years], axis=0)

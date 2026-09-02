@@ -113,6 +113,7 @@ def load_watershed_series(
     *,
     root: str = DEFAULT_ROOT,
     min_order: int = 1,
+    climate_source: str = "nclimgrid",
 ) -> WatershedSeries:
     """Assemble a watershed's year-over-year flow series (cache-backed)."""
     tag = name.lower().replace(" ", "_")
@@ -129,7 +130,8 @@ def load_watershed_series(
         raise SystemExit("No flowlines fell inside the watershed boundary.")
 
     years = list(normalize_years(range(start, end + 1), latest=end))
-    by_id = yearly_flow_by_id(huc4, years, root, latest=end)
+    by_id = yearly_flow_by_id(huc4, years, root, latest=end,
+                              climate_source=climate_source)
     per_year: dict[int, np.ndarray] = {}
     for y in years:
         bucket = by_id[y]
