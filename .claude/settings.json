@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".venv/bin/python -m tools.detect_unfinished --quiet 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
