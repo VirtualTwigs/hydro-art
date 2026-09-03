@@ -40,7 +40,9 @@ Which feature would you like to initiate a new spec for?
 
 ### Step 2: Initialize Spec Structure
 
-Determine a kebab-case spec name from the user's description, then create the spec folder:
+Determine a kebab-case spec name from the user's description, then create the spec
+folder structure this project uses (`planning/`, `implementation/`,
+`verification/`):
 
 ```bash
 # Get today's date in YYYY-MM-DD format
@@ -56,18 +58,22 @@ DATED_SPEC_NAME="${TODAY}-${SPEC_NAME}"
 SPEC_PATH="agent-os/specs/$DATED_SPEC_NAME"
 
 # Create folder structure following architecture
-mkdir -p $SPEC_PATH/planning
-mkdir -p $SPEC_PATH/planning/visuals
+mkdir -p "$SPEC_PATH/planning"
+mkdir -p "$SPEC_PATH/implementation"
+mkdir -p "$SPEC_PATH/verification"
 
 echo "Created spec folder: $SPEC_PATH"
 ```
 
-### Step 3: Create Implementation Folder
+Note: this is a GIS→SVG CLI, not a UI project — mockups are rare. Do NOT
+pre-create a `planning/visuals/` folder; the shaper will create it only if the
+user actually provides images.
 
-Create 2 folders:
-- `$SPEC_PATH/implementation/`
+### Step 3: Save the Raw Idea
 
-Leave this folder empty, for now. Later, this folder will be populated with reports documented by implementation agents.
+Write the user's exact, unmodified description to
+`$SPEC_PATH/planning/initialization.md`. Leave `implementation/` and
+`verification/` empty for the implementation and verifier agents.
 
 ### Step 4: Output Confirmation
 
@@ -77,9 +83,10 @@ Return or output the following:
 Spec folder initialized: `[spec-path]`
 
 Structure created:
-- planning/ - For requirements and specifications
-- planning/visuals/ - For mockups and screenshots
-- implementation/ - For implementation documentation
+- planning/          - requirements, spec, pre-analysis
+- planning/initialization.md - the raw idea (saved verbatim)
+- implementation/    - implementation reports
+- verification/      - verification reports
 
 Ready for requirements research phase.
 ```
@@ -88,5 +95,6 @@ Ready for requirements research phase.
 
 - Always use dated folder names (YYYY-MM-DD-spec-name)
 - Pass the exact spec path back to the orchestrator
-- Follow folder structure exactly
-- Implementation folder should be empty, for now
+- Save the raw idea verbatim to `planning/initialization.md`
+- `implementation/` and `verification/` should be empty, for now
+- Do NOT pre-create `planning/visuals/` (rare in this CLI project)

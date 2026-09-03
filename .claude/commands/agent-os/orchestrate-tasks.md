@@ -63,16 +63,26 @@ task_groups:
   # Repeat for each task group found in tasks.md
 ```
 
-For example, after this step, the `orchestration.yml` file might look like this (exact names will vary):
+For this project the available implementation/verification subagents are:
+`implementer` (offline `src/` modules and non-offline `tools/` entry points),
+`implementation-verifier`, `determinism-auditor` (offline-discipline +
+byte-identical gate), `rights-gate-auditor` (only when a data source is added),
+and `retrospective-writer` (epoch close). There is no front-end/back-end split —
+the real axis is offline `src/` vs. non-offline `tools/`.
+
+For example, after this step, the `orchestration.yml` file might look like this
+(exact names will vary):
 
 ```yaml
 task_groups:
-  - name: authentication-system
-    claude_code_subagent: backend-specialist
-  - name: user-dashboard
-    claude_code_subagent: frontend-specialist
-  - name: api-endpoints
-    claude_code_subagent: backend-specialist
+  - name: pure-climate-grid-src-module   # offline src/ module
+    claude_code_subagent: implementer
+  - name: nclimgrid-tools-entry-point    # non-offline tools/ entry point
+    claude_code_subagent: implementer
+  - name: real-data-smoke-validation
+    claude_code_subagent: implementer
+  - name: close-out-regression
+    claude_code_subagent: determinism-auditor
 ```
 
 ### NEXT: Ask user to assign standards to each task group
@@ -113,23 +123,27 @@ task_groups:
   # Repeat for each task group found in tasks.md
 ```
 
-For example, after this step, the `orchestration.yml` file might look like this (exact names will vary):
+Note: the authoritative standards for this project are
+`global/hydro-art-invariants.md`, `global/tech-stack.md`, and the repo-root
+`CLAUDE.md` / `AGENTS.md`. The generic `backend/*` and `frontend/*` files do NOT
+apply to this GIS→SVG CLI — prefer the invariants file. A sensible default for
+every group is `global/hydro-art-invariants.md`.
+
+For example, after this step, the `orchestration.yml` file might look like this
+(exact names will vary):
 
 ```yaml
 task_groups:
-  - name: authentication-system
+  - name: pure-climate-grid-src-module
     standards:
-      - all
-  - name: user-dashboard
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: nclimgrid-tools-entry-point
     standards:
-      - global/*
-      - frontend/components.md
-      - frontend/css.md
-  - name: task-group-with-no-standards
-  - name: api-endpoints
+      - global/hydro-art-invariants.md
+  - name: real-data-smoke-validation
     standards:
-      - backend/*
-      - global/error-handling.md
+      - global/hydro-art-invariants.md
 ```
 
 Note: If the `use_claude_code_subagents` flag is enabled, the final `orchestration.yml` would include BOTH `claude_code_subagent` assignments AND `standards` for each task group.

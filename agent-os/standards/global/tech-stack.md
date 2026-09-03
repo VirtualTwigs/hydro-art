@@ -1,31 +1,36 @@
 ## Tech stack
 
-Define your technical stack below. This serves as a reference for all team members and helps maintain consistency across the project.
+Hydrographic Vector Art Generator — a deterministic GIS→SVG CLI. There is no web
+framework, database, ORM, or hosted service. Ignore standards that assume those.
 
 ### Framework & Runtime
-- **Application Framework:** [e.g., Rails, Django, Next.js, Express]
-- **Language/Runtime:** [e.g., Ruby, Python, Node.js, Java]
-- **Package Manager:** [e.g., bundler, pip, npm, yarn]
+- **Application type:** command-line tool / library (`build.py`, `src/`), no web framework
+- **Language/Runtime:** Python 3.12+ (running 3.14.x)
+- **Package Manager:** pip; core deps in `pyproject.toml` (`pyyaml`, `rich`),
+  heavy GIS stack in `requirements.txt` (lazy-imported behind seams)
 
-### Frontend
-- **JavaScript Framework:** [e.g., React, Vue, Svelte, Alpine, vanilla JS]
-- **CSS Framework:** [e.g., Tailwind CSS, Bootstrap, custom]
-- **UI Components:** [e.g., shadcn/ui, Material UI, custom library]
+### GIS / numeric stack (lazy-imported behind injected seams, never at `src/` top level)
+- **Vector:** shapely, geopandas, pyogrio, networkx
+- **Raster (optional):** rasterio, numpy
+- **Internal CRS:** EPSG:5070 (single source: `src/crs.py:INTERNAL_CRS`)
+- **Data sources:** USGS NHDPlus HR / NHD / WBD (public domain); 3DEP DEM COGs on
+  AWS S3; NOAA NCEI nClimGrid-Monthly climate (public domain)
 
-### Database & Storage
-- **Database:** [e.g., PostgreSQL, MySQL, MongoDB]
-- **ORM/Query Builder:** [e.g., ActiveRecord, Prisma, Sequelize]
-- **Caching:** [e.g., Redis, Memcached]
+### Frontend (`web/`, no build step)
+- **JavaScript:** vanilla ES, classic `<script src>`, `file://`-safe
+- **CSS:** custom (`web/shared/ux.css`); no framework
+- **Shared logic:** `web/shared/hydro-ux.js` — must stay Node-loadable
 
 ### Testing & Quality
-- **Test Framework:** [e.g., Jest, RSpec, pytest]
-- **Linting/Formatting:** [e.g., ESLint, Prettier, RuboCop]
+- **Test Framework:** pytest (offline suite — no GDAL/network/data) + a CommonJS
+  `node` roundtrip test (`tests/test_recipe_roundtrip.cjs`)
+- **Linting/Formatting:** ruff (line-length 88)
+- **Determinism:** golden-hash registry + `tools/verify_determinism.py`
 
-### Deployment & Infrastructure
-- **Hosting:** [e.g., Heroku, AWS, Vercel, Railway]
-- **CI/CD:** [e.g., GitHub Actions, CircleCI]
+### Storage & Infrastructure
+- **Large data:** Synology NAS (`/Volumes/home/data/hydro-art/…`), redirectable
+  via `src/storage.py` (`--external-root` / `$HYDRO_ART_EXTERNAL_ROOT`)
+- **External CLI tools (optional, degrade gracefully):** `svgo`, `rsvg-convert`
 
 ### Third-Party Services
-- **Authentication:** [e.g., Auth0, Devise, NextAuth]
-- **Email:** [e.g., SendGrid, Postmark]
-- **Monitoring:** [e.g., Sentry, Datadog]
+- None (no auth, email, or monitoring). Fully local/offline pipeline.
