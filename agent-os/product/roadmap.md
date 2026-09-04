@@ -826,11 +826,24 @@ network styling. This is the layer that turns the art into a story about *how pe
 
 **Phase 16.1 — Structure ingestion & taxonomy**
 
-65. [ ] Hydro-structure source layers and classification — Load and classify engineered-water
+65. [x] Hydro-structure source layers and classification — Load and classify engineered-water
 FTypes across `NHDLine` (dam/weir, gate, lock chamber), `NHDPoint` (gaging station, dam/weir, water
 intake/outflow), and `NHDArea` (canal/ditch, lock chamber, spillway, reservoir-as-structure) into a
 versioned `HYDRO_STRUCTURE_POLICY_VERSION` taxonomy; extend the `src/loading.py` allowlists +
 attribute fields. `M`
+(Shipped 2026-09-03. `src/hydro_structures.py` — versioned FType-driven taxonomy
+(`dam_weir`/`gate`/`lock_chamber`/`gaging_station`/`water_intake_outflow`/`spillway`/`canal_ditch`/
+`excluded`), mirroring `src/point_features.py` (name-only-refining, missing FType → `excluded` +
+`missing_ftype`, full provenance, no geometry math, no top-level GDAL). One table serves all three
+source layers. Codes domain-verified against real GDB 1807 (343/336/455/485/367 confirmed; 369
+line/area + 398 lock_chamber flagged UNCONFIRMED, standard NHD codes); `436 Reservoir` stays a
+waterbody (documented policy note). `src/loading.py` gains the NHDLine seam (`LINE_LAYER_ALLOWLIST`,
+`LINE_ATTRIBUTE_FIELDS`, `discover_line_layers`, `load_line_features`); NHDPoint/NHDArea already load
+via the Epoch 15/1.5 seams. Complementarity tested (structure codes disjoint from waterbody/point/
+areal included codes). Spec `agent-os/specs/2026-09-03-hydro-structure-taxonomy/`; 761 offline tests
+green, default build byte-identical (verify_determinism `--region Oregon`), no GDAL leakage.
+**Follow-ons (#66/#67/#68):** flowline canal/pipeline styling, structure symbology + selection/render,
+QA/presets/CLI. This item is taxonomy + loader only — no rendering, no pipeline wiring, byte-identical.)
 
 **Phase 16.2 — Engineered channels on the network**
 

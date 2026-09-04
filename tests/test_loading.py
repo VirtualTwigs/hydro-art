@@ -2,9 +2,7 @@
 
 import warnings
 
-from shapely.geometry import LineString
-
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point
 
 from src.loading import (
     HYDRO_LAYER_ALLOWLIST,
@@ -124,3 +122,63 @@ def test_fake_point_loader_seam_preserves_geometry_and_attributes():
     assert layer.name == "NHDPoint"
     assert len(layer.geometries) == len(layer.attributes) == 2
     assert layer.attributes[0]["FType"] == 458
+
+
+class FakeLineLoader:
+    """In-memory loader exposing the line-structure seam without GDAL."""
+
+    def load_line_features(self, dataset_dir, dataset_id, huc4):
+        return [
+            Layer(
+                name="NHDLine",
+                dataset_id=dataset_id,
+                huc4=huc4,
+                geometries=(LineString([(0, 0), (1, 1)]),
+                            LineString([(2, 2), (3, 3)])),
+                crs="EPSG:4269",
+                attributes=(
+                    {"FType": 343, "Permanent_Identifier": "dam-1"},
+                    {"FType": 455, "Permanent_Identifier": "spill-2"},
+                ),
+            )
+        ]
+
+
+def test_line_allowlist_is_separate_from_other_paths():
+    # NHDLine structures must not leak into the flowline/graph, waterbody, or
+    # point-feature load paths.
+    from src.loading import LINE_LAYER_ALLOWLIST
+
+    assert "NHDLine" in LINE_LAYER_ALLOWLIST
+    assert "NHDLine" not in HYDRO_LAYER_ALLOWLIST
+    assert "NHDLine" not in WATERBODY_LAYER_ALLOWLIST
+    assert "NHDLine" not in POINT_LAYER_ALLOWLIST
+
+
+def test_line_attribute_fields_carry_provenance_but_not_area():
+    from src.loading import LINE_ATTRIBUTE_FIELDS
+
+    assert "FType" in LINE_ATTRIBUTE_FIELDS
+    assert "Permanent_Identifier" in LINE_ATTRIBUTE_FIELDS
+    assert "ReachCode" in LINE_ATTRIBUTE_FIELDS
+    assert "AreaSqKm" not in LINE_ATTRIBUTE_FIELDS
+
+
+def test_discover_line_layers_filters_case_insensitively():
+    from src.loading import discover_line_layers
+
+    available = ["NHDFlowline", "nhdline", "NHDWaterbody", "NHDArea", "NHDPoint"]
+    assert discover_line_layers(available) == ["nhdline"]
+
+
+def test_fake_line_loader_seam_preserves_geometry_and_attributes():
+    loader = FakeLineLoader()
+    layers = loader.load_line_features("/anything", "nhdplus_hr", "1807")
+    assert len(layers) == 1
+    layer = layers[0]
+    assert layer.name == "NHDLine"
+    assert len(layer.geometries) == len(layer.attributes) == 2
+    assert layer.attributes[0]["FType"] == 343
+    # The line seam does not overload the point/waterbody loaders.
+    assert not hasattr(loader, "load_point_features")
+    assert not hasattr(loader, "load_waterbody_layers")

@@ -1,0 +1,14 @@
+task_groups:
+  - name: confirm-structure-ftype-codes   # Task Group 0 — real-GDB verification (non-offline, non-blocking)
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+  - name: hydro-structure-taxonomy-and-line-loader   # Task Group 1 — offline src/ module + loader seam
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: qa-and-regression-gate   # Task Group 2 — offline-discipline + byte-identical gate
+    claude_code_subagent: determinism-auditor
+    standards:
+      - global/hydro-art-invariants.md

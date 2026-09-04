@@ -26,9 +26,12 @@ __all__ = [
     "WATERBODY_ATTRIBUTE_FIELDS",
     "POINT_LAYER_ALLOWLIST",
     "POINT_ATTRIBUTE_FIELDS",
+    "LINE_LAYER_ALLOWLIST",
+    "LINE_ATTRIBUTE_FIELDS",
     "discover_layers",
     "discover_waterbody_layers",
     "discover_point_layers",
+    "discover_line_layers",
 ]
 
 
@@ -74,6 +77,22 @@ POINT_LAYER_ALLOWLIST: tuple[str, ...] = ("NHDPoint",)
 #: Source attribute columns needed to classify point features by type/code and
 #: retain provenance. No ``AreaSqKm`` — points have no area. Case-insensitive.
 POINT_ATTRIBUTE_FIELDS: tuple[str, ...] = (
+    "FType",
+    "FCode",
+    "GNIS_Name",
+    "Permanent_Identifier",
+    "ReachCode",
+)
+
+#: NHDLine engineered-water structure layer (Epoch 16, Item 65). Kept separate
+#: from the flowline, waterbody, and point allowlists so line structures never
+#: leak into the flowline/graph, polygon, or point-feature load paths;
+#: classification lives in :mod:`src.hydro_structures`.
+LINE_LAYER_ALLOWLIST: tuple[str, ...] = ("NHDLine",)
+
+#: Source attribute columns needed to classify line structures by type/code and
+#: retain provenance. No ``AreaSqKm`` — lines have no area. Case-insensitive.
+LINE_ATTRIBUTE_FIELDS: tuple[str, ...] = (
     "FType",
     "FCode",
     "GNIS_Name",
@@ -129,6 +148,16 @@ def discover_point_layers(layer_names: list[str]) -> list[str]:
     independent of the flowline/WBD and waterbody load paths.
     """
     return discover_layers(layer_names, POINT_LAYER_ALLOWLIST)
+
+
+def discover_line_layers(layer_names: list[str]) -> list[str]:
+    """Filter available layer names to the NHDLine structure layer.
+
+    Convenience wrapper over :func:`discover_layers` using
+    :data:`LINE_LAYER_ALLOWLIST`, so line-structure discovery is explicit and
+    independent of the flowline/WBD, waterbody, and point-feature load paths.
+    """
+    return discover_layers(layer_names, LINE_LAYER_ALLOWLIST)
 
 
 @runtime_checkable
@@ -295,6 +324,70 @@ class PyogrioLayerLoader:
             return []
 
         wanted = {field.lower(): field for field in POINT_ATTRIBUTE_FIELDS}
+        layers: list[Layer] = []
+        for name in selected:
+            frame = gpd.read_file(source, layer=name)
+            present = {
+                col: wanted[col.lower()]
+                for col in frame.columns
+                if col.lower() in wanted
+            }
+            attributes = tuple(
+                {canonical: row[col] for col, canonical in present.items()}
+                for _, row in frame.iterrows()
+            )
+            layers.append(
+                Layer(
+                    name=name,
+                    dataset_id=dataset_id,
+                    huc4=huc4,
+                    geometries=tuple(frame.geometry.values),
+                    crs=str(frame.crs) if frame.crs is not None else None,
+                    attributes=attributes,
+                )
+            )
+        return layers
+
+    def load_line_features(
+        self, dataset_dir: Path, dataset_id: str, huc4: str
+    ) -> list[Layer]:  # pragma: no cover - requires GDAL + real data
+        """Load NHDLine engineered-water structure layers with attributes.
+
+        Unlike :meth:`load_layers`, this discovers only
+        :data:`LINE_LAYER_ALLOWLIST` layers and preserves the per-feature source
+        attributes (:data:`LINE_ATTRIBUTE_FIELDS`) needed to classify features by
+        type/code in :mod:`src.hydro_structures`. Independent of the point and
+        waterbody load paths so line structures never leak into them.
+        """
+        try:
+            import geopandas as gpd
+            from pyogrio import list_layers
+        except ImportError as exc:
+            raise GeometryError(
+                "geopandas/pyogrio are required to load GIS data; install the "
+                "GIS dependencies from requirements.txt."
+            ) from exc
+
+        source = self._find_source(dataset_dir)
+        if source is None:
+            warnings.warn(
+                f"No .gdb/.shp source found under {dataset_dir}; skipping "
+                f"line features for {dataset_id}/{huc4}.",
+                stacklevel=2,
+            )
+            return []
+
+        available = [str(row[0]) for row in list_layers(source)]
+        selected = discover_line_layers(available)
+        if not selected:
+            warnings.warn(
+                f"No known line layers in {source} "
+                f"(saw {available}); skipping {dataset_id}/{huc4}.",
+                stacklevel=2,
+            )
+            return []
+
+        wanted = {field.lower(): field for field in LINE_ATTRIBUTE_FIELDS}
         layers: list[Layer] = []
         for name in selected:
             frame = gpd.read_file(source, layer=name)
