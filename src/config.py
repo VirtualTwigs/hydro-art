@@ -201,13 +201,41 @@ AREAL_FEATURE_PRESETS: dict[str, dict[str, Any]] = {
 #: thin to a wider minimum spacing. ``print-state`` is tuned for a whole-state /
 #: wall sheet (prunes harder); ``print-county`` is less aggressive so a single
 #: county still reads. Structures render above the water by default.
+#:
+#: Values tuned from the Item #68 real-data QA run (HUC4 1807, Oregon coastal):
+#: an unthinned basin selects ~557 structures (dam_weir 174, gaging_station 305,
+#: canal_ditch 52, spillway 15, intake 9, gate 2) with 553/557 on-network at a
+#: 3 m median — dense but legible on screen, a smear on a printed wall sheet. So
+#: ``screen`` keeps everything at the default marker weight; ``print-county``
+#: prunes sub-10k m² NHDArea slivers and thins point clusters to ~1.5 km while
+#: enlarging markers so structures read at county zoom; ``print-state`` prunes
+#: harder (60k m² / 8 km) and pushes marker size, fill opacity, and canal dash
+#: further so the sparser set still reads at wall scale (see
+#: ``implementation/real-data-findings.md``).
 HYDRO_STRUCTURE_PRESETS: dict[str, dict[str, Any]] = {
-    "screen": {"min_area_m2": 0.0, "min_spacing_m": 0.0, "render_order": "above"},
-    "print-state": {
-        "min_area_m2": 50_000.0, "min_spacing_m": 8_000.0, "render_order": "above",
+    "screen": {
+        "min_area_m2": 0.0,
+        "min_spacing_m": 0.0,
+        "size": 1.0,
+        "opacity": 0.35,
+        "dash": "4,3",
+        "render_order": "above",
     },
     "print-county": {
-        "min_area_m2": 10_000.0, "min_spacing_m": 2_000.0, "render_order": "above",
+        "min_area_m2": 10_000.0,
+        "min_spacing_m": 1_500.0,
+        "size": 1.3,
+        "opacity": 0.45,
+        "dash": "5,3",
+        "render_order": "above",
+    },
+    "print-state": {
+        "min_area_m2": 60_000.0,
+        "min_spacing_m": 8_000.0,
+        "size": 1.6,
+        "opacity": 0.55,
+        "dash": "7,4",
+        "render_order": "above",
     },
 }
 

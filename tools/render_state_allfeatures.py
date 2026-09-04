@@ -14,6 +14,11 @@ reads real datasets, so it only runs in a full (non-offline) environment.
 
     python tools/render_state_allfeatures.py --state Washington \
         --min-order 4 --huc-level 8 --width 2400
+
+Add ``--structures`` to overlay engineered infrastructure (dams/weirs, gates,
+gaging stations, intakes, spillways, canals) above the water, using the SAME
+classification + selection code the pipeline uses. Off by default, so existing
+invocations render byte-for-byte the same.
 """
 
 from __future__ import annotations
@@ -30,6 +35,12 @@ import pandas as pd  # noqa: E402
 import shapely  # noqa: E402
 
 from src.areal_features import AREAL_FTYPE_CLASS  # noqa: E402
+from src.hydro_structure_selection import (  # noqa: E402
+    HydroStructureSelectionPolicy,
+    process_hydro_structures,
+)
+from src.hydro_structures import classify_hydro_structure  # noqa: E402
+from src.loading import LINE_ATTRIBUTE_FIELDS  # noqa: E402
 from src.point_features import POINT_FTYPE_CLASS  # noqa: E402
 from src.rendering import render_svg  # noqa: E402
 from src.waterbodies import FTYPE_CLASS as WB_FTYPE_CLASS  # noqa: E402
@@ -55,6 +66,9 @@ _AREAL_STYLES = {
     "lake": {"fill": "solid", "color": "#2ec4ff", "opacity": 0.55,
              "render_order": "below"},
 }
+
+#: NHD structure source layers (line/point/area) scanned when --structures is on.
+_STRUCTURE_LAYERS = ("NHDLine", "NHDPoint", "NHDArea")
 
 
 def _gdbs(huc4s):
@@ -180,6 +194,55 @@ def _load_point_features(gdbs, boundary):
         fid += 1
         pts.append((f"pt_{fid}", geom, family))
     return pts
+
+
+def _attrs_for_row(rd, fields):
+    """Pull the structure classification attribute subset from a row dict."""
+    return {f: rd[f] for f in fields if f in rd and rd[f] is not None}
+
+
+def _load_hydro_structures(gdbs, boundary, min_area, min_spacing):
+    """Classify + select engineered structures via the pipeline code.
+
+    Loads all three structure-bearing layers (``NHDLine``/``NHDPoint``/
+    ``NHDArea``), classifies each row with :func:`classify_hydro_structure`, then
+    runs the SAME :func:`process_hydro_structures` selection (repair → clip →
+    per-kind thinning) the pipeline uses. Returns the ``(feature_id, geometry,
+    struct_class)`` tuples :func:`render_svg` draws in its ``hydro_structures``
+    layer.
+    """
+    features: list = []
+    for gdb in gdbs:
+        huc4 = Path(gdb).parent.name
+        for layer in _STRUCTURE_LAYERS:
+            df = _load_layer([gdb], layer)
+            if df is None:
+                continue
+            for row in df.itertuples(index=False):
+                rd = row._asdict()
+                geom = rd.get("geometry")
+                if geom is None or geom.is_empty:
+                    continue
+                features.append(
+                    classify_hydro_structure(
+                        _attrs_for_row(rd, LINE_ATTRIBUTE_FIELDS),
+                        source_layer=layer,
+                        dataset_id="nhdplus_hr",
+                        huc4=huc4,
+                        geometry=geom,
+                        source_crs=EPSG,
+                    )
+                )
+    policy = HydroStructureSelectionPolicy(
+        default_min_area_m2=min_area,
+        default_min_spacing_m=min_spacing,
+    )
+    selection = process_hydro_structures(features, boundary=boundary, policy=policy)
+    items = [
+        (f"st_{i}", f.geometry, f.struct_class)
+        for i, f in enumerate(selection.selected)
+    ]
+    return items, selection.counts["by_class"]
 
 
 def _font(sz):
@@ -319,6 +382,12 @@ def main() -> int:
                     help="Number of major named rivers to label (0 = none).")
     ap.add_argument("--label-lakes", type=int, default=14,
                     help="Number of major named lakes to label (0 = none).")
+    ap.add_argument("--structures", action="store_true",
+                    help="Overlay engineered hydro structures (off by default).")
+    ap.add_argument("--structure-min-area", type=float, default=0.0,
+                    help="Per-polygon min area (m^2) for structure selection.")
+    ap.add_argument("--structure-min-spacing", type=float, default=0.0,
+                    help="Per-point min spacing (m) for structure thinning.")
     ap.add_argument("--output", default="/tmp/hydro_output/wa_allfeatures.png")
     args = ap.parse_args()
 
@@ -352,6 +421,14 @@ def main() -> int:
     points = _load_point_features(gdbs, boundary)
     print(f"  points: {len(points)}")
 
+    structures = None
+    if args.structures:
+        print("loading + selecting engineered structures ...")
+        structures, struct_by_class = _load_hydro_structures(
+            gdbs, boundary, args.structure_min_area, args.structure_min_spacing
+        )
+        print(f"  structures: {len(structures)} ({struct_by_class})")
+
     river_labels = (
         _pick_river_labels(geoms, flows, extras["nhdplus_id"],
                            _river_names(gdbs), args.label_rivers)
@@ -367,6 +444,8 @@ def main() -> int:
         areal_features=(lakes + areal) or None,
         areal_feature_styles=_AREAL_STYLES,
         point_features=points or None,
+        hydro_structures=structures or None,
+        hydro_structure_order="above",
     )
 
     out_png = Path(args.output)
@@ -380,6 +459,8 @@ def main() -> int:
     all_geoms = list(geometries.values())
     all_geoms += [g for _fid, g, _fam in lakes + areal]
     all_geoms += [g for _fid, g, _fam in points]
+    if structures:
+        all_geoms += [g for _fid, g, _fam in structures]
     bounds = (
         min(g.bounds[0] for g in all_geoms),
         min(g.bounds[1] for g in all_geoms),

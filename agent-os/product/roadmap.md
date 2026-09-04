@@ -873,9 +873,15 @@ preset tuning.)
 
 **Phase 16.4 — QA & presets**
 
-68. [ ] Infrastructure QA and presets — Fixture + real Oregon/Washington/Clark County validation
+68. [x] Infrastructure QA and presets — Fixture + real Oregon/Washington/Clark County validation
 (structure-on-network placement, duplicate suppression, canal/natural separation) and screen/print
 presets tuned so infrastructure enriches rather than clutters. `M`
+**Shipped (2026-09-04):** pure/offline `src/hydro_structure_qa.py` (network placement, cross-layer
+dedup, coincidence-fraction separation) + `tools/hydro_structure_qa.py` real-data cross-check;
+`render_state_allfeatures --structures` overlay; tuned `HYDRO_STRUCTURE_PRESETS`
+(screen/print-county/print-state monotonic thinning). Real HUC4 1807: 557 structures, 553/557
+on-network (median 3.0 m), 1 duplicate group, 77 genuine coincidences. Full suite 790 green;
+default byte-identical (sha `e6b9bd6cfaf7…`, 0 structures on default). **Closes Epoch 16.**
 
 Epoch gate: a build can overlay source-traceable dams, weirs, locks, gaging stations, intakes, and
 distinctly-styled engineered channels on the water art, controllable by preset, with the default

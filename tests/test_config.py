@@ -302,3 +302,39 @@ def test_hydro_structures_preset_not_stored_on_settings():
         {**DEFAULTS, "hydro_structures": {"preset": "print-state"}}
     ).hydro_structures
     assert not hasattr(hs, "preset")
+
+
+def test_hydro_structure_presets_monotonic_thinning():
+    """print-state >= print-county >= screen for both thinning knobs (Item #68).
+
+    The tuned presets must declutter monotonically as the sheet gets larger, so a
+    whole-state wall render prunes at least as hard as a single county, which
+    prunes at least as hard as the (unthinned) screen view. Locks the density
+    contract so a future retune can't accidentally invert it.
+    """
+    from src.config import HYDRO_STRUCTURE_PRESETS
+
+    screen = HYDRO_STRUCTURE_PRESETS["screen"]
+    county = HYDRO_STRUCTURE_PRESETS["print-county"]
+    state = HYDRO_STRUCTURE_PRESETS["print-state"]
+
+    for key in ("min_area_m2", "min_spacing_m"):
+        assert state[key] >= county[key] >= screen[key]
+    # print scales actually thin (a positive threshold), screen does not.
+    assert screen["min_area_m2"] == 0.0 and screen["min_spacing_m"] == 0.0
+    assert county["min_area_m2"] > 0.0 and county["min_spacing_m"] > 0.0
+    assert state["min_area_m2"] > county["min_area_m2"]
+    assert state["min_spacing_m"] > county["min_spacing_m"]
+
+
+def test_hydro_structure_preset_tuning_leaves_default_disabled():
+    """Preset value changes must NOT touch the default (byte-identical) build.
+
+    No preset applies unless explicitly requested, so the default structure
+    settings stay disabled with zero thinning — the render path sees no
+    structures and output is unchanged.
+    """
+    hs = build_settings(DEFAULTS).hydro_structures
+    assert hs.enabled is False
+    assert hs.min_area_m2 == 0.0
+    assert hs.min_spacing_m == 0.0

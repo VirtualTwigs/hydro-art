@@ -1,0 +1,14 @@
+task_groups:
+  - name: offline-structure-qa-module          # TG1 — pure/offline src/ QA module
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: real-data-qa-tool-and-preset-tuning  # TG2 — non-offline tools/ + config preset tuning
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+  - name: determinism-and-epoch-close-gate     # TG3 — byte-identical + full-suite gate
+    claude_code_subagent: determinism-auditor
+    standards:
+      - global/hydro-art-invariants.md
