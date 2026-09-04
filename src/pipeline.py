@@ -38,6 +38,11 @@ from src.download import Downloader, UrllibFetcher
 from src.export import Exporter, FileExporter
 from src.geometry import RepairStats, repair_layer
 from src.graph import build_graph
+from src.hydro_structure_selection import (
+    HydroStructureSelectionPolicy,
+    process_hydro_structures,
+)
+from src.hydro_structures import classify_hydro_structure_layer
 from src.loading import LayerLoader, PyogrioLayerLoader
 from src.optimize import SvgoOptimizer, SvgOptimizer
 from src.ordering import assign_stream_order
@@ -45,6 +50,7 @@ from src.point_features import classify_point_layer
 from src.projection import reproject_layer
 from src.rendering import (
     DEFAULT_AREAL_STYLES,
+    DEFAULT_HYDRO_STRUCTURE_STYLES,
     DEFAULT_POINT_STYLES,
     render_svg,
     scaled_widths,
@@ -158,8 +164,13 @@ def _validate_stage(ctx: RunContext) -> None:
     # disabled builds) stay untouched. Both the waterbody-outline layer (Item W3)
     # and the areal natural-feature layer (Item 64) classify this same load
     # through complementary taxonomies, so either one enabled pulls it.
+    # hydro_structures reuses the shared NHDArea/NHDWaterbody load (spillways,
+    # lock chambers, canals, area intakes) through the disjoint structure
+    # taxonomy, so enabling structures also pulls this load.
     needs_waterbody = (
-        ctx.settings.waterbodies.enabled or ctx.settings.areal_features.enabled
+        ctx.settings.waterbodies.enabled
+        or ctx.settings.areal_features.enabled
+        or ctx.settings.hydro_structures.enabled
     )
     if needs_waterbody and hasattr(ctx.loader, "load_waterbody_layers"):
         wb_layers = []
@@ -178,9 +189,13 @@ def _validate_stage(ctx: RunContext) -> None:
 
     # NHDPoint is a separate additive load (springs/waterfalls/rapids), gated the
     # same way and independent of the waterbody path (Item 64).
-    if ctx.settings.point_features.enabled and hasattr(
-        ctx.loader, "load_point_features"
-    ):
+    # hydro_structures also reuses the NHDPoint load (gaging stations, point
+    # intakes, point gates), so enabling structures triggers it too.
+    needs_point = (
+        ctx.settings.point_features.enabled
+        or ctx.settings.hydro_structures.enabled
+    )
+    if needs_point and hasattr(ctx.loader, "load_point_features"):
         pt_layers = []
         for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
             pt_layers.extend(
@@ -193,6 +208,26 @@ def _validate_stage(ctx: RunContext) -> None:
         ctx.log(
             f"[bold]validate[/bold] loaded {len(pt_layers)} point layer(s), "
             f"{pt_total} points"
+        )
+
+    # NHDLine is the structure-only additive load (dams/weirs, line gates),
+    # gated on hydro_structures.enabled AND loader support so river-only and
+    # disabled builds never touch it and stay byte-identical.
+    if ctx.settings.hydro_structures.enabled and hasattr(
+        ctx.loader, "load_line_features"
+    ):
+        line_layers = []
+        for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
+            line_layers.extend(
+                ctx.loader.load_line_features(
+                    dataset_dir, descriptor.dataset_id, descriptor.huc4
+                )
+            )
+        ctx.artifacts["line_layers"] = line_layers
+        line_total = sum(len(layer.geometries) for layer in line_layers)
+        ctx.log(
+            f"[bold]validate[/bold] loaded {len(line_layers)} line layer(s), "
+            f"{line_total} lines"
         )
 
 
@@ -389,12 +424,14 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     waterbody_items = _select_waterbody_outlines(ctx)
     areal_items = _select_areal_features(ctx)
     point_items = _select_point_glyphs(ctx)
+    hydro_items = _select_hydro_structures(ctx)
 
     stroke_widths = _resolve_stroke_widths(ctx)
 
     wb = ctx.settings.waterbodies
     pf = ctx.settings.point_features
     af = ctx.settings.areal_features
+    hs = ctx.settings.hydro_structures
     svg = render_svg(
         geometries,
         segment_colors,
@@ -414,6 +451,9 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         point_features=point_items or None,
         point_feature_styles=_point_feature_styles(pf) if point_items else None,
         point_feature_order=pf.render_order,
+        hydro_structures=hydro_items or None,
+        hydro_structure_styles=_hydro_structure_styles(hs) if hydro_items else None,
+        hydro_structure_order=hs.render_order,
     )
     ctx.artifacts["svg"] = svg
 
@@ -423,8 +463,8 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     ctx.log(
         f"[bold]generate_svg[/bold] rendered {len(geometries)} path(s) in "
         f"{groups} watershed layer(s), {len(waterbody_items)} waterbody outline(s), "
-        f"{len(areal_items)} areal + {len(point_items)} point feature(s); "
-        f"{len(svg)} bytes"
+        f"{len(areal_items)} areal + {len(point_items)} point feature(s), "
+        f"{len(hydro_items)} hydro structure(s); {len(svg)} bytes"
     )
 
 
@@ -522,6 +562,83 @@ def _select_point_glyphs(ctx: RunContext) -> list[tuple]:
         feature_id = feat.source_id or f"pt{index}"
         items.append((feature_id, feat.geometry, feat.pt_class))
     return items
+
+
+def _select_hydro_structures(ctx: RunContext) -> list[tuple]:
+    """Classify + select engineered structures into render items (Item #67).
+
+    Structures arrive across three source loads that are reused through the
+    disjoint structure taxonomy: ``line_layers`` (NHDLine dams/weirs/gates),
+    ``point_layers`` (NHDPoint gaging/intake/gate points), and
+    ``waterbody_layers`` (NHDArea spillways/locks/canals/area intakes). Each is
+    classified via :func:`classify_hydro_structure_layer`, non-``excluded``
+    structures pass through :func:`process_hydro_structures` (repair → reproject →
+    clip → geometry-type-aware select), and the selected set maps to
+    ``(feature_id, geometry, struct_class)`` tuples. The full
+    :class:`~src.hydro_structure_selection.HydroStructureSelection` report is
+    stashed in ``artifacts["hydro_structure_selection"]``. Returns ``[]`` when
+    disabled or when no structure layers were loaded, leaving the render
+    byte-identical.
+    """
+    hs = ctx.settings.hydro_structures
+    if not hs.enabled:
+        return []
+
+    layers = []
+    for key in ("line_layers", "point_layers", "waterbody_layers"):
+        layers.extend(ctx.artifacts.get(key) or ())
+    if not layers:
+        return []
+
+    features = [
+        feat
+        for layer in layers
+        for feat in classify_hydro_structure_layer(layer)
+        if feat.struct_class != "excluded"
+    ]
+    policy = HydroStructureSelectionPolicy(
+        default_min_area_m2=hs.min_area_m2,
+        default_min_spacing_m=hs.min_spacing_m,
+    )
+    selection = process_hydro_structures(
+        features,
+        boundary=ctx.artifacts.get("region_boundary"),
+        policy=policy,
+        target_crs=ctx.settings.projection,
+    )
+    ctx.artifacts["hydro_structure_selection"] = selection
+
+    items: list[tuple] = []
+    for index, feat in enumerate(selection.selected):
+        feature_id = feat.source_id or f"hs{index}"
+        items.append((feature_id, feat.geometry, feat.struct_class))
+    return items
+
+
+def _hydro_structure_styles(hs) -> dict[str, dict[str, Any]] | None:
+    """Bridge group-level ``HydroStructureSettings`` into per-class render styles.
+
+    Only emits overrides that differ from the rendering defaults — ``color`` for
+    any class, ``size`` (a multiplier over each class's default glyph size),
+    ``opacity`` for solid-filled polygon classes, and ``dash`` for outline-only
+    polygon classes — so an enabled build with default knobs (``color=""``,
+    ``size=1.0``, and matching opacity/dash) yields ``None`` and inherits
+    :data:`~src.rendering.DEFAULT_HYDRO_STRUCTURE_STYLES`.
+    """
+    styles: dict[str, dict[str, Any]] = {}
+    for struct_class, base in DEFAULT_HYDRO_STRUCTURE_STYLES.items():
+        override: dict[str, Any] = {}
+        if hs.color:
+            override["color"] = hs.color
+        if hs.size != 1.0:
+            override["size"] = float(base.get("size", 1.5)) * hs.size
+        if base.get("fill") == "solid" and hs.opacity != base.get("opacity"):
+            override["opacity"] = hs.opacity
+        if base.get("fill") == "none" and hs.dash != base.get("dash"):
+            override["dash"] = hs.dash
+        if override:
+            styles[struct_class] = override
+    return styles or None
 
 
 def _point_feature_styles(pf) -> dict[str, dict[str, Any]] | None:

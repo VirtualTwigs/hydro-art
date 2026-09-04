@@ -38,6 +38,8 @@ __all__ = [
     "POINT_GLYPHS",
     "DEFAULT_POINT_STYLES",
     "DEFAULT_AREAL_STYLES",
+    "HYDRO_STRUCTURE_GLYPHS",
+    "DEFAULT_HYDRO_STRUCTURE_STYLES",
 ]
 
 Coord = tuple[float, float]
@@ -294,6 +296,30 @@ def _point_bounds(items: list[tuple]) -> tuple[float, float, float, float] | Non
     return (min_x, min_y, max_x, max_y) if seen else None
 
 
+def _structure_bounds(
+    items: list[tuple],
+) -> tuple[float, float, float, float] | None:
+    """Return ``(min_x, min_y, max_x, max_y)`` over mixed-geometry structures.
+
+    Structures span point/line/polygon, so each geometry's own ``bounds`` box is
+    unioned (a pure attribute read — no GIS import). Empty/None geometries skip.
+    """
+    min_x = min_y = float("inf")
+    max_x = max_y = float("-inf")
+    seen = False
+    for _feature_id, geom, *_rest in items:
+        if geom is None or getattr(geom, "is_empty", False):
+            continue
+        bx = getattr(geom, "bounds", None)
+        if not bx:
+            continue
+        gx0, gy0, gx1, gy1 = bx
+        seen = True
+        min_x, min_y = min(min_x, gx0), min(min_y, gy0)
+        max_x, max_y = max(max_x, gx1), max(max_y, gy1)
+    return (min_x, min_y, max_x, max_y) if seen else None
+
+
 def _glyph_element(
     shape: str, element_id: str, cx: float, cy: float, size: float, precision: int
 ) -> str:
@@ -428,6 +454,204 @@ def _areal_lines_for_order(
     return lines
 
 
+#: Default point-marker glyph per structure class (spec Item #67). Distinct
+#: shapes so gaging stations, gate points, and area/point intakes read apart at
+#: a glance (echoes the Epoch 15 point-glyph seam). Only structure classes that
+#: can arrive as points appear here; a class absent from the table falls back to
+#: ``"dot"``.
+HYDRO_STRUCTURE_GLYPHS: dict[str, str] = {
+    "gaging_station": "square",
+    "water_intake_outflow": "diamond",
+    "gate": "triangle",
+}
+
+#: Per-class default styling for engineered structures. Keyed on ``struct_class``;
+#: the renderer refines by geometry kind (point → glyph, line → bar, polygon →
+#: areal fill/outline). ``color`` is shared across kinds so a class reads
+#: consistently; ``fill`` selects the polygon treatment (``"solid"`` with
+#: ``opacity``, or ``"none"`` for a dashed outline via ``dash``). Callers (the
+#: config layer) override these; kept here so ``render_svg`` is usable in tests.
+DEFAULT_HYDRO_STRUCTURE_STYLES: dict[str, dict[str, Any]] = {
+    "dam_weir": {"color": "#ff6b6b"},
+    "gate": {"color": "#ffd166"},
+    "gaging_station": {"color": "#f4a261"},
+    "water_intake_outflow": {"color": "#e76f51"},
+    "spillway": {"color": "#ff8fa3", "fill": "solid", "opacity": 0.35},
+    "lock_chamber": {"color": "#ffb4a2", "fill": "solid", "opacity": 0.35},
+    "canal_ditch": {"color": "#e5989b", "fill": "none", "dash": "4,3"},
+}
+
+#: Half-length (in SVG user units) of the perpendicular bar drawn for a line
+#: structure — a bold tick reading *across* the channel it crosses.
+_STRUCTURE_BAR_HALF = 3.0
+
+
+def _structure_geometry_kind(geom: Any) -> str:
+    """Classify a shapely geometry as ``"point"``/``"line"``/``"polygon"``."""
+    gtype = getattr(geom, "geom_type", "")
+    if gtype in ("Point", "MultiPoint"):
+        return "point"
+    if gtype in ("Polygon", "MultiPolygon"):
+        return "polygon"
+    return "line"
+
+
+def _structure_bar_element(
+    element_id: str,
+    geom: Any,
+    min_x: float,
+    max_y: float,
+    precision: int,
+    half: float,
+) -> str:
+    """Serialize a line structure as a bar drawn across the channel it crosses.
+
+    The bar is centered on the line's midpoint and oriented perpendicular to the
+    local flow direction, so a dam/weir reads as a stroke spanning the channel.
+    """
+    parts = list(_iter_line_parts(geom))
+    coords: list[Coord] = []
+    for part in parts:
+        coords.extend(tuple(c)[:2] for c in part.coords)
+    if len(coords) < 2:
+        # Degenerate: fall back to a short horizontal bar at the single point.
+        cx, cy = coords[0] if coords else (0.0, 0.0)
+        x0, y0 = cx - min_x - half, max_y - cy
+        x1, y1 = cx - min_x + half, max_y - cy
+    else:
+        mid = len(coords) // 2
+        (ax, ay), (bx, by) = coords[mid - 1], coords[mid]
+        # Midpoint of the central segment, in projected space.
+        px, py = (ax + bx) / 2.0, (ay + by) / 2.0
+        dx, dy = bx - ax, by - ay
+        length = math.hypot(dx, dy) or 1.0
+        # Perpendicular unit vector, scaled to the bar half-length.
+        nx, ny = -dy / length * half, dx / length * half
+        # Transform both endpoints into the flipped SVG frame.
+        x0, y0 = (px + nx) - min_x, max_y - (py + ny)
+        x1, y1 = (px - nx) - min_x, max_y - (py - ny)
+
+    def f(value: float) -> str:
+        return format_number(value, precision)
+
+    d = f"M {f(x0)},{f(y0)} L {f(x1)},{f(y1)}"
+    return f'      <path id="{element_id}" d="{d}"/>'
+
+
+def _structure_glyph_element(
+    shape: str, element_id: str, cx: float, cy: float, size: float, precision: int
+) -> str:
+    """Serialize one structure point glyph (square/diamond/triangle/dot)."""
+    def f(value: float) -> str:
+        return format_number(value, precision)
+
+    if shape == "dot":
+        r = format_number(size, _WIDTH_PRECISION)
+        return f'      <circle id="{element_id}" cx="{f(cx)}" cy="{f(cy)}" r="{r}"/>'
+    if shape == "square":
+        pts = [
+            (cx - size, cy - size), (cx + size, cy - size),
+            (cx + size, cy + size), (cx - size, cy + size),
+        ]
+    elif shape == "diamond":
+        pts = [(cx, cy - size), (cx + size, cy), (cx, cy + size), (cx - size, cy)]
+    else:  # triangle
+        pts = [(cx, cy - size), (cx + size, cy + size), (cx - size, cy + size)]
+    d = f"M {f(pts[0][0])},{f(pts[0][1])} " + " ".join(
+        f"L {f(x)},{f(y)}" for x, y in pts[1:]
+    ) + " Z"
+    return f'      <path id="{element_id}" d="{d}"/>'
+
+
+def _hydro_structure_group(
+    struct_class: str,
+    feats: list[tuple],
+    style: dict,
+    min_x: float,
+    max_y: float,
+    precision: int,
+) -> list[str]:
+    """Serialize one ``<g id="hydro_<class>">`` group, dispatching by geometry.
+
+    Each feature is drawn by its geometry kind: points → marker glyph, lines →
+    a bar across the channel, polygons → an areal fill/outline path. All three
+    kinds may appear under one class (structures span geometry types).
+    """
+    color = style.get("color", DEFAULT_FALLBACK_COLOR)
+    size = float(style.get("size", 1.5))
+    fill_mode = style.get("fill", "none")
+    glyph = style.get("marker") or HYDRO_STRUCTURE_GLYPHS.get(struct_class, "dot")
+
+    attrs = [f'id="hydro_{struct_class}"', f'data-class="{struct_class}"']
+    if glyph == "dot" and fill_mode not in ("solid", "hatch"):
+        attrs.append(f'fill="{color}"')
+        attrs.append('stroke="none"')
+    else:
+        sw = format_number(max(size * 0.4, 0.1), _WIDTH_PRECISION)
+        attrs.append('fill="none"')
+        attrs.append(f'stroke="{color}"')
+        attrs.append(f'stroke-width="{sw}"')
+    lines = [f"  <g {' '.join(attrs)}>"]
+
+    for feature_id, geom in feats:
+        kind = _structure_geometry_kind(geom)
+        eid = f"hydro_{struct_class}_{feature_id}"
+        if kind == "point":
+            cx, cy = _point_xy(geom, min_x, max_y)
+            lines.append(
+                _structure_glyph_element(glyph, eid, cx, cy, size, precision)
+            )
+        elif kind == "polygon":
+            d = polygon_path_d(geom, min_x, max_y, precision)
+            path_attrs = [f'id="{eid}"', f'd="{d}"']
+            if fill_mode == "solid":
+                op = format_number(float(style.get("opacity", 1.0)), 2)
+                path_attrs.append(f'fill="{color}"')
+                path_attrs.append(f'fill-opacity="{op}"')
+                path_attrs.append('fill-rule="evenodd"')
+            else:
+                path_attrs.append('fill="none"')
+                dash = style.get("dash")
+                if dash:
+                    path_attrs.append(f'stroke-dasharray="{dash}"')
+            lines.append("    <path " + " ".join(path_attrs) + "/>")
+        else:  # line → bar across the channel
+            lines.append(
+                _structure_bar_element(
+                    eid, geom, min_x, max_y, precision, _STRUCTURE_BAR_HALF
+                )
+            )
+    lines.append("  </g>")
+    return lines
+
+
+def _hydro_structure_lines(
+    items: list[tuple],
+    styles: Mapping | None,
+    min_x: float,
+    max_y: float,
+    precision: int,
+) -> list[str]:
+    """Serialize ``<g id="hydro_structures">`` with one child ``<g>`` per class.
+
+    ``items`` are ``(feature_id, geometry, struct_class)`` tuples carrying already
+    projected shapely geometries. Classes are emitted in sorted order and each
+    feature is dispatched by geometry kind (point glyph / line bar / areal path)
+    so the group is deterministic.
+    """
+    groups = _group_by_family(items)
+    lines = ['  <g id="hydro_structures">']
+    for struct_class in sorted(groups):
+        style = _merge_style(DEFAULT_HYDRO_STRUCTURE_STYLES, struct_class, styles)
+        lines.extend(
+            _hydro_structure_group(
+                struct_class, groups[struct_class], style, min_x, max_y, precision
+            )
+        )
+    lines.append("  </g>")
+    return lines
+
+
 def _path_element(
     segment_id: int,
     geom: Any,
@@ -544,6 +768,9 @@ def render_svg(
     point_features: Iterable[tuple] | None = None,
     point_feature_styles: Mapping[str, Mapping] | None = None,
     point_feature_order: str = "above",
+    hydro_structures: Iterable[tuple] | None = None,
+    hydro_structure_styles: Mapping[str, Mapping] | None = None,
+    hydro_structure_order: str = "above",
 ) -> str:
     """Render the colored river network as a single layered SVG document.
 
@@ -597,6 +824,18 @@ def render_svg(
             marker); merged over :data:`DEFAULT_POINT_STYLES`.
         point_feature_order: ``"above"`` (default) draws point glyphs on top of
             everything; ``"below"`` draws them beneath the flowline layers.
+        hydro_structures: Optional iterable of ``(feature_id, geometry,
+            struct_class)`` engineered structures (dam_weir/gate/gaging_station/
+            water_intake_outflow/spillway/lock_chamber/canal_ditch) rendered in a
+            dedicated ``<g id="hydro_structures">`` layer, each feature dispatched
+            by geometry kind (point glyph / line bar / areal path). ``None``/empty
+            leaves output byte-identical to a render with no structures argument.
+        hydro_structure_styles: Optional per-class style overrides (color, size,
+            fill mode, opacity, dash, marker); merged over
+            :data:`DEFAULT_HYDRO_STRUCTURE_STYLES`.
+        hydro_structure_order: ``"above"`` (default) draws structures on top of
+            the water stack so a dam overlays its channel; ``"below"`` draws them
+            beneath the flowline layers.
 
     Returns:
         The SVG document as a string (trailing newline included). With
@@ -605,6 +844,7 @@ def render_svg(
     waterbody_items = list(waterbodies) if waterbodies else []
     areal_items = list(areal_features) if areal_features else []
     point_items = list(point_features) if point_features else []
+    structure_items = list(hydro_structures) if hydro_structures else []
     min_x, min_y, max_x, max_y = bounds(geometries.values())
     extra_boxes: list[tuple[float, float, float, float]] = []
     if waterbody_items:
@@ -619,6 +859,10 @@ def render_svg(
         pb = _point_bounds(point_items)
         if pb is not None:
             extra_boxes.append(pb)
+    if structure_items:
+        sb = _structure_bounds(structure_items)
+        if sb is not None:
+            extra_boxes.append(sb)
     seeded = bool(geometries)
     for pb in extra_boxes:
         if not seeded:
@@ -683,6 +927,13 @@ def render_svg(
             _point_features_lines(point_items, point_feature_styles, min_x, max_y, precision)
         )
 
+    if structure_items and hydro_structure_order == "below":
+        lines.extend(
+            _hydro_structure_lines(
+                structure_items, hydro_structure_styles, min_x, max_y, precision
+            )
+        )
+
     grouped: set[int] = set().union(*watersheds.values()) if watersheds else set()
 
     # Ordered river layers: watershed groups (sorted) then any unassigned.
@@ -730,6 +981,13 @@ def render_svg(
     if point_items and point_feature_order == "above":
         lines.extend(
             _point_features_lines(point_items, point_feature_styles, min_x, max_y, precision)
+        )
+
+    if structure_items and hydro_structure_order == "above":
+        lines.extend(
+            _hydro_structure_lines(
+                structure_items, hydro_structure_styles, min_x, max_y, precision
+            )
         )
 
     lines.append("</svg>")

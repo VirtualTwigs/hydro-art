@@ -45,10 +45,13 @@ __all__ = [
     "SUPPORTED_WATERBODY_PRESETS",
     "PointFeatureSettings",
     "ArealFeatureSettings",
+    "HydroStructureSettings",
     "POINT_FEATURE_PRESETS",
     "AREAL_FEATURE_PRESETS",
+    "HYDRO_STRUCTURE_PRESETS",
     "SUPPORTED_POINT_FEATURE_PRESETS",
     "SUPPORTED_AREAL_FEATURE_PRESETS",
+    "SUPPORTED_HYDRO_STRUCTURE_PRESETS",
     "SUPPORTED_ELEVATION_SOURCES",
     "SUPPORTED_ELEVATION_TIERS",
     "SUPPORTED_CACHE_POLICIES",
@@ -188,6 +191,26 @@ AREAL_FEATURE_PRESETS: dict[str, dict[str, Any]] = {
     "print-county": {"min_area_m2": 25_000.0, "render_order": "below"},
 }
 
+#: Engineered-structure art-direction presets (Item #67), mirroring
+#: :data:`AREAL_FEATURE_PRESETS`. A preset is a convenience directive expanding
+#: to a bundle of existing settings fields (precedence
+#: ``defaults < preset < explicit``); it invents no new render behavior and is
+#: never stored on the frozen settings. ``screen`` mirrors the on-screen default
+#: (no thinning/pruning); the ``print-*`` presets declutter for ink — tiny areal
+#: structures are pruned by a positive area threshold and dense point structures
+#: thin to a wider minimum spacing. ``print-state`` is tuned for a whole-state /
+#: wall sheet (prunes harder); ``print-county`` is less aggressive so a single
+#: county still reads. Structures render above the water by default.
+HYDRO_STRUCTURE_PRESETS: dict[str, dict[str, Any]] = {
+    "screen": {"min_area_m2": 0.0, "min_spacing_m": 0.0, "render_order": "above"},
+    "print-state": {
+        "min_area_m2": 50_000.0, "min_spacing_m": 8_000.0, "render_order": "above",
+    },
+    "print-county": {
+        "min_area_m2": 10_000.0, "min_spacing_m": 2_000.0, "render_order": "above",
+    },
+}
+
 #: Named scale-aware flow→width presets (Epoch 18). A preset is a convenience
 #: directive: naming one (top-level ``width_preset`` / ``--width-preset``) expands
 #: to this bundle of existing ``width_*`` fields, inventing no new render behavior.
@@ -227,6 +250,7 @@ WIDTH_PRESETS: dict[str, dict[str, Any]] = {
 #: Allowlists of preset names (for CLI ``choices`` + validation).
 SUPPORTED_POINT_FEATURE_PRESETS: tuple[str, ...] = tuple(POINT_FEATURE_PRESETS)
 SUPPORTED_AREAL_FEATURE_PRESETS: tuple[str, ...] = tuple(AREAL_FEATURE_PRESETS)
+SUPPORTED_HYDRO_STRUCTURE_PRESETS: tuple[str, ...] = tuple(HYDRO_STRUCTURE_PRESETS)
 SUPPORTED_WIDTH_PRESETS: tuple[str, ...] = tuple(WIDTH_PRESETS)
 
 #: Validation pattern for an SVG ``stroke-dasharray`` value (comma/space
@@ -296,6 +320,16 @@ DEFAULTS: dict[str, Any] = {
         "dash": "4,3",
         "min_area_m2": 0.0,
         "render_order": "below",
+    },
+    "hydro_structures": {
+        "enabled": False,
+        "color": "",
+        "size": 1.0,
+        "opacity": 0.35,
+        "dash": "4,3",
+        "min_area_m2": 0.0,
+        "min_spacing_m": 0.0,
+        "render_order": "above",
     },
     "elevation": {
         "enabled": False,
@@ -398,6 +432,44 @@ class ArealFeatureSettings:
 
 
 @dataclass(frozen=True)
+class HydroStructureSettings:
+    """Validated settings for the optional engineered-structure layer (Item #67).
+
+    Dams/weirs, gates, gaging stations, water intakes/outflows, spillways, lock
+    chambers, and canals/ditches (classified in :mod:`src.hydro_structures`) span
+    three geometry kinds, so this one block controls the group-level knobs the
+    pipeline bridges into the rendering layer's per-class styles
+    (:data:`~src.rendering.DEFAULT_HYDRO_STRUCTURE_STYLES`). Structures sit above
+    the water by default so a dam reads on the channel it crosses. Disabled by
+    default so a default build stays byte-identical.
+
+    Attributes:
+        enabled: Whether structures are rendered (off by default).
+        color: Optional single color (hex) overriding every class's default;
+            ``""`` keeps the rendering layer's per-class colors.
+        size: Point-marker size multiplier applied over the per-class defaults;
+            must be > 0.
+        opacity: Fill opacity for solid-filled polygon structures; in ``(0, 1]``.
+        dash: ``stroke-dasharray`` for dashed-outline polygon structures.
+        min_area_m2: Minimum projected area (m²) a polygon structure must exceed
+            to be kept; ``0`` keeps every valid polygon.
+        min_spacing_m: Deterministic per-class density cap — the minimum spacing
+            (m) between kept point structures of the same class; ``0`` keeps all.
+        render_order: Layer position relative to the water stack (one of
+            :data:`SUPPORTED_RENDER_ORDERS`); ``"above"`` by default.
+    """
+
+    enabled: bool
+    color: str
+    size: float
+    opacity: float
+    dash: str
+    min_area_m2: float
+    min_spacing_m: float
+    render_order: str
+
+
+@dataclass(frozen=True)
 class ElevationSettings:
     """Validated settings for the optional elevation stage (Item 11).
 
@@ -469,6 +541,8 @@ class Settings:
             default.
         areal_features: Validated areal natural-feature settings (Item 64);
             disabled by default.
+        hydro_structures: Validated engineered-structure settings (Item
+            #67); disabled by default.
         elevation: Validated elevation settings (Item 11); disabled by default.
     """
 
@@ -497,6 +571,7 @@ class Settings:
     waterbodies: WaterbodySettings
     point_features: PointFeatureSettings
     areal_features: ArealFeatureSettings
+    hydro_structures: HydroStructureSettings
     elevation: ElevationSettings
 
 
@@ -888,6 +963,94 @@ def _coerce_areal_features(value: Any) -> ArealFeatureSettings:
     )
 
 
+def _coerce_hydro_structures(value: Any) -> HydroStructureSettings:
+    """Validate the ``hydro_structures`` block into :class:`HydroStructureSettings`.
+
+    A partial mapping is tolerated (omitted sub-keys fall back to
+    :data:`DEFAULTS`); a ``preset`` directive expands a named
+    :data:`HYDRO_STRUCTURE_PRESETS` bundle with precedence
+    ``defaults < preset < explicit``. Mirrors :func:`_coerce_areal_features`, but
+    validates the point-marker ``size`` / ``min_spacing_m`` knobs too, because
+    engineered structures span point, line, and polygon geometry.
+
+    Raises:
+        ConfigError: If any provided sub-value (or the preset name) is invalid.
+    """
+    defaults = DEFAULTS["hydro_structures"]
+    if value is None:
+        provided: dict[str, Any] = {}
+    elif isinstance(value, Mapping):
+        provided = dict(value)
+    else:
+        raise ConfigError(
+            f"Invalid 'hydro_structures' value: {value!r}. Expected a mapping."
+        )
+
+    preset_values = _coerce_preset(
+        provided, HYDRO_STRUCTURE_PRESETS, "hydro_structures"
+    )
+    merged = {**defaults, **preset_values, **provided}
+
+    enabled = bool(merged.get("enabled", defaults["enabled"]))
+    color = _coerce_optional_color(
+        merged.get("color", defaults["color"]), "hydro_structures.color"
+    )
+
+    try:
+        size = float(merged.get("size", defaults["size"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid hydro_structures.size: {merged.get('size')!r}. "
+            "Expected a positive number."
+        )
+    if size <= 0:
+        raise ConfigError(
+            f"hydro_structures.size must be greater than 0, got {size}."
+        )
+
+    try:
+        opacity = float(merged.get("opacity", defaults["opacity"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid hydro_structures.opacity: {merged.get('opacity')!r}. "
+            "Expected a number in (0, 1]."
+        )
+    if not 0 < opacity <= 1:
+        raise ConfigError(
+            f"hydro_structures.opacity must be in (0, 1], got {opacity}."
+        )
+
+    dash = str(merged.get("dash", defaults["dash"]))
+    if not _DASHARRAY.match(dash):
+        raise ConfigError(
+            f"Invalid hydro_structures.dash: {dash!r}. Expected a "
+            "stroke-dasharray like '4,3'."
+        )
+
+    min_area_m2 = _coerce_nonneg(
+        merged.get("min_area_m2", defaults["min_area_m2"]),
+        "hydro_structures.min_area_m2",
+    )
+    min_spacing_m = _coerce_nonneg(
+        merged.get("min_spacing_m", defaults["min_spacing_m"]),
+        "hydro_structures.min_spacing_m",
+    )
+    render_order = _coerce_render_order(
+        merged.get("render_order", defaults["render_order"]), "hydro_structures"
+    )
+
+    return HydroStructureSettings(
+        enabled=enabled,
+        color=color,
+        size=size,
+        opacity=opacity,
+        dash=dash,
+        min_area_m2=min_area_m2,
+        min_spacing_m=min_spacing_m,
+        render_order=render_order,
+    )
+
+
 def _coerce_elevation(value: Any) -> ElevationSettings:
     """Validate the ``elevation`` block into an :class:`ElevationSettings`.
 
@@ -1180,6 +1343,9 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
     areal_features = _coerce_areal_features(
         values.get("areal_features", DEFAULTS["areal_features"])
     )
+    hydro_structures = _coerce_hydro_structures(
+        values.get("hydro_structures", DEFAULTS["hydro_structures"])
+    )
     elevation = _coerce_elevation(values.get("elevation", DEFAULTS["elevation"]))
 
     return Settings(
@@ -1208,6 +1374,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         waterbodies=waterbodies,
         point_features=point_features,
         areal_features=areal_features,
+        hydro_structures=hydro_structures,
         elevation=elevation,
     )
 

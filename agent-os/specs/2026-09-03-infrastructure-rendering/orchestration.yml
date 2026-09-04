@@ -1,0 +1,20 @@
+task_groups:
+  - name: structure-selection-module          # TG1 — offline src/ selection module
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: config-settings-and-rendering-symbology   # TG2 — offline src/ config + rendering
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: pipeline-integration                 # TG3 — validate load + generate_svg select/render
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: determinism-and-regression-gate      # TG4 — byte-identical + full-suite gate
+    claude_code_subagent: determinism-auditor
+    standards:
+      - global/hydro-art-invariants.md

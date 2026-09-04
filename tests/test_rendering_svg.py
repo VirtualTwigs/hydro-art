@@ -8,7 +8,7 @@ watershed dicts (no GDAL, no browser, no real data).
 import re
 import xml.etree.ElementTree as ET
 
-from shapely.geometry import LineString
+from shapely.geometry import LineString, Point, Polygon
 
 from src.rendering import (
     flow_widths,
@@ -166,3 +166,71 @@ def test_scaled_widths_log_and_degenerate():
     # Single distinct value -> uniform width_min; empty -> empty.
     assert scaled_widths({0: 5.0, 1: 5.0}, width_min=0.6, width_max=3.6) == {0: 0.6, 1: 0.6}
     assert scaled_widths({}, width_min=0.6, width_max=3.6) == {}
+
+
+# --- Hydro-structure symbology (Epoch 16, Item #67) -------------------------
+
+
+def _square(x0, y0, size):
+    return Polygon(
+        [(x0, y0), (x0 + size, y0), (x0 + size, y0 + size), (x0, y0 + size)]
+    )
+
+
+def test_hydro_structures_none_is_byte_identical():
+    baseline = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS)
+    with_none = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, hydro_structures=None)
+    with_empty = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, hydro_structures=[])
+    assert with_none == baseline
+    assert with_empty == baseline
+    assert 'id="hydro_structures"' not in baseline
+
+
+def test_hydro_structures_geometry_dispatch_and_classes():
+    structs = [
+        ("gs1", Point(1, 1), "gaging_station"),
+        ("dam1", LineString([(0, 5), (10, 5)]), "dam_weir"),
+        ("spill1", _square(20, 0, 10), "spillway"),
+    ]
+    svg = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, hydro_structures=structs)
+    assert '<g id="hydro_structures">' in svg
+    # Distinct per-class child groups.
+    assert 'id="hydro_gaging_station"' in svg
+    assert 'id="hydro_dam_weir"' in svg
+    assert 'id="hydro_spillway"' in svg
+    # Point → glyph marker.
+    gs_block = svg.split('id="hydro_gaging_station"')[1].split("</g>")[0]
+    assert "<circle" in gs_block or "<path" in gs_block
+    # Polygon → areal path (a closed subpath).
+    sp_block = svg.split('id="hydro_spillway"')[1].split("</g>")[0]
+    assert "Z" in sp_block
+
+
+def test_hydro_structures_above_water_layers():
+    structs = [("dam1", LineString([(0, 5), (10, 5)]), "dam_weir")]
+    svg = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, hydro_structures=structs)
+    # Structures sit above the river/watershed layers by default.
+    assert svg.index('id="watershed_A"') < svg.index('id="hydro_structures"')
+
+
+def test_hydro_structures_line_bar_is_open_path_distinct_from_polygon():
+    # TG4.1 gap: geometry-type dispatch must emit a *distinct* element for a line
+    # structure — a 2-point open bar across the channel ('M ... L ...' with NO
+    # closing 'Z') — versus a polygon structure's closed 'Z' areal path. The
+    # existing dispatch test only checks point/polygon, so it wouldn't catch a
+    # regression that routed the line branch through the areal (closed) path.
+    structs = [
+        ("dam1", LineString([(0, 5), (10, 5)]), "dam_weir"),
+        ("spill1", _square(20, 0, 10), "spillway"),
+    ]
+    svg = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, hydro_structures=structs)
+
+    dam_block = svg.split('id="hydro_dam_weir"')[1].split("</g>")[0]
+    bar = dam_block.split('id="hydro_dam_weir_dam1"')[1].split("/>")[0]
+    # Line -> a single open segment: exactly one L, no polygon close.
+    assert bar.count(" L ") == 1
+    assert "Z" not in bar
+
+    # The polygon in the same render still closes (distinct treatment).
+    sp_block = svg.split('id="hydro_spillway"')[1].split("</g>")[0]
+    assert "Z" in sp_block

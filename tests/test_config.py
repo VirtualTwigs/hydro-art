@@ -245,3 +245,60 @@ def test_parse_months_invalid_raises(bad):
 def test_months_stored_on_settings():
     settings = build_settings({**DEFAULTS, "months": "may-sep"})
     assert settings.months == (5, 6, 7, 8, 9)
+
+
+# --- Hydro-structure settings (Epoch 16, Item #67) --------------------------
+
+
+def test_hydro_structures_disabled_by_default():
+    s = build_settings(DEFAULTS)
+    assert s.hydro_structures.enabled is False
+    # Empty color means "use the rendering layer's per-class defaults".
+    assert s.hydro_structures.color == ""
+    assert s.hydro_structures.render_order == "above"
+    assert s.hydro_structures.min_area_m2 == 0.0
+    assert s.hydro_structures.min_spacing_m == 0.0
+
+
+def test_hydro_structures_preset_expands_defaults_preset_explicit():
+    from src.config import HYDRO_STRUCTURE_PRESETS
+
+    state = build_settings(
+        {**DEFAULTS, "hydro_structures": {"preset": "print-state"}}
+    ).hydro_structures
+    county = build_settings(
+        {**DEFAULTS, "hydro_structures": {"preset": "print-county"}}
+    ).hydro_structures
+    # Preset fields expand onto the settings...
+    assert (
+        state.min_area_m2 == HYDRO_STRUCTURE_PRESETS["print-state"]["min_area_m2"]
+    )
+    # ...state scale prunes harder than county scale.
+    assert state.min_area_m2 > county.min_area_m2 > 0.0
+
+    # Explicit sub-key wins over the preset; other preset fields remain.
+    override = build_settings(
+        {
+            **DEFAULTS,
+            "hydro_structures": {"preset": "print-state", "min_area_m2": 7.0},
+        }
+    ).hydro_structures
+    assert override.min_area_m2 == 7.0
+    assert (
+        override.render_order
+        == HYDRO_STRUCTURE_PRESETS["print-state"]["render_order"]
+    )
+
+
+def test_hydro_structures_invalid_render_order_raises():
+    with pytest.raises(ConfigError, match="render_order"):
+        build_settings(
+            {**DEFAULTS, "hydro_structures": {"render_order": "sideways"}}
+        )
+
+
+def test_hydro_structures_preset_not_stored_on_settings():
+    hs = build_settings(
+        {**DEFAULTS, "hydro_structures": {"preset": "print-state"}}
+    ).hydro_structures
+    assert not hasattr(hs, "preset")

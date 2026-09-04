@@ -854,9 +854,22 @@ config-driven split of the existing flowline layer, deterministic and byte-ident
 
 **Phase 16.3 — Infrastructure symbology & rendering**
 
-67. [ ] Infrastructure rendering — Symbol set for structures: dam/weir line symbols, gaging-station
+67. [x] Infrastructure rendering — Symbol set for structures: dam/weir line symbols, gaging-station
 and intake point markers, spillway/lock areal treatment; dedicated `<g>` layers with z-order above
 water so a dam reads on the channel it crosses. Reuses the Epoch 15 point-glyph seam. `M`
+(Shipped 2026-09-03. Makes #65's classified structures visible, disabled by default. New
+`src/hydro_structure_selection.py` (`process_hydro_structures`: repair→reproject→clip→geometry-type
+select — polygon `min_area_m2`, point `min_spacing_m` thinning, line clip-only), mirroring
+`src/areal_selection.py`. `src/config.py` gains frozen `HydroStructureSettings` (disabled default) +
+`HYDRO_STRUCTURE_PRESETS` (`screen`/`print-state`/`print-county`). `src/rendering.py` gains
+`HYDRO_STRUCTURE_GLYPHS`/`DEFAULT_HYDRO_STRUCTURE_STYLES`/`_hydro_structure_lines` (point glyph / line
+bar / areal path) + keyword-only `hydro_structures`/`hydro_structure_order="above"` on `render_svg`
+(None → no markup). `src/pipeline.py` adds the additive NHDLine load (`line_layers`), widens the
+shared NHDPoint/NHDArea load gates, and wires `_select_hydro_structures`. Complementarity keeps each
+geometry drawn under exactly one taxonomy. Spec `agent-os/specs/2026-09-03-infrastructure-rendering/`;
+780 offline tests green, default build byte-identical (`verify_determinism --region Oregon`, svg
+sha `e6b9bd6cfaf7…`, 0 structures on default path), no GDAL leakage. Follow-on #68: real-data QA +
+preset tuning.)
 
 **Phase 16.4 — QA & presets**
 

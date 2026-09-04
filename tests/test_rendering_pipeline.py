@@ -11,7 +11,7 @@ import io
 import zipfile
 
 from rich.console import Console
-from shapely.geometry import LineString, box
+from shapely.geometry import LineString, Point, box
 
 import pytest
 
@@ -25,6 +25,14 @@ NETWORK = (
     LineString([(-120.0, 43.0), (-121.0, 44.0)]),
     LineString([(-121.0, 44.0), (-121.0, 45.0)]),
 )
+
+# Engineered-water structures for Epoch 16 (Item #67, TG3) — one per source
+# layer, all inside BOUNDARY. FType codes drive classification in
+# src.hydro_structures: 343 DamWeir (line), 367 Gaging Station (point),
+# 455 Spillway (area polygon).
+DAM_LINE = LineString([(-121.5, 43.5), (-121.4, 43.6)])
+GAGE_POINT = Point(-121.2, 43.8)
+SPILLWAY_POLY = box(-121.3, 43.2, -121.2, 43.3)
 
 
 class FakeZipDownloader:
@@ -46,14 +54,64 @@ class NetworkLoader:
         return [Layer("NHDFlowline", dataset_id, huc4, geoms, crs="EPSG:4326")]
 
 
-def _pipeline(tmp_path):
+class StructureLoader(NetworkLoader):
+    """A NetworkLoader that also serves NHDLine/NHDPoint/NHDArea structures.
+
+    The line/point/area loads mirror the real PyogrioLayerLoader seams. Only the
+    hydrography-dataset HUC4 (1707) carries structures, matching the flowlines.
+    """
+
+    def load_line_features(self, dataset_dir, dataset_id, huc4):
+        if dataset_id == "wbd" or huc4 != "1707":
+            return []
+        return [
+            Layer(
+                "NHDLine",
+                dataset_id,
+                huc4,
+                (DAM_LINE,),
+                crs="EPSG:4326",
+                attributes=({"FType": 343, "Permanent_Identifier": "dam1"},),
+            )
+        ]
+
+    def load_point_features(self, dataset_dir, dataset_id, huc4):
+        if dataset_id == "wbd" or huc4 != "1707":
+            return []
+        return [
+            Layer(
+                "NHDPoint",
+                dataset_id,
+                huc4,
+                (GAGE_POINT,),
+                crs="EPSG:4326",
+                attributes=({"FType": 367, "Permanent_Identifier": "gage1"},),
+            )
+        ]
+
+    def load_waterbody_layers(self, dataset_dir, dataset_id, huc4):
+        if dataset_id == "wbd" or huc4 != "1707":
+            return []
+        return [
+            Layer(
+                "NHDArea",
+                dataset_id,
+                huc4,
+                (SPILLWAY_POLY,),
+                crs="EPSG:4326",
+                attributes=({"FType": 455, "Permanent_Identifier": "spill1"},),
+            )
+        ]
+
+
+def _pipeline(tmp_path, loader=None):
     return Pipeline(
         console=Console(),
         cache_dir=tmp_path / "cache",
         datasets_dir=tmp_path / "datasets",
         output_dir=tmp_path / "output",
         downloader=FakeZipDownloader(),
-        loader=NetworkLoader(),
+        loader=loader or NetworkLoader(),
     )
 
 
@@ -147,3 +205,170 @@ def test_generate_svg_feeds_downstream_stages(tmp_path):
     assert "svg" in context.artifacts
     assert "optimized_svg" in context.artifacts
     assert "export_paths" in context.artifacts
+
+
+# --- Epoch 16, Item #67 TG3: hydro-structure pipeline integration ------------
+
+
+def _hydro_group(svg):
+    root = ET.fromstring(svg)
+    return root.find(".//*[@id='hydro_structures']")
+
+
+def test_hydro_structures_enabled_renders_all_three_source_layers(tmp_path):
+    # A structure-aware loader yields NHDLine (dam) + NHDPoint (gage) + NHDArea
+    # (spillway); with hydro_structures enabled they select, clip, and land in a
+    # dedicated <g id="hydro_structures"> group above the water.
+    settings = build_settings(
+        {"region": ["Oregon"], "hydro_structures": {"enabled": True}}
+    )
+    context = _pipeline(tmp_path, loader=StructureLoader()).run(settings)
+    svg = context.artifacts["svg"]
+
+    group = _hydro_group(svg)
+    assert group is not None, "expected a <g id='hydro_structures'> group"
+
+    # All three structure classes rendered, one per source layer.
+    class_ids = {g.get("id") for g in group}
+    assert "hydro_dam_weir" in class_ids  # NHDLine
+    assert "hydro_gaging_station" in class_ids  # NHDPoint
+    assert "hydro_spillway" in class_ids  # NHDArea polygon
+
+    selection = context.artifacts["hydro_structure_selection"]
+    assert selection.counts["selected"] == 3
+
+
+def test_hydro_structures_disabled_is_byte_identical_to_baseline(tmp_path):
+    # Default (disabled) build must be byte-for-byte identical to a build with no
+    # hydro_structures config at all — no line_layers load, no structure markup.
+    baseline_settings = build_settings({"region": ["Oregon"]})
+    baseline = _pipeline(tmp_path, loader=StructureLoader()).run(baseline_settings)
+
+    disabled_settings = build_settings(
+        {"region": ["Oregon"], "hydro_structures": {"enabled": False}}
+    )
+    disabled = _pipeline(tmp_path, loader=StructureLoader()).run(disabled_settings)
+
+    assert disabled.artifacts["svg"] == baseline.artifacts["svg"]
+    assert "line_layers" not in disabled.artifacts
+    assert "hydro_structure_selection" not in disabled.artifacts
+    assert _hydro_group(disabled.artifacts["svg"]) is None
+
+
+def test_hydro_structures_only_still_loads_point_and_area(tmp_path):
+    # Enabling ONLY hydro_structures (point_features + areal_features +
+    # waterbodies all OFF) must still pull NHDPoint and NHDArea via the widened
+    # shared loads so point/area structures appear.
+    settings = build_settings(
+        {
+            "region": ["Oregon"],
+            "waterbodies": {"enabled": False},
+            "hydro_structures": {"enabled": True},
+        }
+    )
+    assert not settings.point_features.enabled
+    assert not settings.areal_features.enabled
+    assert not settings.waterbodies.enabled
+
+    context = _pipeline(tmp_path, loader=StructureLoader()).run(settings)
+    assert "point_layers" in context.artifacts  # shared NHDPoint load reused
+    assert "waterbody_layers" in context.artifacts  # shared NHDArea load reused
+
+    group = _hydro_group(context.artifacts["svg"])
+    class_ids = {g.get("id") for g in group}
+    assert "hydro_gaging_station" in class_ids  # point structure appeared
+    assert "hydro_spillway" in class_ids  # area structure appeared
+
+
+# --- Epoch 16, Item #67 TG4.1: complementarity / no double-draw --------------
+
+
+# A spring point (FType 458 -> point_features) and a wetland polygon (FType 466
+# -> areal_features), disjoint from the structure codes (367 gaging, 455
+# spillway). Placed inside BOUNDARY, distinct from the structure geometries.
+SPRING_POINT = Point(-121.6, 43.4)
+WETLAND_POLY = box(-121.9, 43.1, -121.8, 43.2)
+
+
+class MixedFeatureLoader(StructureLoader):
+    """NHDPoint/NHDArea loads each carry a structure AND a natural feature.
+
+    NHDPoint -> a gaging station (367, structure) + a spring (458, point
+    feature). NHDArea -> a spillway (455, structure) + a wetland (466, areal
+    feature). Because the structure taxonomy's included codes are disjoint from
+    the point/areal taxonomies' codes, each geometry is owned by exactly one
+    taxonomy and must draw under exactly one layer.
+    """
+
+    def load_point_features(self, dataset_dir, dataset_id, huc4):
+        if dataset_id == "wbd" or huc4 != "1707":
+            return []
+        return [
+            Layer(
+                "NHDPoint",
+                dataset_id,
+                huc4,
+                (GAGE_POINT, SPRING_POINT),
+                crs="EPSG:4326",
+                attributes=(
+                    {"FType": 367, "Permanent_Identifier": "gage1"},
+                    {"FType": 458, "Permanent_Identifier": "spring1"},
+                ),
+            )
+        ]
+
+    def load_waterbody_layers(self, dataset_dir, dataset_id, huc4):
+        if dataset_id == "wbd" or huc4 != "1707":
+            return []
+        return [
+            Layer(
+                "NHDArea",
+                dataset_id,
+                huc4,
+                (SPILLWAY_POLY, WETLAND_POLY),
+                crs="EPSG:4326",
+                attributes=(
+                    {"FType": 455, "Permanent_Identifier": "spill1"},
+                    {"FType": 466, "Permanent_Identifier": "wetland1"},
+                ),
+            )
+        ]
+
+
+def test_shared_loads_are_complementary_no_double_draw(tmp_path):
+    # With hydro_structures, point_features, and areal_features ALL enabled over
+    # a shared NHDPoint/NHDArea load that mixes structure and natural-feature
+    # codes, each geometry must render under exactly ONE taxonomy: the disjoint
+    # code tables guarantee no double-draw.
+    settings = build_settings(
+        {
+            "region": ["Oregon"],
+            "hydro_structures": {"enabled": True},
+            "point_features": {"enabled": True},
+            "areal_features": {"enabled": True},
+        }
+    )
+    context = _pipeline(tmp_path, loader=MixedFeatureLoader()).run(settings)
+    svg = context.artifacts["svg"]
+
+    # The spillway (455) draws ONLY as a structure, never as an areal feature.
+    assert "hydro_spillway_spill1" in svg
+    assert "areal_wetland_spill1" not in svg
+    # The wetland (466) draws ONLY as an areal feature, never as a structure.
+    assert "areal_wetland_wetland1" in svg
+    assert "hydro_spillway_wetland1" not in svg
+    assert "hydro_" not in svg.split('id="areal_features"')[1].split("</g>")[0] \
+        if 'id="areal_features"' in svg else True
+
+    # The gaging station (367) draws ONLY as a structure, never as a point glyph.
+    assert "hydro_gaging_station_gage1" in svg
+    assert "point_spring_gage1" not in svg
+    # The spring (458) draws ONLY as a point glyph, never as a structure.
+    assert "point_spring_spring1" in svg
+    assert "hydro_gaging_station_spring1" not in svg
+
+    # Selection reports agree: structures selected exactly the two structure
+    # geometries (dam via NHDLine + gage + spillway), not the natural features.
+    struct_ids = {f.source_id for f in context.artifacts["hydro_structure_selection"].selected}
+    assert "spring1" not in struct_ids and "wetland1" not in struct_ids
+    assert {"gage1", "spill1", "dam1"} <= struct_ids
