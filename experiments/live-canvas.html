@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Live Canvas</title>
+<!-- Common design tokens (project standard) + shared customer components -->
+<link rel="stylesheet" href="../web/shared/ux.css" />
+<link rel="stylesheet" href="shared/experiments.css" />
+<style>
+  body { overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  /* Top-left place bar */
+  .placebar { position: fixed; top: 16px; left: 16px; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+  .placebar .brand { white-space: nowrap; margin-right: 4px; }
+  .placebar select { width: auto; min-width: 130px; padding: 5px 8px; }
+  .placebar .seg { margin: 0; }
+  .placebar .seg button { padding: 5px 10px; }
+  .quick { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font: inherit; font-size: 11px;
+           border: 1px solid var(--accent-dim); color: var(--accent); background: transparent; border-radius: 999px; padding: 5px 12px; }
+  .quick:hover { background: rgba(0,255,255,.08); }
+  /* Dock */
+  .dock { top: 76px; right: 16px; }
+  .dock[hidden] { display: none; }
+  .dock-toggle { top: 76px; right: 16px; }
+  /* Bottom legend + caption */
+  .footbar { position: fixed; left: 16px; bottom: 16px; right: 76px; z-index: 5; display: flex; align-items: center; gap: 18px; padding: 10px 16px; }
+  .footbar .caption { margin-left: auto; white-space: nowrap; }
+  .exportbtn { position: fixed; right: 16px; bottom: 16px; z-index: 6; width: 44px; height: 44px; }
+  .look-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .look-chips .lchip { cursor: pointer; font: inherit; font-size: 11px; border: 1px solid var(--line);
+    background: var(--panel-3); color: var(--muted); border-radius: var(--radius-sm); padding: 6px 10px; }
+  .look-chips .lchip.on { color: var(--ink); border-color: var(--accent); background: rgba(0,255,255,.07); }
+</style>
+</head>
+<body>
+<div id="stage" class="stage"></div>
+
+<!-- Place bar -->
+<div class="placebar glass">
+  <h1 class="brand">Hydro-Art <span class="dot">◇</span></h1>
+  <select id="state"></select>
+  <div class="seg" id="scope">
+    <button data-v="state" class="active">State</button>
+    <button data-v="county">County</button>
+  </div>
+  <select id="county" hidden></select>
+  <button class="quick" id="clarkQuick">◎ Featured: Clark County, WA</button>
+</div>
+
+<!-- Dock toggle -->
+<div class="dock-toggle glass" id="dockToggle" title="Show / hide controls">⚙</div>
+
+<!-- Floating control dock -->
+<div class="dock glass" id="dock">
+  <h3>Design</h3>
+
+  <div class="group">
+    <div class="section-title">Look</div>
+    <div class="look-chips" id="looks"></div>
+    <label class="row">Background</label>
+    <input type="color" id="bg" value="#05060a" />
+  </div>
+
+  <div class="group">
+    <div class="section-title">Water features</div>
+    <div class="section-note">Tap to layer them on.</div>
+    <div class="chip-row" id="features"></div>
+  </div>
+
+  <div class="group">
+    <div class="section-title">Detail &amp; line weight</div>
+    <label class="row">Print detail</label>
+    <div class="seg" id="detail">
+      <button data-v="screen" class="active">Screen</button>
+      <button data-v="print-county">County</button>
+      <button data-v="print-state">State</button>
+    </div>
+    <label class="row">Line weight <span class="val" id="wpLabel">State</span></label>
+    <div class="seg" id="weight">
+      <button data-v="state" class="active">State</button>
+      <button data-v="basin">Basin</button>
+      <button data-v="watershed">Watershed</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom legend + caption -->
+<div class="footbar glass">
+  <div class="legend-strip" id="legend"></div>
+  <div class="caption" id="caption"></div>
+</div>
+<div class="dock-toggle glass exportbtn" id="exportBtn" title="Export">⤓</div>
+
+<script src="../web/shared/hydro-ux.js"></script>
+<script src="shared/geo-wa.js"></script>
+<script src="shared/geo-clark.js"></script>
+<script src="shared/hydro-features.js"></script>
+<script>
+"use strict";
+const H = window.HydroUX, HF = window.HydroFeatures, el = id => document.getElementById(id);
+let net = null;
+
+const ICON = {
+  lakes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="12" cy="14" rx="8" ry="4.5"/><path d="M6 10c1.5-1.5 4-1.5 5.5 0"/></svg>',
+  natural: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 15l3-4 3 4"/><circle cx="17" cy="8" r="1.6" fill="currentColor" stroke="none"/><path d="M14 16l2-2 2 2"/></svg>',
+  terrain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 18h18M5 18l4-7 3 4 3-6 4 9"/></svg>',
+};
+
+const state = {
+  state: "Washington", scope: "state", county: "Clark",
+  timeMode: "annual", monthStart: 5, monthEnd: 8, month: 6,
+  colorMode: "watershed", palette: "neon", single: "#00e5ff", bg: "#05060a",
+  widthMode: "flow", minW: 0.35, maxW: 3.5, gamma: 1.0, glow: true, glowR: 2.5, huc: "HUC4",
+  look: "neon-glow", detail: "screen", widthPreset: "state",
+  feat: { lakes: true, natural: true, terrain: true },
+};
+
+// ---- Looks ----
+const LOOKS = [
+  { id: "neon-glow", title: "Neon",      recipe: { colorMode: "watershed", palette: "neon",   glow: true,  bg: "#05060a" } },
+  { id: "aurora",    title: "Aurora",    recipe: { colorMode: "watershed", palette: "aurora", glow: false, bg: "#04070a" } },
+  { id: "ice",       title: "Ice",       recipe: { colorMode: "watershed", palette: "ice",    glow: false, bg: "#0a0f14" } },
+  { id: "elevation", title: "Elevation", recipe: { colorMode: "elevation", glow: false, bg: "#05060a" } },
+];
+el("looks").innerHTML = LOOKS.map(l => `<button class="lchip${l.id===state.look?' on':''}" data-id="${l.id}">${l.title}</button>`).join("");
+
+// ---- Features ----
+const FEATURES = [
+  { key: "lakes",   icon: ICON.lakes,   name: "Lakes" },
+  { key: "natural", icon: ICON.natural, name: "Springs & falls" },
+  { key: "terrain", icon: ICON.terrain, name: "Wetlands & ice" },
+];
+function renderFeatures(){
+  el("features").innerHTML = FEATURES.map(f =>
+    `<button class="fchip${state.feat[f.key]?' on':''}" data-key="${f.key}">${f.icon}${f.name}</button>`).join("");
+}
+
+// ---- Legend ----
+function renderLegend(){
+  const S = HF.POINT_STYLES, A = HF.AREAL_STYLES, items = [];
+  items.push(`<span class="li"><span class="sw" style="background:${H.PALETTES[state.palette]?H.PALETTES[state.palette][0]:'#00ffff'}"></span>Rivers</span>`);
+  if (state.feat.lakes) items.push(`<span class="li" style="color:${HF.WATERBODY.color}"><span class="sw ring"></span>Lakes</span>`);
+  if (state.feat.natural){
+    items.push(`<span class="li"><span class="sw" style="background:${S.spring.color}"></span>Springs</span>`);
+    items.push(`<span class="li"><span class="sw" style="background:${S.waterfall.color}"></span>Falls</span>`);
+    items.push(`<span class="li"><span class="sw" style="background:${S.rapids.color}"></span>Rapids</span>`);
+  }
+  if (state.feat.terrain){
+    items.push(`<span class="li"><span class="sw" style="background:${A.wetland.color}"></span>Wetlands</span>`);
+    items.push(`<span class="li"><span class="sw" style="background:${A.perennial_ice.color}"></span>Glaciers</span>`);
+    items.push(`<span class="li" style="color:${A.playa.color}"><span class="sw ring"></span>Playas</span>`);
+  }
+  el("legend").innerHTML = items.join("");
+}
+
+// ---- Render ----
+function rebuild(){
+  net = HF.netForState(state);   // real WA / Clark geometry when available
+  el("stage").innerHTML = H.buildSvg(net);
+  applyScope(); apply();
+}
+function applyScope(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  const w = net.viewBox.w, h = net.viewBox.h;
+  if (state.scope === "county" && !net.countyNative){
+    svg.setAttribute("viewBox", `${w*0.30} ${h*0.55} ${w*0.34} ${h*0.34}`);
+  } else svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+}
+function apply(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  state.month = 6;
+  document.body.style.background = state.bg;
+  H.applyStyles(svg, net, state);
+  HF.render(svg, net, state);
+  renderFeatures(); renderLegend();
+  const c = HF.counts(net, state), total = Object.values(c).reduce((a,b)=>a+b,0);
+  const place = state.scope === "county" ? `${state.county} County, WA` : `${state.state}`;
+  el("caption").innerHTML = `<b>${place}</b> · ${total} features · ${HF.WIDTH_PRESETS[state.widthPreset].label} weight`;
+}
+
+// ---- Wire ----
+el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}"${s.id===state.state?" selected":""}>${s.label}</option>`).join("");
+H.fillCounties(state); if (H.COUNTIES.Washington.includes("Clark")) state.county = "Clark";
+function renderCountyOptions(){ el("county").innerHTML = H.COUNTIES[state.state].map(c => `<option value="${c}"${c===state.county?" selected":""}>${c}</option>`).join(""); }
+renderCountyOptions();
+
+el("state").addEventListener("change", e => { state.state = e.target.value; H.fillCounties(state); renderCountyOptions(); rebuild(); });
+el("county").addEventListener("change", e => { state.county = e.target.value; rebuild(); });
+el("bg").addEventListener("input", e => { state.bg = e.target.value; apply(); });
+
+function setSeg(id, v){ [...el(id).children].forEach(b => b.classList.toggle("active", b.dataset.v === v)); }
+
+H.seg(state, "scope", "scope", () => {
+  el("county").hidden = state.scope !== "county";
+  if (state.scope === "county"){ setSeg("weight","watershed"); HF.applyWidthPreset(state,"watershed"); setSeg("detail","print-county"); state.detail="print-county"; }
+  else { setSeg("weight","state"); HF.applyWidthPreset(state,"state"); setSeg("detail","screen"); state.detail="screen"; }
+  el("wpLabel").textContent = HF.WIDTH_PRESETS[state.widthPreset].label;
+  rebuild();   // scope switches the underlying geometry (state ↔ county)
+});
+H.seg(state, "detail", "detail", apply);
+el("weight").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  setSeg("weight", b.dataset.v); HF.applyWidthPreset(state, b.dataset.v);
+  el("wpLabel").textContent = HF.WIDTH_PRESETS[state.widthPreset].label; apply();
+});
+
+el("clarkQuick").addEventListener("click", () => {
+  state.state = "Washington"; el("state").value = "Washington";
+  H.fillCounties(state); state.county = "Clark"; renderCountyOptions();
+  state.scope = "county"; setSeg("scope", "county"); el("county").hidden = false;
+  setSeg("weight","watershed"); HF.applyWidthPreset(state,"watershed");
+  setSeg("detail","print-county"); state.detail = "print-county";
+  el("wpLabel").textContent = HF.WIDTH_PRESETS[state.widthPreset].label;
+  rebuild();
+});
+
+el("looks").addEventListener("click", e => {
+  const b = e.target.closest(".lchip"); if (!b) return;
+  state.look = b.dataset.id;
+  Object.assign(state, LOOKS.find(l => l.id === state.look).recipe);
+  [...el("looks").children].forEach(x => x.classList.toggle("on", x.dataset.id === state.look));
+  el("bg").value = state.bg; apply();
+});
+el("features").addEventListener("click", e => {
+  const b = e.target.closest(".fchip"); if (!b) return;
+  state.feat[b.dataset.key] = !state.feat[b.dataset.key]; apply();
+});
+el("dockToggle").addEventListener("click", () => { el("dock").hidden = !el("dock").hidden; });
+el("exportBtn").addEventListener("click", () => {
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: "image/svg+xml" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `hydro-${state.state.toLowerCase()}.svg`; a.click();
+});
+
+// ---- Boot ----
+el("scope").querySelector('[data-v="county"]').classList.add("active");
+el("scope").querySelector('[data-v="state"]').classList.remove("active");
+state.scope = "county"; el("county").hidden = false;
+setSeg("weight","watershed"); HF.applyWidthPreset(state,"watershed");
+setSeg("detail","print-county"); state.detail = "print-county";
+el("wpLabel").textContent = HF.WIDTH_PRESETS[state.widthPreset].label;
+rebuild();
+</script>
+</body>
+</html>

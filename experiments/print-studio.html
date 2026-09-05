@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Print Studio</title>
+<!-- Common design tokens (project standard) + shared customer components -->
+<link rel="stylesheet" href="../web/shared/ux.css" />
+<link rel="stylesheet" href="shared/experiments.css" />
+<style>
+  body { display: grid; grid-template-columns: 1fr 380px; grid-template-rows: 100vh; }
+  main { position: relative; display: flex; flex-direction: column; overflow: hidden; padding: 22px 22px 14px; }
+  #stage { flex: 1; min-height: 0; border-radius: var(--radius); border: 1px solid var(--line); }
+  .stagebar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .stagebar .badge { position: static; }
+  .stagecap { display: flex; align-items: center; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  aside { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  aside .head { padding: 16px 18px 6px; }
+  aside .body { padding: 6px 18px 16px; overflow-y: auto; flex: 1; }
+  aside fieldset { background: transparent; border: none; padding: 0; margin: 0 0 18px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="stagebar">
+    <h1 class="brand" style="margin-right:auto">Hydro-Art <span class="dot">◇</span> Print Studio</h1>
+    <span class="badge" id="badge">Washington · whole state</span>
+  </div>
+  <div id="stage" class="stage"></div>
+  <div class="stagecap">
+    <div class="legend-strip" id="legend"></div>
+    <div class="caption" id="caption" style="margin-left:auto"></div>
+  </div>
+</main>
+
+<aside>
+  <div class="head">
+    <div class="sub">Design a one-of-a-kind map of real rivers, lakes and terrain — then order it as a print or digital download.</div>
+  </div>
+  <div class="body">
+
+    <!-- PLACE -->
+    <fieldset>
+      <div class="section-title">1 · Choose your place</div>
+      <div class="section-note">Every map is drawn from public USGS hydrography for the area you pick.</div>
+      <label class="row">State</label>
+      <select id="state"></select>
+      <label class="row">Area</label>
+      <div class="seg" id="scope">
+        <button data-v="state" class="active">Whole state</button>
+        <button data-v="county">Single county</button>
+      </div>
+      <div id="countyWrap" hidden>
+        <label class="row">County <span class="tag live">featured: Clark</span></label>
+        <select id="county"></select>
+      </div>
+    </fieldset>
+
+    <!-- LOOK -->
+    <fieldset>
+      <div class="section-title">2 · Pick a look</div>
+      <div class="section-note">Curated color styles. You can fine-tune the background below.</div>
+      <div class="cards" id="looks"></div>
+      <label class="row" style="margin-top:10px">Background</label>
+      <input type="color" id="bg" value="#05060a" />
+    </fieldset>
+
+    <!-- INCLUDE -->
+    <fieldset>
+      <div class="section-title">3 · What to include</div>
+      <div class="section-note">Layer in natural water features. Counts update for your area &amp; detail level.</div>
+      <div class="feature-list" id="features"></div>
+    </fieldset>
+
+    <!-- DETAIL + WEIGHT -->
+    <fieldset>
+      <div class="section-title">4 · Detail &amp; line weight</div>
+      <div class="section-note">Print detail declutters tiny features for ink; line weight scales rivers by flow.</div>
+      <label class="row">Detail level</label>
+      <div class="seg" id="detail">
+        <button data-v="screen" class="active">Screen</button>
+        <button data-v="print-county">Print · county</button>
+        <button data-v="print-state">Print · state</button>
+      </div>
+      <label class="row">Line weight <span class="val" id="wpLabel">State</span></label>
+      <div class="seg" id="weight">
+        <button data-v="state" class="active">State</button>
+        <button data-v="basin">Basin</button>
+        <button data-v="watershed">Watershed</button>
+      </div>
+    </fieldset>
+
+    <!-- SIZE + FORMAT -->
+    <fieldset>
+      <div class="section-title">5 · Size &amp; format</div>
+      <div class="grid-opts" id="sizes"></div>
+      <label class="row" style="margin-top:10px">Format</label>
+      <div class="seg" id="format">
+        <button data-v="print" class="active">Fine-art print</button>
+        <button data-v="digital">Digital download</button>
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="pricebar">
+    <div>
+      <div class="price" id="price">$69</div>
+      <div class="price-note" id="priceNote">18×24" fine-art print</div>
+    </div>
+    <button class="btn solid cta" id="cart">Add to cart</button>
+  </div>
+</aside>
+
+<script src="../web/shared/hydro-ux.js"></script>
+<script src="shared/geo-wa.js"></script>
+<script src="shared/geo-clark.js"></script>
+<script src="shared/hydro-features.js"></script>
+<script>
+"use strict";
+const H = window.HydroUX, HF = window.HydroFeatures, el = id => document.getElementById(id);
+let net = null;
+
+// Feature icons (inline SVG, currentColor).
+const ICON = {
+  lakes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><ellipse cx="12" cy="14" rx="8" ry="4.5"/><path d="M6 10c1.5-1.5 4-1.5 5.5 0"/></svg>',
+  natural: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 15l3-4 3 4"/><circle cx="17" cy="8" r="1.6" fill="currentColor" stroke="none"/><path d="M14 16l2-2 2 2"/></svg>',
+  terrain: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3 18h18M5 18l4-7 3 4 3-6 4 9"/></svg>',
+};
+
+const state = {
+  state: "Washington", scope: "state", county: null,
+  timeMode: "annual", monthStart: 5, monthEnd: 8, month: 6,
+  colorMode: "watershed", palette: "neon", single: "#00e5ff", bg: "#05060a",
+  widthMode: "flow", minW: 0.35, maxW: 3.5, gamma: 1.0, glow: true, glowR: 2.5,
+  huc: "HUC4",
+  look: "neon-glow", detail: "screen", widthPreset: "state",
+  feat: { lakes: true, natural: true, terrain: true },
+  size: "m", format: "print",
+};
+
+// ---- Curated looks (map to recipe fragments) ----
+const LOOKS = [
+  { id: "neon-glow",  title: "Neon Rivers",      sub: "Signature glow",     recipe: { colorMode: "watershed", palette: "neon",   glow: true,  bg: "#05060a" } },
+  { id: "aurora",     title: "Aurora",           sub: "Cool greens & blues", recipe: { colorMode: "watershed", palette: "aurora", glow: false, bg: "#04070a" } },
+  { id: "ice",        title: "Ice Blue",         sub: "Icy monochrome-ish",  recipe: { colorMode: "watershed", palette: "ice",    glow: false, bg: "#0a0f14" } },
+  { id: "elevation",  title: "Elevation Relief", sub: "Summit → sea tint",   recipe: { colorMode: "elevation", glow: false, bg: "#05060a" } },
+];
+function rampFor(look){
+  if (look.recipe.colorMode === "elevation") return H.HYPSO;
+  return H.PALETTES[look.recipe.palette] || H.PALETTES.neon;
+}
+el("looks").innerHTML = LOOKS.map(l => `
+  <button class="card${l.id===state.look?' active':''}" data-id="${l.id}">
+    <div class="card-title">${l.title}</div>
+    <div class="card-sub">${l.sub}</div>
+    <div class="ramp">${rampFor(l).slice(0,7).map(c=>`<i style="background:${c}"></i>`).join("")}</div>
+  </button>`).join("");
+
+// ---- Feature toggles ----
+const FEATURES = [
+  { key: "lakes",   icon: ICON.lakes,   name: "Lakes & reservoirs",       desc: "Outlined waterbody polygons" },
+  { key: "natural", icon: ICON.natural, name: "Springs · waterfalls · rapids", desc: "Natural point markers" },
+  { key: "terrain", icon: ICON.terrain, name: "Wetlands · glaciers · playas",  desc: "Filled terrain areas" },
+];
+function renderFeatures(){
+  const c = net ? HF.counts(net, state) : {};
+  const cap = {
+    lakes: `${c.lake||0} shown`,
+    natural: `${(c.spring||0)+(c.waterfall||0)+(c.rapids||0)} shown`,
+    terrain: `${(c.wetland||0)+(c.playa||0)+(c.perennial_ice||0)} shown`,
+  };
+  el("features").innerHTML = FEATURES.map(f => `
+    <div class="feature${state.feat[f.key]?' on':''}" data-key="${f.key}">
+      <span class="icon">${f.icon}</span>
+      <span class="meta"><span class="name">${f.name}</span><span class="desc">${f.desc}</span></span>
+      <span class="count">${state.feat[f.key]?cap[f.key]:'off'}</span>
+      <span class="switch"></span>
+    </div>`).join("");
+}
+
+// ---- Sizes / pricing ----
+const SIZES = [
+  { id: "s", big: '12×16"', small: "Small",  price: 39 },
+  { id: "m", big: '18×24"', small: "Medium", price: 69 },
+  { id: "l", big: '24×36"', small: "Large",  price: 109 },
+];
+el("sizes").innerHTML = SIZES.map(s => `
+  <button class="opt${s.id===state.size?' active':''}" data-id="${s.id}">
+    <span class="big">${s.big}</span><span class="small">${s.small}</span>
+  </button>`).join("");
+function priceOf(){
+  if (state.format === "digital") return 24;
+  return (SIZES.find(s=>s.id===state.size)||SIZES[1]).price;
+}
+function renderPrice(){
+  const sz = SIZES.find(s=>s.id===state.size)||SIZES[1];
+  el("price").textContent = "$" + priceOf();
+  el("priceNote").textContent = state.format === "digital"
+    ? "High-res digital download (SVG + PNG)"
+    : `${sz.big} fine-art print`;
+}
+
+// ---- Legend strip (only shown-for-current-selection layers) ----
+function renderLegend(){
+  const S = HF.POINT_STYLES, A = HF.AREAL_STYLES, items = [];
+  items.push(`<span class="li"><span class="sw" style="background:${H.PALETTES[state.palette]?H.PALETTES[state.palette][0]:'#00ffff'}"></span>Rivers</span>`);
+  if (state.feat.lakes)   items.push(`<span class="li" style="color:${HF.WATERBODY.color}"><span class="sw ring"></span>Lakes / reservoirs</span>`);
+  if (state.feat.natural){
+    items.push(`<span class="li"><span class="sw" style="background:${S.spring.color}"></span>Springs</span>`);
+    items.push(`<span class="li"><span class="sw" style="background:${S.waterfall.color}"></span>Waterfalls</span>`);
+    items.push(`<span class="li"><span class="sw" style="background:${S.rapids.color}"></span>Rapids</span>`);
+  }
+  if (state.feat.terrain){
+    items.push(`<span class="li"><span class="sw" style="background:${A.wetland.color}"></span>Wetlands</span>`);
+    items.push(`<span class="li"><span class="sw" style="background:${A.perennial_ice.color}"></span>Glaciers</span>`);
+    items.push(`<span class="li" style="color:${A.playa.color}"><span class="sw ring"></span>Playas</span>`);
+  }
+  el("legend").innerHTML = items.join("");
+}
+
+// ---- Render ----
+function rebuild(){
+  net = HF.netForState(state);   // real WA / Clark geometry when available
+  el("stage").innerHTML = H.buildSvg(net);
+  applyScope(); apply();
+}
+function applyScope(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  const w = net.viewBox.w, h = net.viewBox.h;
+  // Real county geometry (Clark) is already the county — show it whole. Only the
+  // procedural fallback approximates a county by cropping the state viewBox.
+  if (state.scope === "county" && !net.countyNative){
+    svg.setAttribute("viewBox", `${w*0.30} ${h*0.55} ${w*0.34} ${h*0.34}`);
+  } else {
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+  }
+  el("badge").textContent = state.scope === "county"
+    ? `${state.state} · ${state.county} County`
+    : `${state.state} · whole state`;
+}
+function apply(){
+  const svg = el("stage").querySelector("svg"); if (!svg) return;
+  state.month = 6;
+  document.body.style.background = state.bg;
+  H.applyStyles(svg, net, state);      // flowline color / width / glow
+  HF.render(svg, net, state);          // waterbodies + natural + terrain layers
+  renderFeatures(); renderLegend(); renderPrice();
+  const c = HF.counts(net, state);
+  const total = Object.values(c).reduce((a,b)=>a+b,0);
+  el("caption").innerHTML = `<b>${total}</b> water features on this map · detail <b>${HF.DETAIL_PRESETS[state.detail].label}</b> · weight <b>${HF.WIDTH_PRESETS[state.widthPreset].label}</b>`;
+}
+
+// ---- Wire controls ----
+el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}"${s.id===state.state?" selected":""}>${s.label}</option>`).join("");
+H.fillCounties(state);
+// Feature Clark County as the default drill-down.
+if (H.COUNTIES.Washington.includes("Clark")) state.county = "Clark";
+function renderCountyOptions(){ el("county").innerHTML = H.COUNTIES[state.state].map(c => `<option value="${c}"${c===state.county?" selected":""}>${c}</option>`).join(""); }
+renderCountyOptions();
+
+el("state").addEventListener("change", e => { state.state = e.target.value; H.fillCounties(state); if (state.state==="Washington") state.county="Clark"; renderCountyOptions(); rebuild(); });
+el("county").addEventListener("change", e => { state.county = e.target.value; rebuild(); });
+el("bg").addEventListener("input", e => { state.bg = e.target.value; apply(); });
+
+H.seg(state, "scope", "scope", () => {
+  el("countyWrap").hidden = state.scope !== "county";
+  // A single county reads best at watershed weight + county print detail.
+  if (state.scope === "county"){ setSeg("weight","watershed"); HF.applyWidthPreset(state,"watershed"); setSeg("detail","print-county"); state.detail="print-county"; }
+  else { setSeg("weight","state"); HF.applyWidthPreset(state,"state"); setSeg("detail","screen"); state.detail="screen"; }
+  el("wpLabel").textContent = HF.WIDTH_PRESETS[state.widthPreset].label;
+  rebuild();   // scope switches the underlying geometry (state ↔ county)
+});
+H.seg(state, "detail", "detail", apply);
+el("weight").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  setSeg("weight", b.dataset.v); HF.applyWidthPreset(state, b.dataset.v);
+  el("wpLabel").textContent = HF.WIDTH_PRESETS[state.widthPreset].label; apply();
+});
+el("format").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  setSeg("format", b.dataset.v); state.format = b.dataset.v; renderPrice();
+});
+
+el("looks").addEventListener("click", e => {
+  const b = e.target.closest(".card"); if (!b) return;
+  state.look = b.dataset.id;
+  const look = LOOKS.find(l => l.id === state.look);
+  Object.assign(state, look.recipe);
+  [...el("looks").children].forEach(x => x.classList.toggle("active", x.dataset.id === state.look));
+  el("bg").value = state.bg; apply();
+});
+el("features").addEventListener("click", e => {
+  const row = e.target.closest(".feature"); if (!row) return;
+  const k = row.dataset.key; state.feat[k] = !state.feat[k]; apply();
+});
+el("sizes").addEventListener("click", e => {
+  const b = e.target.closest(".opt"); if (!b) return;
+  state.size = b.dataset.id;
+  [...el("sizes").children].forEach(x => x.classList.toggle("active", x.dataset.id === state.size));
+  renderPrice();
+});
+el("cart").addEventListener("click", () => {
+  el("cart").textContent = "Added ✓";
+  setTimeout(() => { el("cart").textContent = "Add to cart"; }, 1400);
+});
+
+function setSeg(id, v){ [...el(id).children].forEach(b => b.classList.toggle("active", b.dataset.v === v)); }
+
+// ---- Boot ----
+rebuild();
+</script>
+</body>
+</html>

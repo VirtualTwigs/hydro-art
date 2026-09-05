@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""Extract simplified real river geometry from a rendered pipeline SVG into a
+compact JSON the web preview can draw live.
+
+The rendered exports (e.g. output/clark_county.svg, output/washington_display.svg)
+are the *real* geography: each `<g id="watershed_HUC" stroke="#color">` holds real
+NHD flowline `<path d="M x,y L …" stroke-width="W">` polylines, grouped by real
+watershed, with real flow-scaled widths. We parse those, drop small/thin lines,
+Douglas-Peucker simplify the rest, round coords, and emit a small JSON so the
+experiments preview reads as actual Washington / Clark County — while the web UI
+still restyles it live (palette, width preset, feature overlays).
+
+Pure stdlib (regex + math) — no GIS deps. Standalone: `python tools/extract_preview_geo.py`.
+"""
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+GROUP_RE = re.compile(r'<g id="watershed_([0-9]+)" stroke="(#[0-9a-fA-F]+)"')
+PATH_RE = re.compile(r'<path d="([^"]+)" stroke-width="([0-9.]+)"')
+NUM_RE = re.compile(r'-?\d+(?:\.\d+)?')
+
+
+def parse_points(d: str) -> list[tuple[float, float]]:
+    nums = [float(n) for n in NUM_RE.findall(d)]
+    return list(zip(nums[0::2], nums[1::2]))
+
+
+def _seg_dist(p, a, b) -> float:
+    (px, py), (ax, ay), (bx, by) = p, a, b
+    dx, dy = bx - ax, by - ay
+    if dx == 0 and dy == 0:
+        return ((px - ax) ** 2 + (py - ay) ** 2) ** 0.5
+    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    qx, qy = ax + t * dx, ay + t * dy
+    return ((px - qx) ** 2 + (py - qy) ** 2) ** 0.5
+
+
+def simplify(pts: list, tol: float) -> list:
+    """Iterative Douglas-Peucker (stack-based; avoids recursion limits)."""
+    if len(pts) < 3:
+        return pts
+    keep = [False] * len(pts)
+    keep[0] = keep[-1] = True
+    stack = [(0, len(pts) - 1)]
+    while stack:
+        i, j = stack.pop()
+        dmax, idx = 0.0, -1
+        for k in range(i + 1, j):
+            dd = _seg_dist(pts[k], pts[i], pts[j])
+            if dd > dmax:
+                dmax, idx = dd, k
+        if dmax > tol and idx != -1:
+            keep[idx] = True
+            stack.append((i, idx))
+            stack.append((idx, j))
+    return [p for p, k in zip(pts, keep) if k]
+
+
+def extract(svg_path: Path, *, width_floor: float, tol: float, max_paths: int) -> dict:
+    text = svg_path.read_text()
+    vb = re.search(r'viewBox="0 0 ([0-9.]+) ([0-9.]+)"', text)
+    vw, vh = float(vb.group(1)), float(vb.group(2))
+
+    # Split into watershed group blocks.
+    groups = []
+    matches = list(GROUP_RE.finditer(text))
+    for gi, gm in enumerate(matches):
+        huc, color = gm.group(1), gm.group(2)
+        start = gm.end()
+        end = matches[gi + 1].start() if gi + 1 < len(matches) else len(text)
+        block = text[start:end]
+        paths = []
+        for pm in PATH_RE.finditer(block):
+            w = float(pm.group(2))
+            if w < width_floor:
+                continue
+            pts = parse_points(pm.group(1))
+            if len(pts) < 2:
+                continue
+            paths.append((w, pts))
+        if paths:
+            groups.append({"huc": huc, "color": color, "_paths": paths})
+
+    # Keep the widest paths overall (major rivers) up to max_paths, then simplify.
+    all_paths = [(gi, w, pts) for gi, g in enumerate(groups) for (w, pts) in g["_paths"]]
+    all_paths.sort(key=lambda t: t[1], reverse=True)
+    all_paths = all_paths[:max_paths]
+
+    out_groups = [
+        {"huc": g["huc"], "color": g["color"], "paths": []} for g in groups
+    ]
+    total_pts = 0
+    for gi, w, pts in all_paths:
+        sp = simplify(pts, tol)
+        if len(sp) < 2:
+            continue
+        # round to 1 unit (meters) — visually lossless at these scales
+        rp = [[round(x), round(y)] for x, y in sp]
+        out_groups[gi]["paths"].append({"w": round(w, 1), "pts": rp})
+        total_pts += len(rp)
+
+    out_groups = [g for g in out_groups if g["paths"]]
+    return {
+        "w": round(vw, 1),
+        "h": round(vh, 1),
+        "groups": out_groups,
+        "_stats": {"groups": len(out_groups), "paths": len(all_paths), "points": total_pts},
+    }
+
+
+JOBS = [
+    # (source svg, output js, global key, width_floor, simplify tol, max_paths)
+    ("output/clark_county.svg", "experiments/shared/geo-clark.js", "clark", 8.0, 12.0, 2600),
+    ("output/washington_display.svg", "experiments/shared/geo-wa.js", "wa", 30.0, 120.0, 14000),
+]
+
+
+def main() -> int:
+    root = Path(__file__).resolve().parent.parent
+    for src, dst, key, wf, tol, mx in JOBS:
+        sp = root / src
+        if not sp.exists():
+            print(f"SKIP {src} (missing)")
+            continue
+        data = extract(sp, width_floor=wf, tol=tol, max_paths=mx)
+        stats = data.pop("_stats")
+        # Emit as file://-safe JS (no fetch/CORS): assign onto window.HydroGeo.
+        body = json.dumps(data, separators=(",", ":"))
+        dp = root / dst
+        dp.write_text(
+            "/* Auto-generated by tools/extract_preview_geo.py — real simplified\n"
+            f"   NHD flowline geometry extracted from {src}. Do not edit by hand. */\n"
+            "window.HydroGeo = window.HydroGeo || {};\n"
+            f"window.HydroGeo[{json.dumps(key)}] = {body};\n"
+        )
+        kb = dp.stat().st_size / 1024
+        print(f"{src} -> {dst}  {stats['groups']} groups, {stats['paths']} paths, "
+              f"{stats['points']} pts, {kb:.0f} KB")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
