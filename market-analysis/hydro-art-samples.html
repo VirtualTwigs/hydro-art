@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hydro-Art — Sample Portfolio &amp; Market-Analysis Prompt</title>
+<style>
+  :root{
+    --bg:#07090d; --panel:#0e1218; --panel2:#131922; --ink:#e8eef6;
+    --muted:#93a1b5; --line:#1e2733; --accent:#31e0c8; --accent2:#6ea8ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent2)}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 22px 80px}
+  header.hero{border:1px solid var(--line);border-radius:16px;
+    background:linear-gradient(160deg,#0e1420,#0b0f16 60%);padding:30px 30px 26px;margin-bottom:14px}
+  h1{margin:0 0 6px;font-size:30px;letter-spacing:-.02em}
+  h1 .sub{color:var(--accent);font-weight:600}
+  .lede{color:var(--muted);max-width:820px}
+  .how{margin-top:18px;padding:16px 18px;border:1px dashed #2a3646;border-radius:12px;
+    background:#0b1017;color:#c7d3e2;font-size:14.5px}
+  .how b{color:var(--ink)}
+  .how ol{margin:8px 0 0;padding-left:20px}
+  h2.section{font-size:14px;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);
+    margin:40px 0 4px;border-top:1px solid var(--line);padding-top:26px}
+  .section-note{color:var(--muted);font-size:14px;margin:0 0 16px;max-width:860px}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    display:flex;flex-direction:column}
+  figure.wide{grid-column:span 2}
+  figure img{width:100%;height:auto;display:block;background:#000}
+  figcaption{padding:10px 13px 13px;font-size:13.5px;color:#cdd8e6}
+  figcaption .t{color:var(--ink);font-weight:600;display:block;margin-bottom:2px}
+  figcaption .tag{display:inline-block;margin-top:7px;padding:2px 8px;border-radius:20px;font-size:11px;
+    background:#122029;color:var(--accent);border:1px solid #1d3a3a}
+  figcaption .tag.anim{background:#1a1526;color:#c39bff;border-color:#3a2a52}
+  figcaption .tag.data{background:#141c2c;color:var(--accent2);border-color:#26364f}
+  /* Prompt block */
+  .promptwrap{margin-top:46px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);overflow:hidden}
+  .promptbar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 18px;background:#0c141d;border-bottom:1px solid var(--line)}
+  .promptbar h2{margin:0;font-size:16px}
+  .promptbar .muted{color:var(--muted);font-size:13px}
+  button.copy{cursor:pointer;border:1px solid #26485f;background:#10202b;color:var(--accent);
+    padding:9px 16px;border-radius:9px;font-size:14px;font-weight:600}
+  button.copy:hover{background:#143140}
+  button.copy.done{color:#8affc0;border-color:#2c6b45}
+  textarea#prompt{width:100%;min-height:520px;border:0;resize:vertical;background:#0a0f15;color:#dfe8f2;
+    padding:20px 22px;font:13.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre}
+  footer{color:#5c6b7d;font-size:12.5px;margin-top:40px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>Hydrographic Vector Art &mdash; <span class="sub">sample portfolio</span></h1>
+    <p class="lede">Original, museum-quality river&nbsp;maps generated entirely from public U.S. government
+    hydrography data (USGS NHDPlus&nbsp;HR / NHD / WBD). Every image below is real output from an automated,
+    deterministic pipeline &mdash; no tracing, no copied art, any U.S. region or single county on demand,
+    delivered as infinitely-scalable editable SVG (plus PDF / high-res PNG / animated GIF / 3D).</p>
+
+    <div class="how">
+      <b>How to use this page with ChatGPT:</b>
+      <ol>
+        <li>Open ChatGPT (a vision-capable model, e.g. GPT-4o / o-series).</li>
+        <li><b>Upload the sample images</b> &mdash; either screenshot this page, or attach the JPGs in the
+        <code>market-analysis/thumbs/</code> folder (pick ~6&ndash;10 that best represent the range).</li>
+        <li>Click <b>Copy prompt</b> below and paste it as your message alongside the images.</li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- CORE RIVER ART -->
+  <h2 class="section">1 &middot; Core neon river art &mdash; whole state</h2>
+  <p class="section-note">The flagship look: every river, stream, tributary, and intermittent channel in a
+  state, colored by watershed on black. Rendered as editable vector &mdash; crisp at any print size.</p>
+  <div class="grid">
+    <figure><img src="thumbs/oregon_state.jpg" alt="Oregon full-state river map">
+      <figcaption><span class="t">Oregon &mdash; full state</span>Every waterway, deterministic watershed coloring.<span class="tag">Vector SVG</span></figcaption></figure>
+    <figure><img src="thumbs/washington_state.jpg" alt="Washington full-state river map">
+      <figcaption><span class="t">Washington &mdash; full state</span>Same recipe, different geography &mdash; an effectively infinite catalog.<span class="tag">Vector SVG</span></figcaption></figure>
+    <figure><img src="thumbs/oregon_state_outlined.jpg" alt="Oregon with state boundary">
+      <figcaption><span class="t">Oregon &mdash; with state outline</span>Optional political boundary overlay for framing.<span class="tag">Vector SVG</span></figcaption></figure>
+  </div>
+
+  <!-- COUNTY SKUs -->
+  <h2 class="section">2 &middot; County-scoped prints &mdash; &ldquo;your town&rdquo; SKUs</h2>
+  <p class="section-note">The same pipeline targets a single county, unlocking hyper-local, personalized
+  &ldquo;where you live&rdquo; prints &mdash; a large custom/commission surface with zero incremental art labor.</p>
+  <div class="grid">
+    <figure><img src="thumbs/clark_county.jpg" alt="Clark County WA">
+      <figcaption><span class="t">Clark County, WA</span>County-clipped, basin-colored, with lakes.<span class="tag">Vector SVG</span></figcaption></figure>
+    <figure><img src="thumbs/multnomah_county.jpg" alt="Multnomah County OR">
+      <figcaption><span class="t">Multnomah County, OR</span>(Portland) &mdash; local personalization.<span class="tag">Vector SVG</span></figcaption></figure>
+    <figure><img src="thumbs/deschutes_county.jpg" alt="Deschutes County OR">
+      <figcaption><span class="t">Deschutes County, OR</span>(Bend) &mdash; any U.S. county on demand.<span class="tag">Vector SVG</span></figcaption></figure>
+  </div>
+
+  <!-- ELEVATION STYLE -->
+  <h2 class="section">3 &middot; Alternate art style &mdash; hypsometric elevation tint</h2>
+  <p class="section-note">A different aesthetic: rivers colored by real terrain elevation (white summits &rarr;
+  deep-blue sea), with channel width tracking peak seasonal flow. Same data, distinct product line.</p>
+  <div class="grid">
+    <figure><img src="thumbs/washington_elevation_peak.jpg" alt="Washington elevation tint">
+      <figcaption><span class="t">Washington &mdash; elevation tint</span>Hypsometric color + peak-flow width.<span class="tag">Vector SVG</span></figcaption></figure>
+    <figure><img src="thumbs/california_elevation_peak.jpg" alt="California elevation tint">
+      <figcaption><span class="t">California &mdash; elevation tint</span><span class="tag">Vector SVG</span></figcaption></figure>
+    <figure><img src="thumbs/idaho_elevation_peak.jpg" alt="Idaho elevation tint">
+      <figcaption><span class="t">Idaho &mdash; elevation tint</span><span class="tag">Vector SVG</span></figcaption></figure>
+  </div>
+
+  <!-- 3D & OVERLAYS -->
+  <h2 class="section">4 &middot; 3D &amp; overlays</h2>
+  <p class="section-note">Stylized pseudo-3D relief and data overlays &mdash; premium / novelty variants and a
+  path toward interactive or physical (3D-print) products.</p>
+  <div class="grid">
+    <figure><img src="thumbs/clark_county_3d.jpg" alt="Clark County 3D">
+      <figcaption><span class="t">Clark County &mdash; pseudo-3D</span>Height derived from the river network itself.<span class="tag">Raster / 3D</span></figcaption></figure>
+    <figure><img src="thumbs/clark_county_facilities.jpg" alt="Clark County facilities overlay">
+      <figcaption><span class="t">Clark County &mdash; facilities overlay</span>Point-data overlay (e.g. infrastructure).<span class="tag data">Data overlay</span></figcaption></figure>
+    <figure><img src="thumbs/infographic_clark_jul.jpg" alt="Seasonal infographic still">
+      <figcaption><span class="t">Seasonal infographic (still)</span>River map + season / precip / moon panels.<span class="tag data">Infographic</span></figcaption></figure>
+  </div>
+
+  <!-- ANIMATED -->
+  <h2 class="section">5 &middot; Animated &mdash; &ldquo;year in motion&rdquo; (first frame shown)</h2>
+  <p class="section-note">Animated renders where channel width tracks monthly water flow through the seasons &mdash;
+  shareable social content and licensable motion assets. <b>These are GIFs; a single frame is shown here.</b></p>
+  <div class="grid">
+    <figure><img src="thumbs/infographic_year_oregon.jpg" alt="Oregon year-in-motion">
+      <figcaption><span class="t">Oregon &mdash; year in motion</span>Seasonal swell &amp; retreat, whole state.<span class="tag anim">Animated GIF</span></figcaption></figure>
+    <figure><img src="thumbs/monthly_flow_clark_county_24f.jpg" alt="Clark County monthly flow animation">
+      <figcaption><span class="t">Clark County &mdash; 24-frame flow</span>Monthly flow cycle, county scale.<span class="tag anim">Animated GIF</span></figcaption></figure>
+    <figure><img src="thumbs/salmon_creek_year_over_year.jpg" alt="Salmon Creek year over year">
+      <figcaption><span class="t">Salmon Creek &mdash; true year-over-year</span>Real per-year PRISM climate (drought vs. wet years).<span class="tag anim">Animated GIF</span></figcaption></figure>
+    <figure><img src="thumbs/washington_year_over_year.jpg" alt="Washington year over year">
+      <figcaption><span class="t">Washington &mdash; year-over-year</span>Statewide historical-flow animation.<span class="tag anim">Animated GIF</span></figcaption></figure>
+  </div>
+
+  <!-- WATERSHED REPORT -->
+  <h2 class="section">6 &middot; Watershed-report analytics (B2B / roadmap direction)</h2>
+  <p class="section-note">The same historical-flow engine produces credible hydrology figures &mdash; multi-decade
+  records, seasonal patterns, wet/dry comparisons. Aimed at conservation groups, watershed councils, land trusts,
+  fisheries interests, and consultancies. (Roadmap direction, engine already built.)</p>
+  <div class="grid">
+    <figure><img src="thumbs/salmon_creek_01_watershed_map.jpg" alt="Salmon Creek watershed map">
+      <figcaption><span class="t">Watershed locator map</span>Basin context for a report.<span class="tag data">Report figure</span></figcaption></figure>
+    <figure><img src="thumbs/salmon_creek_02_hydrograph_by_year.jpg" alt="Hydrograph by year">
+      <figcaption><span class="t">Hydrograph by year</span>Monthly flow across many years.<span class="tag data">Report figure</span></figcaption></figure>
+    <figure><img src="thumbs/salmon_creek_05_typical_year.jpg" alt="Typical year">
+      <figcaption><span class="t">Typical-year profile</span>Seasonal signature of the watershed.<span class="tag data">Report figure</span></figcaption></figure>
+    <figure><img src="thumbs/salmon_creek_06_wet_vs_dry.jpg" alt="Wet vs dry">
+      <figcaption><span class="t">Wet vs. dry years</span>Climate-driven variability.<span class="tag data">Report figure</span></figcaption></figure>
+  </div>
+
+  <!-- PROMPT -->
+  <div class="promptwrap">
+    <div class="promptbar">
+      <div><h2>Market-analysis prompt</h2><div class="muted">Paste into ChatGPT with the sample images attached.</div></div>
+      <button class="copy" id="copyBtn" onclick="copyPrompt()">Copy prompt</button>
+    </div>
+    <textarea id="prompt" spellcheck="false" readonly>
+You are a pragmatic product strategist and indie-hacker advisor. I've ATTACHED SAMPLE IMAGES of the
+product's real output (whole-state neon river maps, county-scoped prints, an elevation-tinted style,
+pseudo-3D and data overlays, animated "year in motion" GIFs shown as single frames, and watershed-report
+analytics figures). Study the images as part of your analysis.
+
+Your job: help me find the FASTEST credible path to first revenue (not a big exit) for this existing,
+technically mature project I built solo. Prioritize concrete, low-cost, near-term monetization over
+large-market theorizing. Be specific and opinionated. Where you assume, say so.
+
+MY CONSTRAINTS:
+- Time: 20 hrs/week
+- Cash up front: under $1,500
+- Fulfillment: PREFER DIGITAL, open to print-on-demand
+- Market: anywhere in the US I can get the data; selling online
+- Goal: ANY REVENUE FIRST (validation over business-building)
+- Buyers: comfortable selling to consumers OR businesses/orgs
+
+THE PRODUCT (built and working today):
+"Hydrographic Vector Art Generator" — a Python pipeline that turns free public U.S. government
+hydrography data (USGS NHDPlus HR / NHD / WBD) into layered, neon-colored, museum-quality SVG
+"river map" artwork with one command. Working capabilities:
+- Fully automated GIS→art: downloads/cleans/reprojects/clips data, builds a river-network graph,
+  groups by watershed, colors deterministically, renders a clean layered SVG on black. No manual GIS.
+- Deterministic & reproducible (identical inputs → byte-identical output).
+- Output is EDITABLE vector SVG (Illustrator/Affinity/Figma/Inkscape), crisp at any print size, plus
+  PDF, PNG up to 65,536 px (tiled), TIFF, EPS, and animated GIF.
+- Scope: Oregon, Washington, California, Idaho today; designed to add ANY U.S. state easily, and can
+  target a single COUNTY. Lakes/reservoirs included.
+- Extra styles/assets: hypsometric elevation-tint art; terrain shaded-relief backgrounds; stylized 3D
+  + portable 3D exports (GLB/OBJ); animated "year in motion" flow GIFs; a browser "studio" that drives
+  the pipeline with live preview and shareable preset "recipes."
+
+KEY DIFFERENTIATORS:
+1. ORIGINAL-BY-CONSTRUCTION, not traced. Most viral river-map art is copied (copyright-risky). Mine is
+   built directly from public-domain government data → genuinely original, no copyright exposure. A real
+   legal/ethical moat vs. Etsy copycats.
+2. Deterministic/reproducible → automatable at scale.
+3. Editable vector → pro print quality at any size.
+4. Any region/county on demand → an effectively infinite SKU catalog with zero incremental art labor.
+
+ROADMAP (NOT built yet — potential, don't assume it exists): expansion to all 50 states; a credible
+"Watershed Report" analytics product (multi-decade flow record, robust trend stats, honest
+model-vs-USGS-gauge validation, ENSO/PDO climate attribution, salmon low-flow × stream-temperature
+ecological framing, web report view) for conservation orgs / watershed councils / consultancies.
+
+MY SITUATION: Solo dev, strong engineering, mature well-tested codebase — but ZERO monetization,
+no brand, no audience, no sales motion yet.
+
+WHAT I WANT FROM YOU (weight everything toward shortest time-to-first-dollar, digital-first,
+validation-first, given my constraints):
+
+1. VISUAL CRITIQUE: From the attached samples, judge which styles/pieces are most commercially
+   compelling and to whom. Which would you lead with, and why? What's weak or needs art direction?
+
+2. MARKET LANDSCAPE: Real buyer segments, sized qualitatively (who pays, how much, how often, how they
+   buy). Cover at least: consumer wall-art buyers; interior designers/stagers; gift & regional/tourism
+   retail; designers/agencies wanting editable assets; GIS/cartography clients; conservation/watershed/
+   land-trust/angling orgs + consultancies (report angle); education. Flag which are reachable DIGITALLY
+   with no physical fulfillment.
+
+3. COMPETITORS/COMPARABLES: Who already sells river-map art, custom map prints, watershed posters, or
+   hydrology reports? Categories + typical price points. Saturated vs. underserved. How much do my
+   "original / no-copyright" and "any county/state on demand" advantages actually matter to buyers?
+
+4. RANK 3–5 PRODUCT OPTIONS by time-to-first-dollar and effort/cost, given my constraints, e.g.:
+   (a) digital SVG/PDF/high-res-PNG downloads or design-asset licensing (Etsy digital, Gumroad,
+       Creative Market); (b) custom/commissioned "your town/river/watershed" digital files; (c) POD
+       physical wall art (Printful/Printify + Etsy/Shopify) for curated regions; (d) a paid self-serve
+       web studio (generate + buy) via credits/subscription; (e) animated/3D social content as
+       top-of-funnel and/or licensable asset; (f) the watershed-report analytics product for orgs/B2B.
+   For each: target buyer, pricing, MINIMUM to build/set up, fulfillment model, marketing channel,
+   realistic first-90-days revenue, and main risk.
+
+5. RECOMMEND ONE first move; justify vs. my constraints. Define the smallest MVP to get the FIRST
+   paying customer, and a concrete 30/60/90-day plan (what to build, list, launch, and where to find
+   the first 10 customers).
+
+6. PRICING: concrete price points/tiers for the recommendation, with reasoning (digital vs. POD margins,
+   custom-commission pricing, any credit/subscription model).
+
+7. GO-TO-MARKET: specific channels, communities, and angles for a solo founder with no audience and
+   little budget. Lean into the "original, no-copyright, any-place-in-the-US" story. Include low-cost
+   content/SEO ideas that exploit the "any county/state" catalog.
+
+8. RISKS & KILL CRITERIA: top risks (commercial-use/licensing of the underlying public data, market
+   saturation, POD quality, unit economics, discoverability) and clear signals to pivot.
+
+9. DATA-RIGHTS CHECK: the art derives from U.S. federal public-domain data (USGS NHDPlus/NHD/WBD) and,
+   for reports, PRISM climate data + USGS gauges. Flag commercial-use/attribution considerations to
+   verify before selling (esp. PRISM, whose terms differ from USGS public domain).
+
+Format: LEAD with your single recommended first move and the 30/60/90-day plan, then the supporting
+analysis. Be concrete and numeric. Challenge my assumptions where warranted.
+</textarea>
+  </div>
+
+  <footer>Generated locally from real pipeline output &middot; thumbnails downscaled for portability &middot;
+  originals up to 65,536&nbsp;px available as vector SVG.</footer>
+
+</div>
+<script>
+function copyPrompt(){
+  var ta=document.getElementById('prompt');
+  var btn=document.getElementById('copyBtn');
+  navigator.clipboard.writeText(ta.value).then(function(){
+    btn.textContent='Copied \u2713'; btn.classList.add('done');
+    setTimeout(function(){btn.textContent='Copy prompt'; btn.classList.remove('done');},2000);
+  }).catch(function(){
+    ta.removeAttribute('readonly'); ta.focus(); ta.select();
+    document.execCommand('copy'); ta.setAttribute('readonly','');
+    btn.textContent='Copied \u2713'; btn.classList.add('done');
+    setTimeout(function(){btn.textContent='Copy prompt'; btn.classList.remove('done');},2000);
+  });
+}
+</script>
+</body>
+</html>
