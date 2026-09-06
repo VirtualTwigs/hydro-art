@@ -1,0 +1,20 @@
+task_groups:
+  - name: endpoint-integration-tests                   # TG1 — offline all-four orchestrators
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: coverage-config-and-gap-tests                # TG2 — coverage config + optimize gaps
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: coverage-gate-and-reporting-tool             # TG3 — tools/coverage_report.py
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: regression-gate-and-report                   # TG4 — byte-identical + full-suite gate
+    claude_code_subagent: determinism-auditor
+    standards:
+      - global/hydro-art-invariants.md

@@ -20,3 +20,19 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 88
+
+# Coverage is scoped to src/ and honors the existing `# pragma: no cover` markers on
+# env-dependent import guards. GDAL/network/subprocess seam bodies (e.g. counties.load,
+# download fetch, loading GDAL read, server handlers) are offline-untestable by design and
+# are covered instead by injected fakes at their call sites — see the Epoch 20 report.
+[tool.coverage.run]
+source = ["src"]
+branch = false
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "\\.\\.\\.",
+]
