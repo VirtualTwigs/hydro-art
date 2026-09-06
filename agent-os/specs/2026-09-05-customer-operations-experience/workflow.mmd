@@ -1,0 +1,26 @@
+%% Hydro-Art customer-to-operations workflow.
+%% Intended for Mermaid-capable Markdown viewers and FigJam import.
+flowchart LR
+    visitor([Prospective buyer]) --> splash[Public splash page]
+    splash --> catalog[Artifact catalog]
+    catalog --> choose[Product and place selection]
+    choose --> proposal[Proposal cart]
+    proposal --> proof[Expectation proof]
+    proof --> submit[Email and request submitted]
+    submit --> intake[Operations intake queue]
+    intake --> valid{Scope and rights valid?}
+    valid -->|No| clarify[Clarify or decline]
+    clarify --> visitor
+    valid -->|Yes| order[(Order record)]
+    order --> brief[Production brief]
+    brief --> recipe[Versioned render recipe]
+    recipe --> job[Render and export job]
+    job --> qa{Visual and provenance QA?}
+    qa -->|Needs work| brief
+    qa -->|Pass| asset[(Asset library)]
+    asset --> proofSend[Proof email and review link]
+    proofSend --> approve{Buyer approves?}
+    approve -->|Revision| brief
+    approve -->|Yes| deliver[Deliver files or send print to fulfillment]
+    deliver --> archive[Archive manifest and outcomes]
+    archive --> complete([Buyer owns a documented artifact])

@@ -1,0 +1,26 @@
+/* Shared editorial foundation for customer-facing Hydro-Art surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=DM+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap');
+
+:root {
+  --paper: #ebe9df;
+  --paper-bright: #f8f6ee;
+  --ink: #182622;
+  --muted: #53625b;
+  --line: #b5bdb3;
+  --panel: #f4f2ea;
+  --panel-2: #ebeae1;
+  --panel-3: #ffffff;
+  --accent: #236c6a;
+  --accent-dim: #7eaaa1;
+  --ok: #236c6a;
+  --warn: #9b6226;
+  --danger: #9e4438;
+  --ui-sans: "Atkinson Hyperlegible", Arial, sans-serif;
+  --ui-serif: "Source Serif 4", Georgia, serif;
+  --ui-mono: "DM Mono", ui-monospace, monospace;
+}
+
+.editorial-type { font-family: var(--ui-sans); }
+.editorial-kicker {
+  font: 10px/1.4 var(--ui-mono); letter-spacing: .1em; text-transform: uppercase;
+}
