@@ -48,11 +48,13 @@ __all__ = [
     "REGIME_SNOW_MIN",
     "REGIME_RAIN_MAX",
     "SnowRegime",
+    "TimingTrend",
     "MeltTimingTrend",
     "snow_fraction",
     "classify_regime",
     "snow_regime",
     "melt_timing_trend",
+    "center_of_timing_trend",
     "FlowValidationError",
     "ValidationReport",
     "bias",
@@ -380,6 +382,22 @@ class SnowRegime:
 
 
 @dataclass(frozen=True)
+class TimingTrend:
+    """Decadal drift of a hydrograph's center of timing (roadmap #70).
+
+    ``slope_months_per_year`` is Sen's slope on the per-year center-of-timing;
+    ``days_per_decade`` restates it in days (negative = the peak arriving earlier);
+    ``trend`` is the Mann-Kendall verdict.
+    """
+
+    years: tuple[int, ...]
+    center_months: tuple[float, ...]
+    slope_months_per_year: float
+    days_per_decade: float
+    trend: str
+
+
+@dataclass(frozen=True)
 class MeltTimingTrend:
     """Decadal drift of the melt-pulse center of timing (roadmap #69)."""
 
@@ -454,25 +472,44 @@ def melt_timing_trend(yearly_melt, years=None) -> MeltTimingTrend:
     over those centers. ``days_per_decade`` = slope × 10 × mean-days-per-month;
     negative means the pulse is arriving earlier. Needs ≥ 3 years.
     """
-    if isinstance(yearly_melt, Mapping):
+    trend = center_of_timing_trend(yearly_melt, years)
+    return MeltTimingTrend(**vars(trend))
+
+
+def _coerce_year_rows(yearly, years, name: str):
+    """Coerce a ``{year:[12]}`` mapping or ``[years,12]`` matrix to ``(years, rows)``."""
+    if isinstance(yearly, Mapping):
         if years is not None:
             raise FlowMetricsError("pass years only with a matrix, not a mapping.")
-        ordered = sorted(int(y) for y in yearly_melt)
-        rows = np.vstack([_validate_monthly(yearly_melt[y], f"melt[{y}]") for y in ordered])
-        year_tuple = tuple(ordered)
-    else:
-        rows = _validate_monthly(yearly_melt, "yearly_melt")
-        if rows.ndim != 2:
-            raise FlowMetricsError("matrix yearly_melt must have shape [years,12].")
-        year_tuple = tuple(int(y) for y in years) if years is not None else tuple(range(len(rows)))
-        if len(year_tuple) != len(rows):
-            raise FlowMetricsError("years length must match the number of rows.")
+        ordered = sorted(int(y) for y in yearly)
+        rows = np.vstack([_validate_monthly(yearly[y], f"{name}[{y}]") for y in ordered])
+        return tuple(ordered), rows
+    rows = _validate_monthly(yearly, name)
+    if rows.ndim != 2:
+        raise FlowMetricsError(f"matrix {name} must have shape [years,12].")
+    year_tuple = tuple(int(y) for y in years) if years is not None else tuple(range(len(rows)))
+    if len(year_tuple) != len(rows):
+        raise FlowMetricsError("years length must match the number of rows.")
+    return year_tuple, rows
+
+
+def center_of_timing_trend(yearly_flow, years=None) -> TimingTrend:
+    """Decadal drift of the whole-hydrograph center of timing (roadmap #70).
+
+    ``yearly_flow`` is a ``{year:[12]}`` mapping (sorted by year) or a ``[years,12]``
+    matrix of one aggregated hydrograph per calendar year. Computes each year's
+    center-of-timing, then Sen's slope (months/year) and the Mann-Kendall verdict
+    over those centers. ``days_per_decade`` = slope × 10 × mean-days-per-month;
+    negative means the peak is arriving earlier ("the peak arrives N days earlier
+    per decade"). Needs ≥ 3 years.
+    """
+    year_tuple, rows = _coerce_year_rows(yearly_flow, years, "yearly_flow")
     if len(rows) < 3:
-        raise FlowMetricsError("melt_timing_trend needs at least 3 years.")
+        raise FlowMetricsError("center_of_timing_trend needs at least 3 years.")
     centers = center_of_timing(rows)
     slope = sens_slope(centers)
     verdict = mann_kendall(centers)
-    return MeltTimingTrend(
+    return TimingTrend(
         years=year_tuple,
         center_months=tuple(float(c) for c in centers),
         slope_months_per_year=float(slope),

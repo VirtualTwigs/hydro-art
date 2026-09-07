@@ -19,7 +19,14 @@ One roadmap item at a time. Only Task Group 1 (#69) is implemented this session.
 - [x] 1.5 Tick roadmap #69; write `implementation/report.md`.
 - [x] 1.6 Full offline suite for regressions; confirm no `PIPELINE_STAGES` touched (2D byte-identical).
 
-## Task Group 2 — #70 Center-of-timing drift panel · not started
+## Task Group 2 — #70 Center-of-timing drift panel
+
+- [x] 2.1 Tests (`tests/test_flow_metrics.py`) — `center_of_timing_trend` detects an earlier-peak
+  shift (neg `days_per_decade`, `trend=="decreasing"`) and a later-peak shift (pos, `"increasing"`);
+  agrees with `melt_timing_trend` on the same input; `<3` years errors.
+- [x] 2.2 `src/flow_metrics.py` — add `TimingTrend` + `center_of_timing_trend`; extract shared
+  `_coerce_year_rows`; refactor `melt_timing_trend` to delegate (keep `MeltTimingTrend` API). Export.
+- [x] 2.3 Full offline suite green (865); roadmap #70 ticked; report updated. No `PIPELINE_STAGES`.
 ## Task Group 3 — #71 Analog-year finder · not started
 ## Task Group 4 — #72 Drought/flood record book · not started
 ## Task Group 5 — #73 Flow-duration-curve panel · not started

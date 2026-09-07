@@ -913,9 +913,15 @@ center-of-timing), and `MeltTimingTrend`+`melt_timing_trend` (Sen's slope + Mann
 melt CT → months/year and days/decade; negative = pulse arriving earlier). No `monthly_flow` import
 in `flow_metrics` (callers pass arrays). Spec `agent-os/specs/2026-09-07-creative-report-analytics/`.
 Suite 861 passing; no `PIPELINE_STAGES` touched (2D byte-identical). Follow-ons #70–#76.)
-70. [ ] Center-of-timing drift as a hero metric — Promote the existing `center_of_timing()` into a
+70. [x] Center-of-timing drift as a hero metric — Promote the existing `center_of_timing()` into a
 dedicated trend panel (Mann-Kendall + Sen's slope on CT itself): "the peak arrives N days earlier
 per decade," one of the most legible western-hydrology climate signals. `S`
+(Shipped 2026-09-07. `src/flow_metrics.py` gains `TimingTrend` + `center_of_timing_trend(yearly_flow,
+years=None)` — per-year whole-hydrograph center-of-timing → Sen's slope (months/yr) + Mann-Kendall
+verdict → `days_per_decade` (negative = peak arriving earlier). Accepts a `{year:[12]}` mapping or
+`[years,12]` matrix. Shares the extracted `_coerce_year_rows` helper with #69's `melt_timing_trend`,
+which now delegates to it (`MeltTimingTrend` API unchanged). Numpy-only, no pipeline wiring. Suite
+865 passing; 2D default byte-identical. Follow-ons #71–#76.)
 
 **Phase 17.2 — Records & distribution**
 

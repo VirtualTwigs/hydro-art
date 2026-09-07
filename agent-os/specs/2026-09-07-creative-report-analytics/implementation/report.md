@@ -46,4 +46,36 @@ Targeted run: `tests/test_monthly_flow.py tests/test_flow_metrics.py` → **61 p
 
 ## Not done (by design — later items)
 No `tools/report_common.py` figure and no `web/report.html` panel yet — those land with #76
-(report assembly & web surfacing). Items #70–#75 remain unchecked in `tasks.md`.
+(report assembly & web surfacing). Items #71–#75 remain unchecked in `tasks.md`.
+
+---
+
+# Implementation report — #70 Center-of-timing drift as a hero metric
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.1, item #70** · one roadmap item, then STOP.
+
+## What shipped
+`src/flow_metrics.py`:
+- `TimingTrend` dataclass (years, center_months, slope_months_per_year, days_per_decade, trend).
+- `center_of_timing_trend(yearly_flow, years=None)` — per-year whole-hydrograph center-of-timing →
+  `sens_slope` (months/yr) + `mann_kendall` verdict → `days_per_decade` (negative = peak arriving
+  earlier: "the peak arrives N days earlier per decade"). Accepts a `{year:[12]}` mapping or a
+  `[years,12]` matrix. Needs ≥ 3 years.
+- Extracted `_coerce_year_rows` (mapping/matrix → `(years, rows)`), now shared with #69's
+  `melt_timing_trend`, which delegates to `center_of_timing_trend` and repackages into
+  `MeltTimingTrend` — **#69's public API and tests unchanged** (a test asserts the two agree on the
+  same input). Exported `TimingTrend`/`center_of_timing_trend` in `__all__`.
+
+## Tests (`tests/test_flow_metrics.py`, +4)
+Earlier-peak shift → negative `days_per_decade`, `trend=="decreasing"` (6 decades); later-peak shift
+→ positive, `"increasing"` (6 years, past Mann-Kendall significance); agreement with
+`melt_timing_trend`; `<3` years raises.
+
+Targeted run: `test_flow_metrics.py test_monthly_flow.py` → **65 passed**.
+
+## Regression / discipline
+Full offline suite **865 passed**. No `PIPELINE_STAGES` edit → 2D default byte-for-byte identical.
+`flow_metrics` stays numpy-only.
+
+## Not done (later items)
+`tools`/`web` surfacing lands with #76. Items #71–#75 remain unchecked.

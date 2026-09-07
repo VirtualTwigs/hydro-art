@@ -16,10 +16,12 @@ from src.flow_metrics import (
     FlowValidationError,
     MeltTimingTrend,
     SnowRegime,
+    TimingTrend,
     align_index,
     anomaly,
     bias,
     center_of_timing,
+    center_of_timing_trend,
     classify_regime,
     correlate,
     flashiness,
@@ -477,3 +479,51 @@ def test_melt_timing_trend_accepts_matrix_and_needs_three_years() -> None:
     assert trend.years == (0, 1, 2)
     with pytest.raises(FlowMetricsError):
         melt_timing_trend(mat[:2])   # < 3 years
+
+
+# --- #70 center-of-timing drift trend ----------------------------------------
+
+def test_center_of_timing_trend_detects_earlier_peak() -> None:
+    # 6 decades where the hydrograph peak moves one month earlier each step.
+    yearly = {}
+    for k, year in enumerate(range(1960, 2020, 10)):
+        flow = np.full(12, 5.0)          # baseline flow all year
+        peak_month = 7 - k               # 7,6,5,4,3,2 (1-based)
+        flow[peak_month - 1] += 100.0    # dominant peak
+        yearly[year] = flow
+    trend = center_of_timing_trend(yearly)
+    assert isinstance(trend, TimingTrend)
+    assert trend.years == tuple(range(1960, 2020, 10))
+    assert trend.slope_months_per_year < 0
+    assert trend.days_per_decade < 0     # peak arrives earlier
+    assert trend.trend == "decreasing"
+
+
+def test_center_of_timing_trend_detects_later_peak() -> None:
+    mat = np.full((6, 12), 2.0)
+    for i in range(6):
+        mat[i, 2 + i] += 50.0            # peak drifts Mar→Aug (later)
+    trend = center_of_timing_trend(mat)
+    assert trend.years == (0, 1, 2, 3, 4, 5)
+    assert trend.slope_months_per_year > 0
+    assert trend.days_per_decade > 0
+    assert trend.trend == "increasing"
+
+
+def test_center_of_timing_trend_matches_melt_on_same_input() -> None:
+    # center_of_timing_trend is the general primitive; melt_timing_trend is the
+    # same computation on the melt bucket. Same input → same numbers.
+    mat = np.zeros((5, 12))
+    for i in range(5):
+        mat[i, 5 - i] = 10.0
+    general = center_of_timing_trend(mat)
+    melt = melt_timing_trend(mat)
+    assert general.center_months == melt.center_months
+    assert general.slope_months_per_year == melt.slope_months_per_year
+    assert general.days_per_decade == melt.days_per_decade
+    assert general.trend == melt.trend
+
+
+def test_center_of_timing_trend_needs_three_years() -> None:
+    with pytest.raises(FlowMetricsError):
+        center_of_timing_trend(np.ones((2, 12)))
