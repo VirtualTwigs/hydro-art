@@ -925,9 +925,15 @@ which now delegates to it (`MeltTimingTrend` API unchanged). Numpy-only, no pipe
 
 **Phase 17.2 — Records & distribution**
 
-71. [ ] Analog-year finder — Rank the most-similar historical years to any target year via
+71. [x] Analog-year finder — Rank the most-similar historical years to any target year via
 `correlate()`/`pearson_r()` over monthly-shape vectors ("2015 looked most like 1934") — a
 personal, engaging hook for a buyer's own watershed. `S`
+(Shipped 2026-09-07. `src/flow_metrics.py` gains `AnalogYear` + `analog_years(series, target,
+n=None)` — ranks every year in a `{year:[12]}` series by Pearson correlation of its 12-month vector
+to the target's (reuses `pearson_r`; mean/scale-invariant, so same seasonal *shape* matches even at
+different magnitude). Constant year → `nan`, sorts last; ties break by ascending year (deterministic);
+`n` keeps the top matches. Numpy-only, no pipeline wiring. Suite 869 passing; 2D default byte-identical.
+Follow-ons #72–#76.)
 72. [ ] Drought / flood record book — Rank years by summer-low and by peak using `percentile_rank()`
 ("driest summer in 130 years," "top-5 wettest") over the full 1895– record. `S`
 73. [ ] Flow-duration-curve panel — Plot the already-computed `flow_duration()` as a log-scale FDC

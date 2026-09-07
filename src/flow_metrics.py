@@ -50,11 +50,13 @@ __all__ = [
     "SnowRegime",
     "TimingTrend",
     "MeltTimingTrend",
+    "AnalogYear",
     "snow_fraction",
     "classify_regime",
     "snow_regime",
     "melt_timing_trend",
     "center_of_timing_trend",
+    "analog_years",
     "FlowValidationError",
     "ValidationReport",
     "bias",
@@ -516,6 +518,65 @@ def center_of_timing_trend(yearly_flow, years=None) -> TimingTrend:
         days_per_decade=float(slope * 10.0 * _DAYS_PER_MONTH),
         trend=verdict.trend,
     )
+
+
+# --- #71 analog-year finder ----------------------------------------------
+#
+# Rank the historical years whose monthly hydrograph most resembles a target
+# year's ("2015 looked most like 1934"). Similarity is the Pearson correlation of
+# the two 12-month vectors, which removes mean and scale — so a wet year and a dry
+# year with the same *seasonal shape* still read as analogs. Reuses ``pearson_r``.
+
+
+@dataclass(frozen=True)
+class AnalogYear:
+    """A historical year and its monthly-shape similarity to a target year."""
+
+    year: int
+    similarity: float
+
+
+def _shape_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    """Pearson correlation of two 12-month vectors; ``nan`` when undefined."""
+    try:
+        return pearson_r(a, b)
+    except FlowValidationError:
+        return float("nan")
+
+
+def analog_years(series: Mapping[int, object], target: int, *, n: int | None = None) -> list[AnalogYear]:
+    """Rank the years in ``series`` by monthly-shape similarity to ``target``.
+
+    ``series`` is a ``{year: [12]}`` mapping of one aggregated hydrograph per year.
+    Returns :class:`AnalogYear` records for every year except ``target``, sorted by
+    descending Pearson correlation of the 12-month vectors (a constant year yields
+    ``nan`` and sorts last); ties break by ascending year for determinism. ``n``
+    keeps only the top matches.
+    """
+    validated: dict[int, np.ndarray] = {}
+    for year, vec in series.items():
+        a = _validate_monthly(vec, f"series[{year}]")
+        if a.ndim != 1:
+            raise FlowMetricsError("analog_years takes a {year:[12]} series of single hydrographs.")
+        validated[int(year)] = a
+    if int(target) not in validated:
+        raise FlowMetricsError(f"target year {target} not in series.")
+    if n is not None and n < 1:
+        raise FlowMetricsError("n must be >= 1.")
+    tv = validated[int(target)]
+    ranked = [
+        AnalogYear(year=y, similarity=_shape_similarity(tv, v))
+        for y, v in validated.items()
+        if y != int(target)
+    ]
+    ranked.sort(
+        key=lambda a: (
+            np.isnan(a.similarity),
+            -a.similarity if not np.isnan(a.similarity) else 0.0,
+            a.year,
+        )
+    )
+    return ranked[:n] if n is not None else ranked
 
 
 # --- #50/#51 model-vs-observed validation + climate-index teleconnection ---

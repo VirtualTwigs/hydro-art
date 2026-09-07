@@ -14,10 +14,12 @@ import pytest
 from src.flow_metrics import (
     FlowMetricsError,
     FlowValidationError,
+    AnalogYear,
     MeltTimingTrend,
     SnowRegime,
     TimingTrend,
     align_index,
+    analog_years,
     anomaly,
     bias,
     center_of_timing,
@@ -527,3 +529,56 @@ def test_center_of_timing_trend_matches_melt_on_same_input() -> None:
 def test_center_of_timing_trend_needs_three_years() -> None:
     with pytest.raises(FlowMetricsError):
         center_of_timing_trend(np.ones((2, 12)))
+
+
+# --- #71 analog-year finder --------------------------------------------------
+
+def _spring(scale: float = 1.0) -> np.ndarray:
+    v = np.array([1, 1, 2, 6, 9, 7, 4, 2, 1, 1, 1, 1], dtype=float)
+    return v * scale
+
+
+def _winter() -> np.ndarray:
+    return np.array([9, 8, 6, 3, 1, 1, 1, 1, 2, 4, 7, 9], dtype=float)
+
+
+def test_analog_years_ranks_by_shape_not_magnitude() -> None:
+    series = {
+        2000: _spring(1.0),        # target
+        1934: _spring(3.0),        # same shape, 3x magnitude → most similar (r≈1)
+        1988: _spring(1.0) + np.array([0, 0, 0, 1, -1, 1, -1, 0, 0, 0, 0, 0.0]),  # near
+        1977: _winter(),           # anti-phase → least similar
+    }
+    ranked = analog_years(series, 2000)
+    assert [a.year for a in ranked] == [1934, 1988, 1977]
+    assert isinstance(ranked[0], AnalogYear)
+    assert ranked[0].similarity == pytest.approx(1.0)   # scale-invariant match
+    assert ranked[-1].similarity < ranked[0].similarity
+
+
+def test_analog_years_top_n_and_target_excluded() -> None:
+    series = {y: _spring(1.0 + 0.1 * y) for y in range(5)}
+    ranked = analog_years(series, 0, n=2)
+    assert len(ranked) == 2
+    assert all(a.year != 0 for a in ranked)
+
+
+def test_analog_years_constant_year_sorts_last_as_nan() -> None:
+    series = {
+        2000: _spring(1.0),
+        1950: _spring(2.0),
+        1960: np.full(12, 5.0),   # constant → pearson nan
+    }
+    ranked = analog_years(series, 2000)
+    assert ranked[0].year == 1950
+    assert ranked[-1].year == 1960
+    assert np.isnan(ranked[-1].similarity)
+
+
+def test_analog_years_guards() -> None:
+    with pytest.raises(FlowMetricsError):
+        analog_years({2000: _spring()}, 1999)          # target not in series
+    with pytest.raises(FlowMetricsError):
+        analog_years({2000: np.ones((2, 12))}, 2000)   # not single [12] hydrographs
+    with pytest.raises(FlowMetricsError):
+        analog_years({2000: _spring(), 2001: _spring()}, 2000, n=0)  # n < 1

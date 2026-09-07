@@ -27,7 +27,14 @@ One roadmap item at a time. Only Task Group 1 (#69) is implemented this session.
 - [x] 2.2 `src/flow_metrics.py` — add `TimingTrend` + `center_of_timing_trend`; extract shared
   `_coerce_year_rows`; refactor `melt_timing_trend` to delegate (keep `MeltTimingTrend` API). Export.
 - [x] 2.3 Full offline suite green (865); roadmap #70 ticked; report updated. No `PIPELINE_STAGES`.
-## Task Group 3 — #71 Analog-year finder · not started
+## Task Group 3 — #71 Analog-year finder
+
+- [x] 3.1 Tests (`tests/test_flow_metrics.py`) — `analog_years` ranks by monthly *shape* not
+  magnitude (scale-invariant match r≈1 first, anti-phase last); top-`n` truncation excludes target;
+  constant year → `nan` sorts last; target-not-in-series / non-`[12]` / `n<1` guards.
+- [x] 3.2 `src/flow_metrics.py` — add `AnalogYear` + `analog_years(series, target, n=None)` over
+  `pearson_r`, deterministic nan-last sort. Export.
+- [x] 3.3 Full offline suite green (869); roadmap #71 ticked; report updated. No `PIPELINE_STAGES`.
 ## Task Group 4 — #72 Drought/flood record book · not started
 ## Task Group 5 — #73 Flow-duration-curve panel · not started
 ## Task Group 6 — #74 ENSO/PDO composite hydrographs · not started

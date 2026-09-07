@@ -79,3 +79,33 @@ Full offline suite **865 passed**. No `PIPELINE_STAGES` edit → 2D default byte
 
 ## Not done (later items)
 `tools`/`web` surfacing lands with #76. Items #71–#75 remain unchecked.
+
+---
+
+# Implementation report — #71 Analog-year finder
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.2, item #71** · one roadmap item, then STOP.
+
+## What shipped
+`src/flow_metrics.py`:
+- `AnalogYear` dataclass (`year`, `similarity`).
+- `analog_years(series, target, *, n=None)` — ranks every year in a `{year:[12]}` series by Pearson
+  correlation of its 12-month vector to the target year's, via `pearson_r`. Correlation removes
+  mean/scale, so a wet year and a dry year with the same seasonal *shape* still read as analogs
+  ("2015 looked most like 1934"). A constant year → `nan` similarity and sorts last; ties break by
+  ascending year (deterministic); `n` keeps the top matches. Guards: target must be in the series,
+  each value must be `[12]`, `n >= 1`. Private `_shape_similarity` maps the degenerate
+  `FlowValidationError` to `nan`. Exported both names.
+
+## Tests (`tests/test_flow_metrics.py`, +4)
+Shape-not-magnitude ranking (scale-invariant match first, anti-phase last); top-`n` excludes target;
+constant year → `nan` sorts last; the three guard errors.
+
+Targeted run: `test_flow_metrics.py` → **60 passed**.
+
+## Regression / discipline
+Full offline suite **869 passed**. No `PIPELINE_STAGES` edit → 2D default byte-for-byte identical.
+`flow_metrics` stays numpy-only.
+
+## Not done (later items)
+`tools`/`web` surfacing lands with #76. Items #72–#75 remain unchecked.
