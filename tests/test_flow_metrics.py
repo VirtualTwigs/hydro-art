@@ -14,16 +14,20 @@ import pytest
 from src.flow_metrics import (
     FlowMetricsError,
     FlowValidationError,
+    MeltTimingTrend,
+    SnowRegime,
     align_index,
     anomaly,
     bias,
     center_of_timing,
+    classify_regime,
     correlate,
     flashiness,
     flow_duration,
     longitudinal_profile,
     low_flow,
     mann_kendall,
+    melt_timing_trend,
     nash_sutcliffe,
     outlet_index,
     peak_flow,
@@ -34,6 +38,8 @@ from src.flow_metrics import (
     seasonal_ratio,
     seasonal_skill,
     sens_slope,
+    snow_fraction,
+    snow_regime,
     subset_series,
     validate,
 )
@@ -390,3 +396,84 @@ def test_longitudinal_profile_guards() -> None:
 def test_seasonal_skill_shape_guard() -> None:
     with pytest.raises(FlowValidationError):
         seasonal_skill(np.ones(12), np.ones(11))           # model/obs shape mismatch
+
+
+# --- #69 snow-vs-rain regime -------------------------------------------------
+
+def test_snow_fraction_scalar_and_vector() -> None:
+    # Snow-heavy: most available water is melt. Rain-heavy: almost none.
+    snow_rain = np.array([1.0] * 6 + [9.0] * 6)   # melt bucket, sum 60
+    snow_melt = np.array([9.0] * 6 + [1.0] * 6)   # rain bucket, sum 60 -> frac 0.5
+    assert snow_fraction(snow_melt, snow_rain) == pytest.approx(0.5)
+    # Vectorized [n,12]: reach 0 all-melt (frac 1), reach 1 all-rain (frac 0).
+    rain = np.array([[0.0] * 12, [5.0] * 12])
+    melt = np.array([[5.0] * 12, [0.0] * 12])
+    np.testing.assert_allclose(snow_fraction(rain, melt), [1.0, 0.0])
+
+
+def test_snow_fraction_all_zero_is_zero() -> None:
+    assert snow_fraction(np.zeros(12), np.zeros(12)) == 0.0
+
+
+def test_classify_regime_boundaries_and_labels() -> None:
+    assert classify_regime(0.5) == "snowmelt"
+    assert classify_regime(0.4) == "snowmelt"      # >= snow_min
+    assert classify_regime(0.3) == "transitional"
+    assert classify_regime(0.2) == "rain"          # <= rain_max
+    assert classify_regime(0.05) == "rain"
+    labels = classify_regime(np.array([0.9, 0.3, 0.1]))
+    assert list(labels) == ["snowmelt", "transitional", "rain"]
+
+
+def test_classify_regime_bad_thresholds() -> None:
+    with pytest.raises(FlowMetricsError):
+        classify_regime(0.5, snow_min=0.2, rain_max=0.4)   # rain_max >= snow_min
+    with pytest.raises(FlowMetricsError):
+        classify_regime(0.5, rain_max=-0.1)                # out of [0,1]
+
+
+def test_snow_regime_label_and_melt_center() -> None:
+    # Spring-melt watershed: melt concentrated in Apr-Jun (months 4-6), rain small.
+    rain = np.array([2.0] * 12)
+    melt = np.zeros(12)
+    melt[3:6] = 30.0   # Apr,May,Jun
+    reg = snow_regime(rain, melt)
+    assert isinstance(reg, SnowRegime)
+    assert reg.label == "snowmelt"
+    assert reg.snow_fraction == pytest.approx(90.0 / (90.0 + 24.0))
+    # Center of timing of the melt pulse sits in May (month 5).
+    assert reg.melt_center_month == pytest.approx(5.0)
+
+
+def test_snow_regime_no_melt_center_is_nan() -> None:
+    reg = snow_regime(np.array([5.0] * 12), np.zeros(12))
+    assert reg.label == "rain"
+    assert np.isnan(reg.melt_center_month)
+
+
+def test_melt_timing_trend_detects_earlier_shift() -> None:
+    # Build 6 decades where the melt pulse moves one month earlier each step:
+    # center of timing drifts from ~June down to ~January.
+    yearly = {}
+    for k, year in enumerate(range(1960, 2020, 10)):
+        melt = np.zeros(12)
+        peak_month = 6 - k              # 6,5,4,3,2,1 (1-based)
+        melt[peak_month - 1] = 100.0
+        yearly[year] = melt
+    trend = melt_timing_trend(yearly)
+    assert isinstance(trend, MeltTimingTrend)
+    assert trend.years == tuple(range(1960, 2020, 10))
+    assert trend.slope_months_per_year < 0
+    assert trend.days_per_decade < 0      # pulse arrives earlier
+    assert trend.trend == "decreasing"
+    assert trend.center_months[0] == pytest.approx(6.0)
+
+
+def test_melt_timing_trend_accepts_matrix_and_needs_three_years() -> None:
+    mat = np.zeros((3, 12))
+    for i in range(3):
+        mat[i, 4 - i] = 10.0
+    trend = melt_timing_trend(mat)
+    assert trend.years == (0, 1, 2)
+    with pytest.raises(FlowMetricsError):
+        melt_timing_trend(mat[:2])   # < 3 years

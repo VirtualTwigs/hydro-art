@@ -45,6 +45,14 @@ __all__ = [
     "subset_series",
     "outlet_index",
     "longitudinal_profile",
+    "REGIME_SNOW_MIN",
+    "REGIME_RAIN_MAX",
+    "SnowRegime",
+    "MeltTimingTrend",
+    "snow_fraction",
+    "classify_regime",
+    "snow_regime",
+    "melt_timing_trend",
     "FlowValidationError",
     "ValidationReport",
     "bias",
@@ -345,6 +353,132 @@ def longitudinal_profile(accum_flow, hydroseq, dnhydroseq, path) -> np.ndarray:
             )
     rows = [index_of[h] for h in path]
     return accum[rows]
+
+
+# --- #69 snow-vs-rain regime signature -----------------------------------
+#
+# The disaggregation model (``src.monthly_flow.snow_available_components``) splits
+# each reach's monthly available water into a rain bucket and a snowmelt bucket.
+# These helpers turn that split into a report story: what share of a watershed's
+# water is snowmelt, whether it reads as snowmelt-/rain-dominated, and whether the
+# melt pulse is arriving earlier across the decades ("your river is becoming a rain
+# river"). Numpy-only; callers pass the rain/melt arrays, so this module never
+# imports ``monthly_flow``.
+
+REGIME_SNOW_MIN = 0.4   # snowmelt share >= this → snowmelt-dominated
+REGIME_RAIN_MAX = 0.2   # snowmelt share <= this → rain-dominated
+_DAYS_PER_MONTH = 30.4368   # mean Gregorian month, for months→days conversion
+
+
+@dataclass(frozen=True)
+class SnowRegime:
+    """A watershed's snow-vs-rain verdict for one aggregated year."""
+
+    snow_fraction: float
+    label: str
+    melt_center_month: float
+
+
+@dataclass(frozen=True)
+class MeltTimingTrend:
+    """Decadal drift of the melt-pulse center of timing (roadmap #69)."""
+
+    years: tuple[int, ...]
+    center_months: tuple[float, ...]
+    slope_months_per_year: float
+    days_per_decade: float
+    trend: str
+
+
+def snow_fraction(rain, melt) -> float | np.ndarray:
+    """Annual snowmelt share of available water: ``Σmelt / Σ(rain + melt)``.
+
+    ``[12]`` inputs → float; ``[n,12]`` → ``[n]``. An all-zero year → ``0.0`` (no
+    division warning). Inputs must share shape.
+    """
+    r = _validate_monthly(rain, "rain")
+    m = _validate_monthly(melt, "melt")
+    if r.shape != m.shape:
+        raise FlowMetricsError(f"rain {r.shape} and melt {m.shape} must share shape.")
+    axis = r.ndim - 1
+    melt_sum = m.sum(axis=axis)
+    total = r.sum(axis=axis) + melt_sum
+    frac = np.divide(melt_sum, total, out=np.zeros_like(melt_sum), where=total > 0)
+    return float(frac) if r.ndim == 1 else frac
+
+
+def classify_regime(
+    fraction, *, snow_min: float = REGIME_SNOW_MIN, rain_max: float = REGIME_RAIN_MAX
+) -> str | np.ndarray:
+    """Label a snowmelt ``fraction`` snowmelt / transitional / rain.
+
+    ``fraction >= snow_min`` → ``"snowmelt"``; ``<= rain_max`` → ``"rain"``; else
+    ``"transitional"``. Scalar → ``str``; array → object ``ndarray`` of labels.
+    """
+    if not (0.0 <= rain_max < snow_min <= 1.0):
+        raise FlowMetricsError(
+            f"require 0 <= rain_max ({rain_max}) < snow_min ({snow_min}) <= 1."
+        )
+    f = np.asarray(fraction, dtype=float)
+    labels = np.where(
+        f >= snow_min, "snowmelt", np.where(f <= rain_max, "rain", "transitional")
+    )
+    return str(labels) if f.ndim == 0 else labels.astype(object)
+
+
+def snow_regime(
+    rain, melt, *, snow_min: float = REGIME_SNOW_MIN, rain_max: float = REGIME_RAIN_MAX
+) -> SnowRegime:
+    """Snow-vs-rain verdict for one aggregated watershed (``[12]`` rain & melt).
+
+    Combines :func:`snow_fraction`, :func:`classify_regime`, and the flow-weighted
+    center month of the **melt** pulse (via :func:`center_of_timing`). An all-zero
+    melt pulse → ``melt_center_month = nan``.
+    """
+    r = _validate_monthly(rain, "rain")
+    m = _validate_monthly(melt, "melt")
+    if r.ndim != 1 or m.ndim != 1:
+        raise FlowMetricsError("snow_regime takes single [12] rain and melt vectors.")
+    frac = snow_fraction(r, m)
+    label = classify_regime(frac, snow_min=snow_min, rain_max=rain_max)
+    center = float(center_of_timing(m)) if m.sum() > 0 else float("nan")
+    return SnowRegime(snow_fraction=float(frac), label=str(label), melt_center_month=center)
+
+
+def melt_timing_trend(yearly_melt, years=None) -> MeltTimingTrend:
+    """Decadal drift of the melt-pulse center of timing.
+
+    ``yearly_melt`` is a ``{year: [12]}`` mapping (sorted by year) or a ``[years,12]``
+    matrix of the melt pulse per calendar year. Computes each year's melt
+    center-of-timing, then Sen's slope (months/year) and the Mann-Kendall verdict
+    over those centers. ``days_per_decade`` = slope × 10 × mean-days-per-month;
+    negative means the pulse is arriving earlier. Needs ≥ 3 years.
+    """
+    if isinstance(yearly_melt, Mapping):
+        if years is not None:
+            raise FlowMetricsError("pass years only with a matrix, not a mapping.")
+        ordered = sorted(int(y) for y in yearly_melt)
+        rows = np.vstack([_validate_monthly(yearly_melt[y], f"melt[{y}]") for y in ordered])
+        year_tuple = tuple(ordered)
+    else:
+        rows = _validate_monthly(yearly_melt, "yearly_melt")
+        if rows.ndim != 2:
+            raise FlowMetricsError("matrix yearly_melt must have shape [years,12].")
+        year_tuple = tuple(int(y) for y in years) if years is not None else tuple(range(len(rows)))
+        if len(year_tuple) != len(rows):
+            raise FlowMetricsError("years length must match the number of rows.")
+    if len(rows) < 3:
+        raise FlowMetricsError("melt_timing_trend needs at least 3 years.")
+    centers = center_of_timing(rows)
+    slope = sens_slope(centers)
+    verdict = mann_kendall(centers)
+    return MeltTimingTrend(
+        years=year_tuple,
+        center_months=tuple(float(c) for c in centers),
+        slope_months_per_year=float(slope),
+        days_per_decade=float(slope * 10.0 * _DAYS_PER_MONTH),
+        trend=verdict.trend,
+    )
 
 
 # --- #50/#51 model-vs-observed validation + climate-index teleconnection ---

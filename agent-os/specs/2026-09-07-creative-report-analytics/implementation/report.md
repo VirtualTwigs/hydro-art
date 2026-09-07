@@ -1,0 +1,49 @@
+# Implementation report — #69 Snow-vs-rain regime signature
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.1, item #69** · one roadmap item, then STOP.
+
+## What shipped
+Surfaced the snow bucket the disaggregation model already computes and turned it into a
+report-ready regime story — all pure, numpy-only, offline-tested, nothing in `PIPELINE_STAGES`.
+
+### `src/monthly_flow.py`
+- New `snow_available_components(precip_mm, temp_c) -> (rain[n,12], melt[n,12])` — the two buckets
+  that previously summed inside `snow_available_water`. Same temperature-index physics, same
+  3-cycle spin-up (`pack` carried across cycles — the spin-up invariant preserved).
+- `snow_available_water` now returns `rain + melt` from the new function. **Byte-identical**: the
+  existing `test_snow_bucket_accumulates_cold_and_releases_warm` passes unchanged, and a new test
+  asserts `rain + melt == snow_available_water(...)` exactly (`np.array_equal`).
+- Exported `snow_available_components` in `__all__`.
+
+### `src/flow_metrics.py` (numpy-only; no `monthly_flow` import — callers pass arrays)
+- `snow_fraction(rain, melt)` — annual `Σmelt / Σ(rain+melt)`; `[12]`→float, `[n,12]`→`[n]`;
+  all-zero year → `0.0` (guarded divide).
+- `REGIME_SNOW_MIN=0.4`, `REGIME_RAIN_MAX=0.2` constants + `classify_regime(fraction, …)` →
+  `snowmelt` / `transitional` / `rain`; scalar→`str`, array→object `ndarray`; validates
+  `0 <= rain_max < snow_min <= 1`.
+- `SnowRegime` dataclass + `snow_regime(rain, melt, …)` — fraction, label, and the melt pulse's
+  center-of-timing (reusing `center_of_timing`; all-zero melt → `nan`).
+- `MeltTimingTrend` dataclass + `melt_timing_trend(yearly_melt, years=None)` — accepts a
+  `{year:[12]}` mapping or `[years,12]` matrix; per-year melt center-of-timing → `sens_slope`
+  (months/year) + `mann_kendall` verdict; `days_per_decade = slope × 10 × 30.4368`. Negative =
+  melt arriving earlier ("your river is becoming a rain river"). Needs ≥ 3 years.
+- All six names exported in `__all__`; added a `# --- #69 …` section header.
+
+## Tests
+- `tests/test_monthly_flow.py` (+3): components sum to available water (byte-identical), all-warm →
+  ~0 melt, cold→warm spike lands in the melt bucket not rain.
+- `tests/test_flow_metrics.py` (+8): `snow_fraction` scalar/vector/all-zero; `classify_regime`
+  boundaries, bad thresholds, array labels; `snow_regime` label + melt center; `melt_timing_trend`
+  detects an imposed earlier-each-decade shift (negative `days_per_decade`, `trend=="decreasing"`),
+  accepts a matrix, and errors on < 3 years.
+
+Targeted run: `tests/test_monthly_flow.py tests/test_flow_metrics.py` → **61 passed**.
+
+## Regression / discipline
+- Full offline suite: **861 passed** (no GDAL/network).
+- No `PIPELINE_STAGES` edit → 2D default render byte-for-byte identical.
+- `flow_metrics`/`monthly_flow` stay numpy-only; no `tools`/`web`/GDAL imports at module scope.
+
+## Not done (by design — later items)
+No `tools/report_common.py` figure and no `web/report.html` panel yet — those land with #76
+(report assembly & web surfacing). Items #70–#75 remain unchecked in `tasks.md`.

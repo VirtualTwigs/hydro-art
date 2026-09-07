@@ -38,6 +38,7 @@ __all__ = [
     "T_MELT",
     "T_MELT_FULL",
     "SPINUP_CYCLES",
+    "snow_available_components",
     "snow_available_water",
     "normalize_shape",
     "accumulate_downstream",
@@ -56,11 +57,15 @@ T_MELT_FULL = 6.0   # snowpack melts at full monthly rate at/above this
 SPINUP_CYCLES = 3   # repeat the 12-month cycle to reach periodic snowpack
 
 
-def snow_available_water(precip_mm: np.ndarray, temp_c: np.ndarray) -> np.ndarray:
-    """Monthly available water (rain + snowmelt) per reach, shape ``[n, 12]``.
+def snow_available_components(
+    precip_mm: np.ndarray, temp_c: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
+    """Split monthly available water into ``(rain, melt)`` buckets, each ``[n, 12]``.
 
-    Vectorized temperature-index snow bucket with spin-up. Inputs already in
-    physical units (mm, degC).
+    Vectorized temperature-index snow bucket with spin-up (identical physics to
+    :func:`snow_available_water`, which returns ``rain + melt``). Exposing the two
+    buckets separately lets the watershed report characterize a reach's snow-vs-rain
+    regime (roadmap #69). Inputs already in physical units (mm, degC).
     """
     n = precip_mm.shape[0]
     snow_frac = np.clip((T_ALL_RAIN - temp_c) / (T_ALL_RAIN - T_ALL_SNOW), 0.0, 1.0)
@@ -69,15 +74,25 @@ def snow_available_water(precip_mm: np.ndarray, temp_c: np.ndarray) -> np.ndarra
     rainfall = precip_mm - snowfall
 
     pack = np.zeros(n)
-    available = np.zeros((n, 12))
+    melt_out = np.zeros((n, 12))
     for _ in range(SPINUP_CYCLES):
-        available = np.zeros((n, 12))
+        melt_out = np.zeros((n, 12))
         for m in range(12):
             pack = pack + snowfall[:, m]
             melt = pack * melt_frac[:, m]
             pack = pack - melt
-            available[:, m] = rainfall[:, m] + melt
-    return available
+            melt_out[:, m] = melt
+    return rainfall, melt_out
+
+
+def snow_available_water(precip_mm: np.ndarray, temp_c: np.ndarray) -> np.ndarray:
+    """Monthly available water (rain + snowmelt) per reach, shape ``[n, 12]``.
+
+    Vectorized temperature-index snow bucket with spin-up. Inputs already in
+    physical units (mm, degC).
+    """
+    rain, melt = snow_available_components(precip_mm, temp_c)
+    return rain + melt
 
 
 def normalize_shape(available: np.ndarray) -> np.ndarray:

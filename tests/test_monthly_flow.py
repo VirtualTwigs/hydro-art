@@ -14,6 +14,7 @@ from src.monthly_flow import (
     accumulate_downstream,
     disaggregate_monthly,
     normalize_shape,
+    snow_available_components,
     snow_available_water,
 )
 
@@ -108,3 +109,39 @@ def test_snowmelt_headwater_shifts_downstream_peak():
     # Rain-only, the mouth would peak in Dec/Jan (month 11/0). Snowmelt pulls the
     # accumulated peak into spring/summer.
     assert 3 <= mouth_peak <= 7
+
+
+def test_snow_components_sum_to_available_water():
+    # #69: the rain + melt buckets must reconstruct snow_available_water exactly
+    # (the refactor is byte-identical), across a snowy and a rainy reach.
+    precip = np.array([[60.0] * 12, [40.0] * 12])
+    temp = np.array(
+        [[-5, -5, -5, 8, 8, 8, 10, 10, 10, 10, 10, 10], [12.0] * 12]
+    )
+    rain, melt = snow_available_components(precip, temp)
+    assert rain.shape == (2, 12)
+    assert melt.shape == (2, 12)
+    assert np.array_equal(rain + melt, snow_available_water(precip, temp))
+    # Both buckets are non-negative.
+    assert (rain >= 0).all()
+    assert (melt >= 0).all()
+
+
+def test_snow_components_all_warm_is_all_rain():
+    # Always-warm reach: no snowpack ever forms, so melt is ~0 and rain == precip.
+    precip = np.full((1, 12), 30.0)
+    temp = np.full((1, 12), 15.0)
+    rain, melt = snow_available_components(precip, temp)
+    assert np.allclose(melt, 0.0)
+    assert np.allclose(rain, precip)
+
+
+def test_snow_components_cold_then_warm_spike_is_melt_not_rain():
+    # Cold Jan-Mar builds a pack; the Apr spike must live in the MELT bucket, and
+    # the cold months' rain bucket is ~0 (all precip fell as snow).
+    precip = np.full((1, 12), 50.0)
+    temp = np.array([[-5, -5, -5, 8, 8, 8, 10, 10, 10, 10, 10, 10]], dtype=float)
+    rain, melt = snow_available_components(precip, temp)
+    assert rain[0, 0] < 1.0  # Jan precip was snow, not rain
+    assert melt[0, 3] > 100.0  # Apr releases the accumulated pack
+    assert rain[0, 3] <= 50.0 + 1e-9  # Apr rain is just that month's rainfall

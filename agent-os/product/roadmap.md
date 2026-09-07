@@ -901,10 +901,18 @@ attribution; PRISM stays A/B-only and non-sellable.
 
 **Phase 17.1 — Regime & timing signals**
 
-69. [ ] Snow-vs-rain regime signature — Surface the snow bucket the disaggregation already models
+69. [x] Snow-vs-rain regime signature — Surface the snow bucket the disaggregation already models
 (`src/monthly_flow.snow_available_water`) as a returned diagnostic (new pure function, no change to
 existing outputs) and classify each watershed snowmelt-dominated / rain-dominated / transitional,
 with melt-pulse timing shift across decades. The "your river is becoming a rain river" story. `M`
+(Shipped 2026-09-07. `src/monthly_flow.snow_available_components(precip,temp) → (rain,melt)` exposes
+the two buckets; `snow_available_water` now returns their sum — byte-identical (existing snow test
+unchanged). `src/flow_metrics.py` gains numpy-only `snow_fraction`, `classify_regime`
+(`REGIME_SNOW_MIN=0.4`/`REGIME_RAIN_MAX=0.2`), `SnowRegime`+`snow_regime` (fraction/label/melt
+center-of-timing), and `MeltTimingTrend`+`melt_timing_trend` (Sen's slope + Mann-Kendall on per-year
+melt CT → months/year and days/decade; negative = pulse arriving earlier). No `monthly_flow` import
+in `flow_metrics` (callers pass arrays). Spec `agent-os/specs/2026-09-07-creative-report-analytics/`.
+Suite 861 passing; no `PIPELINE_STAGES` touched (2D byte-identical). Follow-ons #70–#76.)
 70. [ ] Center-of-timing drift as a hero metric — Promote the existing `center_of_timing()` into a
 dedicated trend panel (Mann-Kendall + Sen's slope on CT itself): "the peak arrives N days earlier
 per decade," one of the most legible western-hydrology climate signals. `S`
