@@ -30,14 +30,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-from src.endpoints import (
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+
+from src.endpoints import (  # noqa: E402
     ENDPOINTS,
     EndpointError,
     build_endpoint_request,
     dispatch_endpoint,
 )
 
-REPO = Path(__file__).resolve().parent.parent
 PY = sys.executable
 
 

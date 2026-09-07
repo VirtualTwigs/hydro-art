@@ -1,0 +1,20 @@
+task_groups:
+  - name: combined-e2e-provenance-core                 # TG1 — combined_manifest + digest
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: offline-all-endpoints-e2e-test               # TG2 — flagship in-suite flow
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: real-data-e2e-harness                        # TG3 — opt-in tools/ harness
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: e2e-golden-fixture-and-gate                  # TG4 — golden + regression gate
+    claude_code_subagent: determinism-auditor
+    standards:
+      - global/hydro-art-invariants.md

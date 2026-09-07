@@ -1,0 +1,94 @@
+{
+  "attribution": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
+  "county": "Wahkiakum",
+  "endpoints": {
+    "animation": [
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_motion.gif",
+        "fmt": "gif",
+        "height_px": null,
+        "kind": "motion",
+        "width_px": null
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_motion.mp4",
+        "fmt": "mp4",
+        "height_px": null,
+        "kind": "motion",
+        "width_px": null
+      }
+    ],
+    "digital_image": [
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_digital.svg",
+        "fmt": "svg",
+        "height_px": null,
+        "kind": "vector",
+        "width_px": null
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_digital.png",
+        "fmt": "png",
+        "height_px": null,
+        "kind": "raster",
+        "width_px": null
+      }
+    ],
+    "print_image": [
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_print.png",
+        "fmt": "png",
+        "height_px": 7200,
+        "kind": "raster",
+        "width_px": 5400
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_print.pdf",
+        "fmt": "pdf",
+        "height_px": 7200,
+        "kind": "raster",
+        "width_px": 5400
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_print.tiff",
+        "fmt": "tiff",
+        "height_px": 7200,
+        "kind": "raster",
+        "width_px": 5400
+      }
+    ],
+    "report": [
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_report.html",
+        "fmt": "html",
+        "height_px": null,
+        "kind": "document",
+        "width_px": null
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_report.png",
+        "fmt": "png",
+        "height_px": null,
+        "kind": "figures",
+        "width_px": null
+      }
+    ]
+  },
+  "region": "Washington",
+  "schema": "hydro-art/e2e-contract@1",
+  "sources": [
+    {
+      "name": "USGS NHDPlus HR",
+      "version": null
+    },
+    {
+      "name": "USGS NHD",
+      "version": null
+    },
+    {
+      "name": "USGS WBD",
+      "version": null
+    }
+  ],
+  "style": "neon-basin"
+}

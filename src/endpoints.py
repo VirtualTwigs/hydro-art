@@ -40,10 +40,16 @@ __all__ = [
     "endpoint_manifest",
     "assert_sellable",
     "dispatch_endpoint",
+    "combined_manifest",
+    "e2e_contract_digest",
     "MANIFEST_SCHEMA",
+    "E2E_MANIFEST_SCHEMA",
+    "E2E_CONTRACT_SCHEMA",
 ]
 
 MANIFEST_SCHEMA = "hydro-art/endpoint-manifest@1"
+E2E_MANIFEST_SCHEMA = "hydro-art/e2e-manifest@1"
+E2E_CONTRACT_SCHEMA = "hydro-art/e2e-contract@1"
 
 
 class EndpointError(Exception):
@@ -337,3 +343,94 @@ def dispatch_endpoint(
     checksums = renderer(request, plan)
     manifest = endpoint_manifest(request, plan, checksums=checksums, sources=sources)
     return EndpointResult(endpoint=request.endpoint, plan=plan, manifest=manifest)
+
+
+# --- flagship end-to-end aggregation (Epoch 21) ---------------------------
+
+def _shared_identity(triples) -> tuple[str, str, str]:
+    """Return the single ``(region, county, style)`` shared by every item.
+
+    Raises :class:`EndpointError` if the items disagree — the flagship e2e is
+    defined as *one region, one path, all endpoints*, so a mixed identity is a
+    programming error, not a mergeable manifest.
+    """
+    idents = set(triples)
+    if len(idents) != 1:
+        raise EndpointError(
+            "e2e aggregation requires one region/county/style across all endpoints; "
+            f"saw {sorted(idents)}."
+        )
+    return next(iter(idents))
+
+
+def combined_manifest(results, *, sources=DEFAULT_SOURCES) -> dict:
+    """Aggregate per-endpoint :class:`EndpointResult`s into one e2e provenance doc.
+
+    Schema ``hydro-art/e2e-manifest@1``. All results must share one region/county/style
+    and carry distinct endpoints (else :class:`EndpointError`). ``endpoints`` maps each
+    endpoint -> its own per-file manifest, so the combined document is order-independent
+    and byte-identical under ``json.dumps(sort_keys=True)`` for equal inputs.
+    """
+    results = list(results)
+    if not results:
+        raise EndpointError("combined_manifest requires at least one result.")
+    endpoints = [r.endpoint for r in results]
+    if len(set(endpoints)) != len(endpoints):
+        raise EndpointError(f"Duplicate endpoint in combined manifest: {endpoints}.")
+    region, county, style = _shared_identity(
+        (r.manifest["request"]["region"],
+         r.manifest["request"]["county"],
+         r.manifest["request"]["style"])
+        for r in results
+    )
+    return {
+        "schema": E2E_MANIFEST_SCHEMA,
+        "region": region,
+        "county": county,
+        "style": style,
+        "attribution": attribution_line(sources),
+        "sources": [{"name": s.name, "version": s.version} for s in sources],
+        "endpoints": {r.endpoint: r.manifest for r in results},
+    }
+
+
+def e2e_contract_digest(requests, *, sources=DEFAULT_SOURCES) -> dict:
+    """The render-independent e2e skeleton for a set of validated requests.
+
+    Schema ``hydro-art/e2e-contract@1``. Records each endpoint's planned
+    filenames/kinds/formats/dims plus attribution + sources — but NO checksums, so it
+    depends only on the requests (not on any rendered bytes). Deterministic and
+    byte-identical, which makes it safe to commit as a golden fixture and assert against
+    offline. Same identity/uniqueness rules as :func:`combined_manifest`.
+    """
+    requests = list(requests)
+    if not requests:
+        raise EndpointError("e2e_contract_digest requires at least one request.")
+    endpoints = [r.endpoint for r in requests]
+    if len(set(endpoints)) != len(endpoints):
+        raise EndpointError(f"Duplicate endpoint in e2e digest: {endpoints}.")
+    region, county, style = _shared_identity(
+        (r.region, r.county, r.style) for r in requests
+    )
+    contracts = {}
+    for req in requests:
+        plan = endpoint_plan(req)
+        contracts[req.endpoint] = [
+            {
+                "filename": d.filename,
+                "kind": d.kind,
+                "fmt": d.fmt,
+                "width_px": d.width_px,
+                "height_px": d.height_px,
+            }
+            for d in plan.items
+        ]
+    return {
+        "schema": E2E_CONTRACT_SCHEMA,
+        "region": region,
+        "county": county,
+        "style": style,
+        "attribution": attribution_line(sources),
+        "sources": [{"name": s.name, "version": s.version} for s in sources],
+        "endpoints": contracts,
+    }
