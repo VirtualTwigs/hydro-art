@@ -1004,82 +1004,82 @@ e2e proof is an **opt-in `tools/` harness** (like `verify_determinism.py`) requi
 data. Default 2D output stays **byte-for-byte identical**. Only **public-domain** sources ship in any
 marketing asset (Rights gate).
 
-## Epoch 19 — Production endpoint contracts & hardening · proposed
+## Epoch 19 — Production endpoint contracts & hardening · complete
 
 Give each of the four endpoints a documented, versioned **output contract** and a single stable entry
 point, so the test pyramid and the flagship e2e have something concrete to assert against. Reuses the
 `src/fulfillment` request→deliverable seam rather than duplicating renderer recipes.
 
-79. [ ] Endpoint output contracts — Define and document, for each endpoint, the artifact contract:
+79. [x] Endpoint output contracts — Define and document, for each endpoint, the artifact contract:
 file types, naming, a sidecar provenance/manifest (source version, attribution, checksum), and the
 success/failure signals. Encode as pure/offline dataclasses + validators mirroring `src/fulfillment`. `M`
-80. [ ] Endpoint dispatch consolidation — A thin, documented dispatcher mapping a validated request →
+80. [x] Endpoint dispatch consolidation — A thin, documented dispatcher mapping a validated request →
 the correct renderer per endpoint (extend `src/fulfillment.build_order` / a `tools/` orchestrator), with
 **no duplicated recipe logic** (extend `render_common.py`). `M`
-81. [ ] Provenance & failure-mode hardening — Every endpoint stamps source version + attribution +
+81. [x] Provenance & failure-mode hardening — Every endpoint stamps source version + attribution +
 checksum and fails fast under the `ConfigError`/`AcquisitionError` taxonomy; the Rights gate
 (`assert_sellable`) runs before any asset is marked deliverable. `S`
 
 Epoch gate: each endpoint produces a documented, provenance-stamped artifact from one validated
 request; default 2D output stays byte-identical.
 
-## Epoch 20 — Unit & integration test completion · proposed
+## Epoch 20 — Unit & integration test completion · complete
 
 Close the base of the pyramid. Coverage-audit every `src/` module, fill unit gaps, and add offline
 integration tests that drive each endpoint orchestrator end-of-path with injected fakes.
 
-82. [ ] Unit-coverage audit & gap closure — Measure per-module coverage; add offline unit tests for any
+82. [x] Unit-coverage audit & gap closure — Measure per-module coverage; add offline unit tests for any
 `src/` module below the agreed threshold; keep GDAL/network out of the suite. `M`
-83. [ ] Endpoint integration tests (offline) — For each of the four endpoints, an offline integration
+83. [x] Endpoint integration tests (offline) — For each of the four endpoints, an offline integration
 test that drives its orchestrator through the full code path to an asserted output contract, using
 injected fakes + hand-built shapely/graph inputs. `M`
-84. [ ] Coverage gate & reporting — Wire a coverage measurement into the suite run (report-only first,
+84. [x] Coverage gate & reporting — Wire a coverage measurement into the suite run (report-only first,
 then an enforced threshold) so regressions in coverage are visible. `S`
 
 Epoch gate: the offline suite covers every `src/` module and all four endpoint orchestrators to the
 agreed threshold; default output byte-identical.
 
-## Epoch 21 — Flagship end-to-end proof (all four endpoints) · proposed
+## Epoch 21 — Flagship end-to-end proof (all four endpoints) · complete
 
 The headline deliverable: **one path, one region, all four endpoints.** Two layers respect the offline
 discipline — an in-suite orchestration test with fakes, and an opt-in real-artifact harness.
 
-85. [ ] Offline all-endpoints e2e orchestration test — One in-suite test that walks a single
+85. [x] Offline all-endpoints e2e orchestration test — One in-suite test that walks a single
 settings/request object through the digital-image, animation, print-image, and report code paths with
 injected fakes, asserting each endpoint's contract **and** determinism. `M`
-86. [ ] Real-data e2e harness (opt-in, outside the suite) — A `tools/` command that takes one small
+86. [x] Real-data e2e harness (opt-in, outside the suite) — A `tools/` command that takes one small
 public-domain county and produces **all four** real artifacts (SVG+PNG, GIF/MP4, print raster, report)
 plus a combined provenance manifest and a double-render determinism check. `L`
-87. [ ] E2E golden fixture — Commit the small region's expected artifact hashes/manifest as a golden
+87. [x] E2E golden fixture — Commit the small region's expected artifact hashes/manifest as a golden
 fixture (extends `tests/fixtures/golden/`) so the e2e path is regression-guarded. `S`
 
 Epoch gate: `tools/<e2e>.py --county <small>` produces all four deliverables with provenance and passes
 a determinism re-render; the offline orchestration e2e is green in the suite.
 
-## Epoch 22 — High-resolution marketing gallery · proposed
+## Epoch 22 — High-resolution marketing gallery · complete
 
 Curated, rights-clean, high-resolution examples per style/endpoint for the website — the visual proof
 of the engine's range. Public-domain sources only.
 
-88. [ ] Curated style matrix — Select regions × styles × endpoints that show the range (neon basin,
+88. [x] Curated style matrix — Select regions × styles × endpoints that show the range (neon basin,
 elevation mono, year-in-motion, terrain print, watershed report); record the selection + rationale. `S`
-89. [ ] High-res render & export — Render each at marketing/print resolution; export web-optimized and
+89. [x] High-res render & export — Render each at marketing/print resolution; export web-optimized and
 full-resolution variants; all from public-domain sources. `M`
-90. [ ] Gallery provenance & rights ledger — A per-asset ledger (source version, attribution, checksum,
+90. [x] Gallery provenance & rights ledger — A per-asset ledger (source version, attribution, checksum,
 sellable flag) via the Rights gate; wire the gallery into the marketing web surface (`web/` foundation). `S`
 
 Epoch gate: a rights-clean, high-res marketing gallery covering all four endpoints is published on the
 web surface, each asset traceable to a public-domain source.
 
-## Epoch 23 — Release packaging, CI & reproducibility gate · proposed
+## Epoch 23 — Release packaging, CI & reproducibility gate · complete
 
 Turn "green suite + artifacts" into a tagged, reproducible **v1.0**.
 
-91. [ ] CI for the full test pyramid — Run offline unit+integration+e2e on every change; run the opt-in
+91. [x] CI for the full test pyramid — Run offline unit+integration+e2e on every change; run the opt-in
 real-data e2e + determinism as a scheduled/gated job. `M`
-92. [ ] Reproducibility release gate — Block the release tag unless double-render is byte-identical and
+92. [x] Reproducibility release gate — Block the release tag unless double-render is byte-identical and
 golden fixtures match (extends `tools/verify_determinism.py`). `S`
-93. [ ] Version, changelog & distribution packaging — Tag `v1.0`, generate a changelog from the epoch
+93. [x] Version, changelog & distribution packaging — Tag `v1.0`, generate a changelog from the epoch
 history, and package the CLI + docs for distribution. `M`
 
 Epoch gate: `v1.0` is tagged only when the full pyramid is green, determinism holds, and the marketing

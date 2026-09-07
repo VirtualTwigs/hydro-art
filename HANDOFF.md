@@ -1,12 +1,6 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-09-01, after Epoch 14 (license-free climate source, #60 — PRISM Rights
-gate retired) close-out. Prior: Epoch 12 (watershed report analytics, #48–#55) close-out
-and the Epoch 10 roadmap reconciliation (#39/#42-offline/#43 landed in `87c64fd`). Prior:
-Epoch 11.5 #56/#57 order-fulfillment core, Epoch 8 (terrain-aware print, #30–#32) and
-Epoch 9 (codebase health, #33–#38), each with a closeout note under
-`agent-os/retrospectives/`. See the per-item bullets below for the full trail back through
-Epochs 5–7._
+_Last updated: 2026-09-06, Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
 
 ## Current state (2026-09-01)
 
