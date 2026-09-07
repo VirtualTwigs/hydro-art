@@ -934,10 +934,21 @@ to the target's (reuses `pearson_r`; mean/scale-invariant, so same seasonal *sha
 different magnitude). Constant year → `nan`, sorts last; ties break by ascending year (deterministic);
 `n` keeps the top matches. Numpy-only, no pipeline wiring. Suite 869 passing; 2D default byte-identical.
 Follow-ons #72–#76.)
-72. [ ] Drought / flood record book — Rank years by summer-low and by peak using `percentile_rank()`
+72. [x] Drought / flood record book — Rank years by summer-low and by peak using `percentile_rank()`
 ("driest summer in 130 years," "top-5 wettest") over the full 1895– record. `S`
-73. [ ] Flow-duration-curve panel — Plot the already-computed `flow_duration()` as a log-scale FDC
+(Shipped 2026-09-07. `src/flow_metrics.py` gains `YearRank`/`RecordBook` + `rank_years(metric_by_year,
+ascending, n)` (1-based rank + `percentile_rank` position, deterministic year tie-break) and
+`record_book(series, summer_months=(6,7,8), n=5)` — reduces a `{year:[12]}` series to summer-low
+(ascending → driest) and annual-peak (descending → wettest) leaderboards. Numpy-only, no pipeline
+wiring. Suite 874 passing; 2D default byte-identical. Follow-ons #73–#76.)
+73. [x] Flow-duration-curve panel — Plot the already-computed `flow_duration()` as a log-scale FDC
 with decade overlays, showing how the whole distribution shifts, not just the mean. `S`
+(Shipped 2026-09-07. `src/flow_metrics.py` gains `DecadeFDC` + `decade_flow_duration(series,
+quantiles, decade_size=10)` — buckets a `{year:[12]}` series into decades, pools each decade's
+monthly flows, and computes the exceedance curve via `flow_duration`; returns one `DecadeFDC` per
+decade (ascending) so overlays show the distribution shifting. Log-scale plotting itself lands with
+the #76 web/tools panel. Numpy-only, no pipeline wiring. Suite 877 passing; 2D default byte-identical.
+Follow-ons #74–#76.)
 
 **Phase 17.3 — Climate framing**
 

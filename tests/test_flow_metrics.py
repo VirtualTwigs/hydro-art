@@ -15,17 +15,23 @@ from src.flow_metrics import (
     FlowMetricsError,
     FlowValidationError,
     AnalogYear,
+    DecadeFDC,
     MeltTimingTrend,
+    RecordBook,
     SnowRegime,
     TimingTrend,
+    YearRank,
     align_index,
     analog_years,
+    decade_flow_duration,
     anomaly,
     bias,
     center_of_timing,
     center_of_timing_trend,
     classify_regime,
     correlate,
+    rank_years,
+    record_book,
     flashiness,
     flow_duration,
     longitudinal_profile,
@@ -582,3 +588,87 @@ def test_analog_years_guards() -> None:
         analog_years({2000: np.ones((2, 12))}, 2000)   # not single [12] hydrographs
     with pytest.raises(FlowMetricsError):
         analog_years({2000: _spring(), 2001: _spring()}, 2000, n=0)  # n < 1
+
+
+# --- #72 drought/flood record book -------------------------------------------
+
+def test_rank_years_ascending_and_percentile() -> None:
+    metric = {2000: 5.0, 2001: 1.0, 2002: 9.0, 2003: 3.0}
+    driest = rank_years(metric, ascending=True)
+    assert [r.year for r in driest] == [2001, 2003, 2000, 2002]
+    assert driest[0].rank == 1 and driest[0].value == 1.0
+    assert driest[0].percentile == pytest.approx(0.0)     # lowest in record
+    assert isinstance(driest[0], YearRank)
+
+
+def test_rank_years_descending_and_top_n() -> None:
+    metric = {2000: 5.0, 2001: 1.0, 2002: 9.0, 2003: 3.0}
+    wettest = rank_years(metric, ascending=False, n=2)
+    assert [r.year for r in wettest] == [2002, 2000]
+    assert wettest[0].rank == 1 and wettest[0].value == 9.0
+    assert wettest[0].percentile == pytest.approx(1.0)    # highest in record
+
+
+def test_rank_years_tie_break_by_year() -> None:
+    metric = {2001: 4.0, 2000: 4.0, 2002: 1.0}
+    ranked = rank_years(metric, ascending=True)
+    # 2002 lowest; the 4.0 tie breaks to earlier year first.
+    assert [r.year for r in ranked] == [2002, 2000, 2001]
+
+
+def test_rank_years_needs_two_years() -> None:
+    with pytest.raises(FlowMetricsError):
+        rank_years({2000: 1.0})
+    with pytest.raises(FlowMetricsError):
+        rank_years({2000: 1.0, 2001: 2.0}, n=0)
+
+
+def test_record_book_driest_summer_and_wettest_peak() -> None:
+    base = np.array([8, 7, 5, 4, 3, 2, 2, 2, 3, 5, 7, 8], dtype=float)
+    series = {
+        1990: base,
+        1991: base + np.array([0, 0, 0, 0, 0, -1.5, -1.5, -1.5, 0, 0, 0, 0.0]),  # driest summer
+        1992: base + np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40.0]),          # highest peak
+    }
+    book = record_book(series, n=2)
+    assert isinstance(book, RecordBook)
+    assert book.driest_summers[0].year == 1991
+    assert book.wettest_years[0].year == 1992
+    assert len(book.driest_summers) == 2 and len(book.wettest_years) == 2
+    # summer-low uses Jun/Jul/Aug min; 1991 min is 0.5.
+    assert book.driest_summers[0].value == pytest.approx(0.5)
+    # peak is the annual max; 1992 Dec = 48.
+    assert book.wettest_years[0].value == pytest.approx(48.0)
+
+
+# --- #73 flow-duration-curve panel (decade overlays) -------------------------
+
+def test_decade_flow_duration_groups_and_is_monotone() -> None:
+    rng = np.arange(1.0, 13.0)
+    series = {1990: rng, 1991: rng + 1, 1992: rng + 2, 2000: rng + 10, 2001: rng + 11}
+    curves = decade_flow_duration(series, [0, 25, 50, 75, 100])
+    assert [c.decade for c in curves] == [1990, 2000]
+    assert isinstance(curves[0], DecadeFDC)
+    assert curves[0].quantiles == (0.0, 25.0, 50.0, 75.0, 100.0)
+    # Exceedance q=0 is the pooled max, q=100 the pooled min; curve non-increasing.
+    flows = np.array(curves[0].flows)
+    assert np.all(np.diff(flows) <= 1e-9)
+    assert flows[0] == pytest.approx(14.0)   # 1992 = rng+2 → max 14
+    assert flows[-1] == pytest.approx(1.0)   # 1990 = rng → min 1
+
+
+def test_decade_flow_duration_shows_upward_shift() -> None:
+    rng = np.arange(1.0, 13.0)
+    series = {1990: rng, 1991: rng, 2000: rng + 10, 2001: rng + 10}
+    early, late = decade_flow_duration(series, [50])
+    assert late.decade == 2000
+    assert late.flows[0] > early.flows[0]    # whole distribution shifted up
+
+
+def test_decade_flow_duration_decade_size_and_guard() -> None:
+    rng = np.arange(1.0, 13.0)
+    series = {1990: rng, 2005: rng, 2011: rng}
+    curves = decade_flow_duration(series, [50], decade_size=20)
+    assert [c.decade for c in curves] == [1980, 2000]  # 20-yr bins: 1980-99, 2000-19
+    with pytest.raises(FlowMetricsError):
+        decade_flow_duration({1990: np.ones((2, 12))}, [50])  # not single [12]

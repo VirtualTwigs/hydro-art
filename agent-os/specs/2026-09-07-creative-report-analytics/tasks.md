@@ -35,8 +35,22 @@ One roadmap item at a time. Only Task Group 1 (#69) is implemented this session.
 - [x] 3.2 `src/flow_metrics.py` — add `AnalogYear` + `analog_years(series, target, n=None)` over
   `pearson_r`, deterministic nan-last sort. Export.
 - [x] 3.3 Full offline suite green (869); roadmap #71 ticked; report updated. No `PIPELINE_STAGES`.
-## Task Group 4 — #72 Drought/flood record book · not started
-## Task Group 5 — #73 Flow-duration-curve panel · not started
+## Task Group 4 — #72 Drought/flood record book
+
+- [x] 4.1 Tests (`tests/test_flow_metrics.py`) — `rank_years` ascending/descending, 1-based rank +
+  percentile attach, year tie-break, top-`n`, `<2` years / `n<1` guards; `record_book` picks the
+  driest summer and the wettest-peak year from a `{year:[12]}` series.
+- [x] 4.2 `src/flow_metrics.py` — add `YearRank`/`RecordBook` + `rank_years` + `record_book` over
+  `percentile_rank`. Export.
+- [x] 4.3 Full offline suite green (874); roadmap #72 ticked; report updated. No `PIPELINE_STAGES`.
+## Task Group 5 — #73 Flow-duration-curve panel
+
+- [x] 5.1 Tests (`tests/test_flow_metrics.py`) — `decade_flow_duration` groups by decade, per-decade
+  FDC non-increasing in q (q=0 pooled max, q=100 pooled min), a wetter decade shifts the curve up,
+  `decade_size` re-bins, non-`[12]` guard.
+- [x] 5.2 `src/flow_metrics.py` — add `DecadeFDC` + `decade_flow_duration` delegating to
+  `flow_duration` over pooled decade months. Export.
+- [x] 5.3 Full offline suite green (877); roadmap #73 ticked; report updated. No `PIPELINE_STAGES`.
 ## Task Group 6 — #74 ENSO/PDO composite hydrographs · not started
 ## Task Group 7 — #75 Longitudinal flow-accumulation animation · not started
 ## Task Group 8 — #76 Report assembly & web surfacing · not started

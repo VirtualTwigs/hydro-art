@@ -109,3 +109,62 @@ Full offline suite **869 passed**. No `PIPELINE_STAGES` edit → 2D default byte
 
 ## Not done (later items)
 `tools`/`web` surfacing lands with #76. Items #72–#75 remain unchecked.
+
+---
+
+# Implementation report — #72 Drought/flood record book
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.2, item #72** · one roadmap item, then STOP.
+
+## What shipped
+`src/flow_metrics.py`:
+- `YearRank` (`year`, `value`, `rank`, `percentile`) and `RecordBook` (`driest_summers`,
+  `wettest_years`) dataclasses.
+- `rank_years(metric_by_year, *, ascending=True, n=None)` — ranks a `{year: value}` metric; rank 1 =
+  smallest (drought) or largest (`ascending=False`, flood); each entry stamped with its
+  `percentile_rank` position in the full record (direction-independent). Deterministic year
+  tie-break; `n` bounds the list; needs ≥ 2 years.
+- `record_book(series, *, summer_months=(6,7,8), n=5)` — reduces a `{year:[12]}` hydrograph series to
+  a summer-low (min over summer months) and an annual peak (max over 12), then ranks the driest
+  summers (ascending) and wettest years (descending). Exported all four names.
+
+## Tests (`tests/test_flow_metrics.py`, +5)
+`rank_years` ascending/descending + percentile + top-`n`; year tie-break; `<2` years and `n<1`
+guards; `record_book` selects the driest-summer and highest-peak years with correct values.
+
+Targeted run: `test_flow_metrics.py` → **65 passed**.
+
+## Regression / discipline
+Full offline suite **874 passed**. No `PIPELINE_STAGES` edit → 2D default byte-for-byte identical.
+`flow_metrics` stays numpy-only.
+
+## Not done (later items)
+`tools`/`web` surfacing lands with #76. Items #73–#75 remain unchecked.
+
+---
+
+# Implementation report — #73 Flow-duration-curve panel (decade overlays)
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.2, item #73** · one roadmap item, then STOP.
+
+## What shipped
+`src/flow_metrics.py`:
+- `DecadeFDC` dataclass (`decade`, `quantiles`, `flows`).
+- `decade_flow_duration(series, quantiles, *, decade_size=10)` — buckets a `{year:[12]}` series into
+  decades (`year // decade_size * decade_size`), pools each decade's monthly flows, and computes the
+  exceedance curve via `flow_duration`. Returns one `DecadeFDC` per decade, ascending, so overlaying
+  them shows the whole distribution shifting over time (not just the mean). The log-scale plotting is
+  the #76 web/tools panel; this is the stats behind it. Exported both names.
+
+## Tests (`tests/test_flow_metrics.py`, +3)
+Decade grouping + monotone-non-increasing FDC (q=0 pooled max, q=100 pooled min); a wetter decade
+shifts the curve up; `decade_size=20` re-bins; non-`[12]` guard.
+
+Targeted run: `test_flow_metrics.py` → **68 passed**.
+
+## Regression / discipline
+Full offline suite **877 passed**. No `PIPELINE_STAGES` edit → 2D default byte-for-byte identical.
+`flow_metrics` stays numpy-only.
+
+## Not done (later items)
+`tools`/`web` surfacing lands with #76. Items #74–#75 remain unchecked.

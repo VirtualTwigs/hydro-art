@@ -51,12 +51,18 @@ __all__ = [
     "TimingTrend",
     "MeltTimingTrend",
     "AnalogYear",
+    "YearRank",
+    "RecordBook",
+    "DecadeFDC",
     "snow_fraction",
     "classify_regime",
     "snow_regime",
     "melt_timing_trend",
     "center_of_timing_trend",
     "analog_years",
+    "rank_years",
+    "record_book",
+    "decade_flow_duration",
     "FlowValidationError",
     "ValidationReport",
     "bias",
@@ -577,6 +583,128 @@ def analog_years(series: Mapping[int, object], target: int, *, n: int | None = N
         )
     )
     return ranked[:n] if n is not None else ranked
+
+
+# --- #72 drought/flood record book ---------------------------------------
+#
+# Rank years by a scalar metric (summer-low for drought, annual peak for flood)
+# and stamp each with its position in the full record ("driest summer in 130
+# years," "top-5 wettest"). Reuses ``percentile_rank`` for the position.
+
+
+@dataclass(frozen=True)
+class YearRank:
+    """A year, its metric value, 1-based rank, and percentile in the full record."""
+
+    year: int
+    value: float
+    rank: int
+    percentile: float
+
+
+@dataclass(frozen=True)
+class RecordBook:
+    """Drought (driest summer-low) and flood (highest peak) leaderboards."""
+
+    driest_summers: list[YearRank]
+    wettest_years: list[YearRank]
+
+
+def rank_years(
+    metric_by_year: Mapping[int, float], *, ascending: bool = True, n: int | None = None
+) -> list[YearRank]:
+    """Rank years by a scalar ``{year: value}`` metric.
+
+    ``ascending`` puts the smallest value at rank 1 (drought leaderboard); set it
+    ``False`` for the largest first (flood leaderboard). Each :class:`YearRank`
+    carries its :func:`percentile_rank` position in the full record (independent of
+    sort direction). Ties break by ascending year for determinism; ``n`` keeps only
+    the top entries. Needs ≥ 2 years (``percentile_rank`` requires it).
+    """
+    if len(metric_by_year) < 2:
+        raise FlowMetricsError("rank_years needs at least 2 years.")
+    if n is not None and n < 1:
+        raise FlowMetricsError("n must be >= 1.")
+    values = {int(y): float(v) for y, v in metric_by_year.items()}
+    record = np.array(list(values.values()), dtype=float)
+    order = sorted(values, key=lambda y: (values[y] if ascending else -values[y], y))
+    ranked = [
+        YearRank(
+            year=y,
+            value=values[y],
+            rank=i + 1,
+            percentile=percentile_rank(values[y], record),
+        )
+        for i, y in enumerate(order)
+    ]
+    return ranked[:n] if n is not None else ranked
+
+
+def record_book(
+    series: Mapping[int, object], *, summer_months: Sequence[int] = (6, 7, 8), n: int | None = 5
+) -> RecordBook:
+    """Drought/flood leaderboards from a ``{year: [12]}`` hydrograph series.
+
+    Reduces each year to a summer-low (min over ``summer_months``) and an annual
+    peak (max over 12 months), then ranks the driest summers (ascending low) and the
+    wettest years (descending peak) via :func:`rank_years`. ``n`` bounds each list.
+    """
+    cols = _month_columns(summer_months)
+    summer_low: dict[int, float] = {}
+    annual_peak: dict[int, float] = {}
+    for year, vec in series.items():
+        a = _validate_monthly(vec, f"series[{year}]")
+        if a.ndim != 1:
+            raise FlowMetricsError("record_book takes a {year:[12]} series of single hydrographs.")
+        summer_low[int(year)] = float(a[cols].min())
+        annual_peak[int(year)] = float(a.max())
+    return RecordBook(
+        driest_summers=rank_years(summer_low, ascending=True, n=n),
+        wettest_years=rank_years(annual_peak, ascending=False, n=n),
+    )
+
+
+# --- #73 flow-duration-curve panel (decade overlays) ---------------------
+#
+# Group a multi-year series into decades and compute a flow-duration curve for
+# each, so the report can overlay them and show how the whole flow *distribution*
+# shifts across decades — not just the mean. Reuses ``flow_duration``.
+
+
+@dataclass(frozen=True)
+class DecadeFDC:
+    """One decade's flow-duration curve over its pooled monthly flows."""
+
+    decade: int
+    quantiles: tuple[float, ...]
+    flows: tuple[float, ...]
+
+
+def decade_flow_duration(
+    series: Mapping[int, object], quantiles: Sequence[float], *, decade_size: int = 10
+) -> list[DecadeFDC]:
+    """Per-decade flow-duration curves from a ``{year: [12]}`` hydrograph series.
+
+    Buckets each year into its decade (``year // decade_size * decade_size``), pools
+    all monthly flows in the decade, and computes the exceedance ``quantiles`` via
+    :func:`flow_duration`. Returns one :class:`DecadeFDC` per decade, sorted
+    ascending, so overlaying them shows the distribution shifting over time.
+    """
+    if decade_size < 1:
+        raise FlowMetricsError("decade_size must be >= 1.")
+    buckets: dict[int, list[np.ndarray]] = {}
+    for year, vec in series.items():
+        a = _validate_monthly(vec, f"series[{year}]")
+        if a.ndim != 1:
+            raise FlowMetricsError("decade_flow_duration takes a {year:[12]} series.")
+        decade = (int(year) // decade_size) * decade_size
+        buckets.setdefault(decade, []).append(a)
+    q = tuple(float(x) for x in quantiles)
+    out: list[DecadeFDC] = []
+    for decade in sorted(buckets):
+        flows = flow_duration(np.vstack(buckets[decade]), quantiles)
+        out.append(DecadeFDC(decade=decade, quantiles=q, flows=tuple(float(f) for f in flows)))
+    return out
 
 
 # --- #50/#51 model-vs-observed validation + climate-index teleconnection ---
