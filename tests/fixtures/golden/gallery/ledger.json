@@ -1,0 +1,163 @@
+{
+  "assets": [
+    {
+      "county": "Shasta",
+      "deliverables": [
+        {
+          "filename": "ca-neon-animation_california-shasta_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "ca-neon-animation_california-shasta_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "ca-neon-animation",
+      "rationale": "Year-in-motion seasonality \u2014 flow disaggregated across the calendar year.",
+      "region": "California",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Blaine",
+      "deliverables": [
+        {
+          "filename": "id-elev-digital_idaho-blaine_elevation-tint_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "id-elev-digital_idaho-blaine_elevation-tint_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "id-elev-digital",
+      "rationale": "Elevation-mono treatment carried to a fourth region \u2014 range across styles.",
+      "region": "Idaho",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
+      "county": "Deschutes",
+      "deliverables": [
+        {
+          "filename": "or-neon-digital_oregon-deschutes_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "or-neon-digital_oregon-deschutes_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "or-neon-digital",
+      "rationale": "Flagship neon-basin river art (SVG + PNG) \u2014 the signature look.",
+      "region": "Oregon",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Wahkiakum",
+      "deliverables": [
+        {
+          "filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.png",
+          "fmt": "png",
+          "height_px": 10800,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 7200
+        },
+        {
+          "filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.pdf",
+          "fmt": "pdf",
+          "height_px": 10800,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 7200
+        },
+        {
+          "filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.tiff",
+          "fmt": "tiff",
+          "height_px": 10800,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 7200
+        }
+      ],
+      "endpoint": "print_image",
+      "item_id": "wa-elev-print",
+      "rationale": "Archival hypsometric terrain print at gallery size (24x36).",
+      "region": "Washington",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
+      "county": "Wahkiakum",
+      "deliverables": [
+        {
+          "filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.html",
+          "fmt": "html",
+          "height_px": null,
+          "kind": "document",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "figures",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "report",
+      "item_id": "wa-neon-report",
+      "rationale": "Watershed analytics report \u2014 the data-story deliverable.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    }
+  ],
+  "attribution": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
+  "schema": "hydro-art/gallery-ledger@1",
+  "sources": [
+    {
+      "name": "USGS NHDPlus HR",
+      "version": null
+    },
+    {
+      "name": "USGS NHD",
+      "version": null
+    },
+    {
+      "name": "USGS WBD",
+      "version": null
+    }
+  ]
+}

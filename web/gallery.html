@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art · Marketing Gallery</title>
+<link rel="stylesheet" href="shared/ux.css" />
+<style>
+  body { max-width: 1180px; margin: 0 auto; padding: 20px 20px 60px; }
+  header.gallery-head {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px;
+  }
+  header.gallery-head .spacer { flex: 1; }
+  .attribution { color: var(--muted); font-size: 11px; margin: 0 0 18px; }
+  .attribution b { color: var(--ink); }
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+  .card {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--panel-2); padding: 14px 14px 12px; display: flex;
+    flex-direction: column; gap: 8px;
+  }
+  .card .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .card .place { font-size: 14px; color: var(--ink); font-weight: 600; }
+  .card .tag {
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid var(--accent-dim);
+    border-radius: var(--radius-sm); padding: 1px 6px;
+  }
+  .card .endpoint {
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--accent-2); border: 1px solid var(--accent-2);
+    border-radius: var(--radius-sm); padding: 1px 6px;
+  }
+  .card .sellable {
+    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--bg); background: var(--accent-dim);
+    border-radius: var(--radius-sm); padding: 1px 6px; margin-left: auto;
+  }
+  .card .rationale { color: var(--muted); font-size: 12px; line-height: 1.45; }
+  .card .deliverables {
+    list-style: none; margin: 4px 0 0; padding: 8px 0 0; font-size: 11px;
+    border-top: 1px solid var(--line);
+  }
+  .card .deliverables li {
+    display: flex; justify-content: space-between; gap: 10px; padding: 2px 0;
+    color: var(--muted);
+  }
+  .card .deliverables .fname { color: var(--ink); font-family: var(--mono, monospace); word-break: break-all; }
+  .card .deliverables .dims { white-space: nowrap; }
+  .empty { color: var(--warn); padding: 20px 0; }
+</style>
+</head>
+<body>
+<header class="gallery-head">
+  <h1 class="brand">Hydro-Art <span class="dot">◇</span></h1>
+  <div class="sub" id="subtitle">Curated marketing gallery · rights-clean, public-domain sources</div>
+  <div class="spacer"></div>
+  <div class="sub" id="count"></div>
+</header>
+<p class="attribution" id="attribution"></p>
+
+<div class="grid" id="grid"></div>
+
+<!-- Embedded sample ledger: the render-independent skeleton produced by
+     src.gallery.gallery_ledger() (schema hydro-art/gallery-ledger@1). Over http(s)
+     a ?ledger=<url> query param can point at a real stamped ledger sidecar. -->
+<script id="sample-ledger" type="application/json">
+{
+  "schema": "hydro-art/gallery-ledger@1",
+  "attribution": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
+  "sources": [
+    {"name": "USGS NHDPlus HR", "version": null},
+    {"name": "USGS NHD", "version": null},
+    {"name": "USGS WBD", "version": null}
+  ],
+  "assets": [
+    {
+      "item_id": "or-neon-digital", "region": "Oregon", "county": "Deschutes",
+      "style": "neon-basin", "endpoint": "digital_image", "sellable": true,
+      "rationale": "Flagship neon-basin river art (SVG + PNG) \u2014 the signature look.",
+      "deliverables": [
+        {"filename": "or-neon-digital_oregon-deschutes_neon-basin_digital.svg", "kind": "vector", "fmt": "svg", "width_px": null, "height_px": null, "sha256": null},
+        {"filename": "or-neon-digital_oregon-deschutes_neon-basin_digital.png", "kind": "raster", "fmt": "png", "width_px": null, "height_px": null, "sha256": null}
+      ]
+    },
+    {
+      "item_id": "wa-elev-print", "region": "Washington", "county": "Wahkiakum",
+      "style": "elevation-tint", "endpoint": "print_image", "sellable": true,
+      "rationale": "Archival hypsometric terrain print at gallery size (24x36).",
+      "deliverables": [
+        {"filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.png", "kind": "raster", "fmt": "png", "width_px": 7200, "height_px": 10800, "sha256": null},
+        {"filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.pdf", "kind": "raster", "fmt": "pdf", "width_px": 7200, "height_px": 10800, "sha256": null},
+        {"filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.tiff", "kind": "raster", "fmt": "tiff", "width_px": 7200, "height_px": 10800, "sha256": null}
+      ]
+    },
+    {
+      "item_id": "ca-neon-animation", "region": "California", "county": "Shasta",
+      "style": "neon-basin", "endpoint": "animation", "sellable": true,
+      "rationale": "Year-in-motion seasonality \u2014 flow disaggregated across the calendar year.",
+      "deliverables": [
+        {"filename": "ca-neon-animation_california-shasta_neon-basin_motion.gif", "kind": "motion", "fmt": "gif", "width_px": null, "height_px": null, "sha256": null},
+        {"filename": "ca-neon-animation_california-shasta_neon-basin_motion.mp4", "kind": "motion", "fmt": "mp4", "width_px": null, "height_px": null, "sha256": null}
+      ]
+    },
+    {
+      "item_id": "id-elev-digital", "region": "Idaho", "county": "Blaine",
+      "style": "elevation-tint", "endpoint": "digital_image", "sellable": true,
+      "rationale": "Elevation-mono treatment carried to a fourth region \u2014 range across styles.",
+      "deliverables": [
+        {"filename": "id-elev-digital_idaho-blaine_elevation-tint_digital.svg", "kind": "vector", "fmt": "svg", "width_px": null, "height_px": null, "sha256": null},
+        {"filename": "id-elev-digital_idaho-blaine_elevation-tint_digital.png", "kind": "raster", "fmt": "png", "width_px": null, "height_px": null, "sha256": null}
+      ]
+    },
+    {
+      "item_id": "wa-neon-report", "region": "Washington", "county": "Wahkiakum",
+      "style": "neon-basin", "endpoint": "report", "sellable": true,
+      "rationale": "Watershed analytics report \u2014 the data-story deliverable.",
+      "deliverables": [
+        {"filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.html", "kind": "document", "fmt": "html", "width_px": null, "height_px": null, "sha256": null},
+        {"filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.png", "kind": "figures", "fmt": "png", "width_px": null, "height_px": null, "sha256": null}
+      ]
+    }
+  ]
+}
+</script>
+
+<script>
+  function $(id) { return document.getElementById(id); }
+
+  function embeddedLedger() {
+    return JSON.parse($("sample-ledger").textContent);
+  }
+
+  function dims(d) {
+    if (d.width_px && d.height_px) return d.width_px + "\u00d7" + d.height_px + " px";
+    return d.fmt.toUpperCase();
+  }
+
+  function assetCard(asset) {
+    var card = document.createElement("div");
+    card.className = "card";
+
+    var meta = document.createElement("div");
+    meta.className = "meta";
+    var place = document.createElement("span");
+    place.className = "place";
+    place.textContent = asset.region + " \u00b7 " + asset.county;
+    var style = document.createElement("span");
+    style.className = "tag";
+    style.textContent = asset.style;
+    var endpoint = document.createElement("span");
+    endpoint.className = "endpoint";
+    endpoint.textContent = asset.endpoint.replace(/_/g, " ");
+    meta.appendChild(place);
+    meta.appendChild(style);
+    meta.appendChild(endpoint);
+    if (asset.sellable) {
+      var badge = document.createElement("span");
+      badge.className = "sellable";
+      badge.textContent = "sellable";
+      meta.appendChild(badge);
+    }
+    card.appendChild(meta);
+
+    var rationale = document.createElement("div");
+    rationale.className = "rationale";
+    rationale.textContent = asset.rationale;
+    card.appendChild(rationale);
+
+    var list = document.createElement("ul");
+    list.className = "deliverables";
+    (asset.deliverables || []).forEach(function (d) {
+      var li = document.createElement("li");
+      var fname = document.createElement("span");
+      fname.className = "fname";
+      fname.textContent = d.filename;
+      var meta2 = document.createElement("span");
+      meta2.className = "dims";
+      meta2.textContent = dims(d);
+      li.appendChild(fname);
+      li.appendChild(meta2);
+      list.appendChild(li);
+    });
+    card.appendChild(list);
+    return card;
+  }
+
+  function render(ledger) {
+    $("attribution").innerHTML = "";
+    var strong = document.createElement("b");
+    strong.textContent = "Attribution: ";
+    $("attribution").appendChild(strong);
+    $("attribution").appendChild(
+      document.createTextNode(ledger.attribution + "  \u00b7  schema " + ledger.schema)
+    );
+
+    var assets = ledger.assets || [];
+    $("count").textContent = assets.length + " curated asset(s)";
+    var grid = $("grid");
+    grid.innerHTML = "";
+    if (!assets.length) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = "No assets in this ledger.";
+      grid.appendChild(empty);
+      return;
+    }
+    assets.forEach(function (asset) {
+      grid.appendChild(assetCard(asset));
+    });
+  }
+
+  function boot() {
+    var params = new URLSearchParams(window.location.search);
+    var url = params.get("ledger");
+    if (url && window.location.protocol !== "file:") {
+      fetch(url)
+        .then(function (r) { return r.json(); })
+        .then(render)
+        .catch(function () { render(embeddedLedger()); });
+    } else {
+      render(embeddedLedger());
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", boot);
+</script>
+</body>
+</html>

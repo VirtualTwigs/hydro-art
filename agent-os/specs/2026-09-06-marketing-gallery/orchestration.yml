@@ -1,0 +1,20 @@
+task_groups:
+  - name: curated-matrix-and-rights-ledger             # TG1 — offline src/gallery.py
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: high-res-render-harness                      # TG2 — opt-in tools/ harness
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: web-gallery-surface                          # TG3 — web/gallery.html
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: gallery-golden-and-gate                      # TG4 — golden + regression gate
+    claude_code_subagent: rights-gate-auditor
+    standards:
+      - global/hydro-art-invariants.md
