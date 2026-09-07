@@ -1,0 +1,20 @@
+task_groups:
+  - name: reproducibility-release-gate-core             # TG1 — src/release.py + flagship single-source
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: changelog-generator                           # TG2 — src/changelog.py
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: clis-ci-and-version-bump                       # TG3 — tools/ + .github/ + pyproject
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md
+      - global/tech-stack.md
+  - name: release-artifacts-and-gate                    # TG4 — CHANGELOG + gate + report
+    claude_code_subagent: determinism-auditor
+    standards:
+      - global/hydro-art-invariants.md

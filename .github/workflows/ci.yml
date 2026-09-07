@@ -1,0 +1,44 @@
+name: CI (offline test pyramid)
+
+# Runs the fully-offline pyramid (unit + integration + e2e) on every change. The suite needs
+# no GDAL, network, or real datasets (see CLAUDE.md "offline-suite discipline"), so it runs on a
+# stock hosted runner. The real-data e2e + determinism is a separate, gated workflow
+# (reproducibility.yml).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  offline-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install core + dev deps (no GDAL stack)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest coverage
+
+      - name: Unit + integration + e2e (offline)
+        run: python -m pytest -q
+
+      - name: Web recipe roundtrip (Node, no deps)
+        run: node tests/test_recipe_roundtrip.cjs
+
+      - name: Coverage report (report-only)
+        run: python tools/coverage_report.py --quiet
+
+      - name: Reproducibility preflight (fixture-match, offline)
+        run: python tools/release_gate.py --offline-only
+
+      - name: Changelog is up to date
+        run: python tools/build_changelog.py --check

@@ -19,30 +19,28 @@ import pytest
 from src.endpoints import (
     ENDPOINT_CONTRACTS,
     ENDPOINTS,
+    FLAGSHIP_E2E,
     EndpointError,
     build_endpoint_request,
     combined_manifest,
     dispatch_endpoint,
     e2e_contract_digest,
+    flagship_e2e_requests,
 )
 
 GOLDEN = Path(__file__).parent / "fixtures" / "golden" / "e2e" / "washington-wahkiakum.json"
 
-ENDPOINT_EXTRAS = {
-    "digital_image": {},
-    "animation": {"year": 2015},
-    "print_image": {"size": "18x24"},
-    "report": {"huc": "17080003"},
-}
+# Single source of truth for the flagship path (also used by the Epoch 23 release gate).
+ENDPOINT_EXTRAS = FLAGSHIP_E2E["extras"]
 
 
 def _payload(endpoint, **over):
     base = {
-        "request_id": "REQ-E2E-1",
-        "region": "Washington",
-        "county": "Wahkiakum",
+        "request_id": FLAGSHIP_E2E["request_id"],
+        "region": FLAGSHIP_E2E["region"],
+        "county": FLAGSHIP_E2E["county"],
         "endpoint": endpoint,
-        "style": "neon-basin",
+        "style": FLAGSHIP_E2E["style"],
     }
     base.update(ENDPOINT_EXTRAS[endpoint])
     base.update(over)
@@ -63,7 +61,7 @@ def _disk_renderer(out_dir):
 
 
 def _all_requests():
-    return [build_endpoint_request(_payload(ep)) for ep in ENDPOINTS]
+    return flagship_e2e_requests()
 
 
 def _dispatch_all(out_root):

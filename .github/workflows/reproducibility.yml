@@ -1,0 +1,52 @@
+name: Reproducibility gate (real data)
+
+# The NON-OFFLINE half of the release gate: renders a small public-domain region twice through
+# the real GDAL-backed pipeline and proves byte-identical determinism + golden match, then runs
+# the full release gate. This needs GDAL + staged NHDPlus HR data on the runner, so it is NOT run
+# on the stock offline CI — it is manual (workflow_dispatch) or scheduled, and expected to target
+# a self-hosted runner with the GIS stack + NAS-staged datasets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: "Region to prove deterministic"
+        required: true
+        default: "Oregon"
+      county:
+        description: "Optional county scope"
+        required: false
+        default: ""
+  schedule:
+    # Weekly drift check (Mondays 06:00 UTC). No-ops cheaply if no GIS runner is available.
+    - cron: "0 6 * * 1"
+
+jobs:
+  real-data-e2e-and-determinism:
+    # Requires a runner with GDAL + staged datasets; label your GIS runner "gdal".
+    runs-on: [self-hosted, gdal]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install full GIS stack
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install -r requirements.txt
+
+      - name: All-four-endpoints real e2e + determinism
+        run: |
+          python tools/render_all_endpoints.py \
+            --region "${{ github.event.inputs.region || 'Oregon' }}" \
+            --check-determinism
+
+      - name: Release gate (fixtures + double-render)
+        run: |
+          python tools/release_gate.py \
+            --region "${{ github.event.inputs.region || 'Oregon' }}" \
+            ${{ github.event.inputs.county && format('--county {0}', github.event.inputs.county) || '' }}

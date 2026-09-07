@@ -42,6 +42,8 @@ __all__ = [
     "dispatch_endpoint",
     "combined_manifest",
     "e2e_contract_digest",
+    "flagship_e2e_requests",
+    "FLAGSHIP_E2E",
     "MANIFEST_SCHEMA",
     "E2E_MANIFEST_SCHEMA",
     "E2E_CONTRACT_SCHEMA",
@@ -434,3 +436,42 @@ def e2e_contract_digest(requests, *, sources=DEFAULT_SOURCES) -> dict:
         "sources": [{"name": s.name, "version": s.version} for s in sources],
         "endpoints": contracts,
     }
+
+
+# --- flagship end-to-end path (single source of truth, Epoch 21/23) -------
+# One region, one path, all four endpoints. Shared by the flagship e2e proof
+# (tests/test_endpoints_e2e.py) and the Epoch 23 release gate (src/release.py) so both
+# recompute the *same* render-independent golden without duplicating the definition.
+FLAGSHIP_E2E: dict = {
+    "request_id": "REQ-E2E-1",
+    "region": "Washington",
+    "county": "Wahkiakum",
+    "style": "neon-basin",
+    "extras": {
+        "digital_image": {},
+        "animation": {"year": 2015},
+        "print_image": {"size": "18x24"},
+        "report": {"huc": "17080003"},
+    },
+}
+
+
+def flagship_e2e_requests(*, styles=ORDER_STYLES, sizes=SIZES) -> list[EndpointRequest]:
+    """The canonical flagship all-four-endpoints request set (one region, one path).
+
+    Builds one validated :class:`EndpointRequest` per endpoint in :data:`ENDPOINTS` from
+    :data:`FLAGSHIP_E2E` (Rights gate enforced). Deterministic and offline — the single
+    source of truth for both the flagship e2e proof and the release-gate golden recompute.
+    """
+    requests = []
+    for endpoint in ENDPOINTS:
+        payload = {
+            "request_id": FLAGSHIP_E2E["request_id"],
+            "region": FLAGSHIP_E2E["region"],
+            "county": FLAGSHIP_E2E["county"],
+            "endpoint": endpoint,
+            "style": FLAGSHIP_E2E["style"],
+            **FLAGSHIP_E2E["extras"][endpoint],
+        }
+        requests.append(build_endpoint_request(payload, styles=styles, sizes=sizes))
+    return requests
