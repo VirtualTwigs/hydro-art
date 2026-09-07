@@ -54,6 +54,7 @@ __all__ = [
     "YearRank",
     "RecordBook",
     "DecadeFDC",
+    "PhaseComposite",
     "snow_fraction",
     "classify_regime",
     "snow_regime",
@@ -63,6 +64,7 @@ __all__ = [
     "rank_years",
     "record_book",
     "decade_flow_duration",
+    "composite_hydrographs",
     "FlowValidationError",
     "ValidationReport",
     "bias",
@@ -705,6 +707,73 @@ def decade_flow_duration(
         flows = flow_duration(np.vstack(buckets[decade]), quantiles)
         out.append(DecadeFDC(decade=decade, quantiles=q, flows=tuple(float(f) for f in flows)))
     return out
+
+
+# --- #74 ENSO/PDO composite hydrographs ----------------------------------
+#
+# Split the years by a climate index (ONI for ENSO, PDO) into warm / neutral /
+# cool phases and average the hydrograph within each, so the report can overlay
+# "what your river does in each phase" — more actionable than one correlation
+# coefficient. Only years present in *both* the flow series and the index count.
+
+
+@dataclass(frozen=True)
+class PhaseComposite:
+    """Mean hydrographs per climate phase (``None`` when a phase has no years)."""
+
+    warm: tuple[float, ...] | None
+    neutral: tuple[float, ...] | None
+    cool: tuple[float, ...] | None
+    warm_years: tuple[int, ...]
+    neutral_years: tuple[int, ...]
+    cool_years: tuple[int, ...]
+
+
+def composite_hydrographs(
+    series: Mapping[int, object],
+    index_by_year: Mapping[int, float],
+    *,
+    warm_min: float = 0.5,
+    cool_max: float = -0.5,
+) -> PhaseComposite:
+    """Mean hydrograph per climate phase over a ``{year:[12]}`` flow series.
+
+    Each year common to ``series`` and ``index_by_year`` is a warm phase when its
+    index ``>= warm_min`` (El Niño / positive PDO), a cool phase when ``<= cool_max``
+    (La Niña / negative PDO), else neutral. Returns the per-phase mean 12-month
+    hydrograph (``None`` when a phase is empty) and the member years. Defaults are
+    the standard ONI ±0.5 thresholds.
+    """
+    if not (cool_max < warm_min):
+        raise FlowMetricsError(f"require cool_max ({cool_max}) < warm_min ({warm_min}).")
+    validated: dict[int, np.ndarray] = {}
+    for year, vec in series.items():
+        a = _validate_monthly(vec, f"series[{year}]")
+        if a.ndim != 1:
+            raise FlowMetricsError("composite_hydrographs takes a {year:[12]} series.")
+        validated[int(year)] = a
+    index = {int(y): float(v) for y, v in index_by_year.items()}
+    phases: dict[str, list[np.ndarray]] = {"warm": [], "neutral": [], "cool": []}
+    years: dict[str, list[int]] = {"warm": [], "neutral": [], "cool": []}
+    for year in sorted(set(validated) & set(index)):
+        idx = index[year]
+        phase = "warm" if idx >= warm_min else "cool" if idx <= cool_max else "neutral"
+        phases[phase].append(validated[year])
+        years[phase].append(year)
+
+    def _mean(rows: list[np.ndarray]) -> tuple[float, ...] | None:
+        if not rows:
+            return None
+        return tuple(float(x) for x in np.vstack(rows).mean(axis=0))
+
+    return PhaseComposite(
+        warm=_mean(phases["warm"]),
+        neutral=_mean(phases["neutral"]),
+        cool=_mean(phases["cool"]),
+        warm_years=tuple(years["warm"]),
+        neutral_years=tuple(years["neutral"]),
+        cool_years=tuple(years["cool"]),
+    )
 
 
 # --- #50/#51 model-vs-observed validation + climate-index teleconnection ---

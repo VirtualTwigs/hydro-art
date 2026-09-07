@@ -51,6 +51,13 @@ One roadmap item at a time. Only Task Group 1 (#69) is implemented this session.
 - [x] 5.2 `src/flow_metrics.py` — add `DecadeFDC` + `decade_flow_duration` delegating to
   `flow_duration` over pooled decade months. Export.
 - [x] 5.3 Full offline suite green (877); roadmap #73 ticked; report updated. No `PIPELINE_STAGES`.
-## Task Group 6 — #74 ENSO/PDO composite hydrographs · not started
+## Task Group 6 — #74 ENSO/PDO composite hydrographs
+
+- [x] 6.1 Tests (`tests/test_flow_metrics.py`) — `composite_hydrographs` means each warm/neutral/cool
+  phase (warm peaks spring, cool peaks winter); only common years counted, extras dropped; empty
+  phase → `None`; threshold + non-`[12]` guards.
+- [x] 6.2 `src/flow_metrics.py` — add `PhaseComposite` + `composite_hydrographs(series,
+  index_by_year, warm_min=0.5, cool_max=-0.5)`. Export.
+- [x] 6.3 Full offline suite green (880); roadmap #74 ticked; report updated. No `PIPELINE_STAGES`.
 ## Task Group 7 — #75 Longitudinal flow-accumulation animation · not started
 ## Task Group 8 — #76 Report assembly & web surfacing · not started

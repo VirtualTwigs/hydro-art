@@ -952,9 +952,15 @@ Follow-ons #74–#76.)
 
 **Phase 17.3 — Climate framing**
 
-74. [ ] ENSO / PDO composite hydrographs — Using the per-year ONI/PDO series already fetched, overlay
+74. [x] ENSO / PDO composite hydrographs — Using the per-year ONI/PDO series already fetched, overlay
 the mean El Niño-year vs La Niña-year hydrograph ("here's what your river does in each phase") —
 more actionable than a single correlation coefficient. `S`
+(Shipped 2026-09-07. `src/flow_metrics.py` gains `PhaseComposite` + `composite_hydrographs(series,
+index_by_year, warm_min=0.5, cool_max=-0.5)` — splits the years common to the `{year:[12]}` flow
+series and the climate index into warm/neutral/cool phases (standard ONI ±0.5; reusable for PDO by
+sign) and averages the 12-month hydrograph within each (`None` when a phase is empty), plus the member
+years per phase. Numpy-only, no pipeline wiring. Suite 880 passing; 2D default byte-identical.
+Follow-ons #75–#76.)
 
 **Phase 17.4 — Longitudinal story**
 

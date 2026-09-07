@@ -168,3 +168,32 @@ Full offline suite **877 passed**. No `PIPELINE_STAGES` edit → 2D default byte
 
 ## Not done (later items)
 `tools`/`web` surfacing lands with #76. Items #74–#75 remain unchecked.
+
+---
+
+# Implementation report — #74 ENSO/PDO composite hydrographs
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.3, item #74** · one roadmap item, then STOP.
+
+## What shipped
+`src/flow_metrics.py`:
+- `PhaseComposite` dataclass (per-phase mean hydrograph `warm`/`neutral`/`cool`, each `None` when
+  empty, plus the member years).
+- `composite_hydrographs(series, index_by_year, *, warm_min=0.5, cool_max=-0.5)` — over the years
+  common to the `{year:[12]}` flow series and the climate index, classifies each warm (`>= warm_min`,
+  El Niño / positive PDO), cool (`<= cool_max`, La Niña / negative PDO), or neutral, and averages the
+  12-month hydrograph within each phase. Defaults are the standard ONI ±0.5 thresholds; reusable for
+  PDO by sign. Exported both names.
+
+## Tests (`tests/test_flow_metrics.py`, +3)
+Warm/cool/neutral means (warm peaks spring, cool peaks winter); only common years counted (index-only
+and series-only years dropped); empty phase → `None`; `cool_max < warm_min` and non-`[12]` guards.
+
+Targeted run: `test_flow_metrics.py` → **71 passed**.
+
+## Regression / discipline
+Full offline suite **880 passed**. No `PIPELINE_STAGES` edit → 2D default byte-for-byte identical.
+`flow_metrics` stays numpy-only.
+
+## Not done (later items)
+`tools`/`web` surfacing lands with #76. Item #75 remains unchecked.

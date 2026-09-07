@@ -17,12 +17,14 @@ from src.flow_metrics import (
     AnalogYear,
     DecadeFDC,
     MeltTimingTrend,
+    PhaseComposite,
     RecordBook,
     SnowRegime,
     TimingTrend,
     YearRank,
     align_index,
     analog_years,
+    composite_hydrographs,
     decade_flow_duration,
     anomaly,
     bias,
@@ -672,3 +674,44 @@ def test_decade_flow_duration_decade_size_and_guard() -> None:
     assert [c.decade for c in curves] == [1980, 2000]  # 20-yr bins: 1980-99, 2000-19
     with pytest.raises(FlowMetricsError):
         decade_flow_duration({1990: np.ones((2, 12))}, [50])  # not single [12]
+
+
+# --- #74 ENSO/PDO composite hydrographs --------------------------------------
+
+def test_composite_hydrographs_means_each_phase() -> None:
+    warm_shape = np.array([1, 1, 2, 5, 8, 6, 3, 2, 1, 1, 1, 1], dtype=float)
+    cool_shape = np.array([8, 7, 5, 3, 1, 1, 1, 1, 2, 4, 7, 8], dtype=float)
+    series = {
+        1997: warm_shape, 2015: warm_shape + 2,   # El Niño years
+        1999: cool_shape, 2010: cool_shape + 2,   # La Niña years
+        2003: (warm_shape + cool_shape) / 2,      # neutral
+    }
+    oni = {1997: 2.3, 2015: 2.6, 1999: -1.7, 2010: -1.4, 2003: 0.1}
+    comp = composite_hydrographs(series, oni)
+    assert isinstance(comp, PhaseComposite)
+    assert comp.warm_years == (1997, 2015)
+    assert comp.cool_years == (1999, 2010)
+    assert comp.neutral_years == (2003,)
+    np.testing.assert_allclose(comp.warm, (warm_shape + (warm_shape + 2)) / 2)
+    np.testing.assert_allclose(comp.cool, (cool_shape + (cool_shape + 2)) / 2)
+    # The warm composite peaks in spring/summer, the cool one in winter.
+    assert int(np.argmax(comp.warm)) == 4       # May
+    assert int(np.argmax(comp.cool)) in (0, 11)  # Jan/Dec
+
+
+def test_composite_hydrographs_only_common_years_and_empty_phase() -> None:
+    series = {2000: np.arange(1.0, 13.0), 2001: np.arange(2.0, 14.0), 2002: np.ones(12)}
+    # Index missing 2002 (dropped); 1990 in index only (dropped). No cool years.
+    idx = {2000: 0.8, 2001: 0.1, 1990: -3.0}
+    comp = composite_hydrographs(series, idx)
+    assert comp.warm_years == (2000,)
+    assert comp.neutral_years == (2001,)
+    assert comp.cool_years == ()
+    assert comp.cool is None
+
+
+def test_composite_hydrographs_guards() -> None:
+    with pytest.raises(FlowMetricsError):
+        composite_hydrographs({2000: np.ones(12)}, {2000: 0.0}, warm_min=-0.5, cool_max=0.5)
+    with pytest.raises(FlowMetricsError):
+        composite_hydrographs({2000: np.ones((2, 12))}, {2000: 1.0})  # not single [12]
