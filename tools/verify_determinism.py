@@ -36,13 +36,16 @@ import tempfile
 from pathlib import Path
 from typing import Sequence
 
-from rich.console import Console
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 
-from build import _storage_roots
-from src.cli import resolve_settings
-from src.config import ConfigError, Settings
-from src.datasets import AcquisitionError
-from src.determinism import (
+from rich.console import Console  # noqa: E402
+
+from build import _storage_roots  # noqa: E402
+from src.cli import resolve_settings  # noqa: E402
+from src.config import ConfigError, Settings  # noqa: E402
+from src.datasets import AcquisitionError  # noqa: E402
+from src.determinism import (  # noqa: E402
     DeterminismError,
     dump_registry,
     evaluate,
@@ -51,7 +54,7 @@ from src.determinism import (
     record_golden,
     registry_key,
 )
-from src.pipeline import Pipeline
+from src.pipeline import Pipeline  # noqa: E402
 
 #: Default golden registry path (a ``{key: svg_sha256}`` JSON map).
 DEFAULT_GOLDEN = "tests/fixtures/golden/registry.json"
