@@ -25,6 +25,8 @@ from datetime import date as _date
 from pathlib import Path
 from typing import Sequence
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from src.status import (
     StatusError,
     stamp_epoch_status,

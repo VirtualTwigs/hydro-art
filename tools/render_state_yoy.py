@@ -28,7 +28,8 @@ import pickle
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 
 import numpy as np
 import pyogrio
@@ -114,7 +115,7 @@ def yearly_flow_by_id(spec, years, root, *, latest, climate_source="nclimgrid"):
     root = Path(root)
     for gdb in gdb_paths(spec):
         code = Path(gdb).parent.name
-        cache = Path(f"output/_yoy_net_{code}.pkl")
+        cache = REPO / "output" / f"_yoy_net_{code}.pkl"
         if cache.exists():
             ids, q_incr, hydroseq, dnhydroseq, lon, lat = pickle.loads(
                 cache.read_bytes()
@@ -190,7 +191,7 @@ def main() -> int:
     tag = args.state.lower().replace(" ", "_")
 
     # Reuse the still-render's clip+elevation cache for geometry & hypsometric tint.
-    pk = Path(f"output/_peakcache_{tag}_mo{args.min_order}.pkl")
+    pk = REPO / "output" / f"_peakcache_{tag}_mo{args.min_order}.pkl"
     if not pk.exists():
         raise SystemExit(
             f"missing {pk}; run render_state_mono_peak.py --state {args.state} "
@@ -251,7 +252,7 @@ def main() -> int:
     print(f"flow span {np.exp(lo):.2f}..{np.exp(hi):.0f} cfs -> "
           f"{args.min_px}..{args.max_px}px; peak={MONTH_ABBR[peak]}")
 
-    out_dir = Path("output/yoy")
+    out_dir = REPO / "output" / "yoy"
     out_dir.mkdir(parents=True, exist_ok=True)
     subtitle = (f"{args.state} - {MONTH_ABBR[peak]} flow, year over year "
                 f"(PRISM {years[0]}-{years[-1]})")

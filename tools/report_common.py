@@ -28,7 +28,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
 
 import geopandas as gpd
 import matplotlib
@@ -48,7 +49,7 @@ from tools.render_state_yoy import yearly_flow_by_id
 from tools.render_watershed_yoy import clip_watershed, load_huc12_boundary
 
 FLOOR = 1e-2
-FIG_DIR = Path("notebooks/figures")
+FIG_DIR = REPO / "notebooks" / "figures"
 
 # NWIS horizontal-datum codes -> EPSG (for snapping the gauge to a model reach).
 _DATUM_EPSG = {"NAD83": "EPSG:4269", "NAD27": "EPSG:4267", "WGS84": "EPSG:4326"}
@@ -117,7 +118,7 @@ def load_watershed_series(
 ) -> WatershedSeries:
     """Assemble a watershed's year-over-year flow series (cache-backed)."""
     tag = name.lower().replace(" ", "_")
-    clip_cache = Path(f"output/_wshed_{tag}_mo{min_order}.pkl")
+    clip_cache = REPO / "output" / f"_wshed_{tag}_mo{min_order}.pkl"
     if clip_cache.exists():
         geoms, elev_max, nhdids = pickle.loads(clip_cache.read_bytes())
     else:

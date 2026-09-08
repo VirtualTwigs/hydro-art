@@ -29,6 +29,8 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from src.unfinished import (
     closed_epochs,
     commit_pending_bullets,
