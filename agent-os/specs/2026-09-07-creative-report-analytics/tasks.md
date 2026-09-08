@@ -59,5 +59,12 @@ One roadmap item at a time. Only Task Group 1 (#69) is implemented this session.
 - [x] 6.2 `src/flow_metrics.py` — add `PhaseComposite` + `composite_hydrographs(series,
   index_by_year, warm_min=0.5, cool_max=-0.5)`. Export.
 - [x] 6.3 Full offline suite green (880); roadmap #74 ticked; report updated. No `PIPELINE_STAGES`.
-## Task Group 7 — #75 Longitudinal flow-accumulation animation · not started
+## Task Group 7 — #75 Longitudinal flow-accumulation animation
+
+- [x] 7.1 Tests (`tests/test_flow_metrics.py`) — `longitudinal_frames` reveals `profile[:k+1]` per
+  step; `fraction` monotone in `[0,1]` with last `1.0`; `hydroseq`/`accum_flow` match; zero-mouth →
+  `0` fractions; `longitudinal_profile` validation errors propagate.
+- [x] 7.2 `src/flow_metrics.py` — add `ProfileFrame` + `longitudinal_frames` over
+  `longitudinal_profile`. Export.
+- [x] 7.3 Full offline suite green (884); roadmap #75 ticked; report updated. No `PIPELINE_STAGES`.
 ## Task Group 8 — #76 Report assembly & web surfacing · not started

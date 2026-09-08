@@ -197,3 +197,33 @@ Full offline suite **880 passed**. No `PIPELINE_STAGES` edit → 2D default byte
 
 ## Not done (later items)
 `tools`/`web` surfacing lands with #76. Item #75 remains unchecked.
+
+---
+
+# Implementation report — #75 Longitudinal flow-accumulation animation
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.3, item #75** · one roadmap item, then STOP.
+
+## What shipped
+`src/flow_metrics.py`:
+- `ProfileFrame` dataclass (`step`, `hydroseq`, `accum_flow`, `revealed`, `fraction`).
+- `longitudinal_frames(accum_flow, hydroseq, dnhydroseq, path)` — walks the mouth-to-headwater
+  `longitudinal_profile` one confluence at a time, emitting one `ProfileFrame` per path position:
+  `revealed` is the accumulated-flow polyline from the mouth up to that step (the reveal for a
+  progressive draw), and `fraction` is that step's accumulated flow over the mouth total (monotone in
+  `[0,1]`, last `1.0`). A zero-mouth network yields all-`0` fractions (guarded divide). Validation from
+  `longitudinal_profile` (bad `path`, shape mismatches) propagates unchanged. Exported both names.
+
+## Tests (`tests/test_flow_metrics.py`, +4)
+Progressive reveal (`revealed == profile[:step+1]`, `hydroseq`/`accum_flow` match per step); `fraction`
+monotone in `[0,1]` with last `1.0`; zero-mouth → all `0` fractions; `longitudinal_profile` validation
+errors propagate.
+
+Targeted run: `test_flow_metrics.py` → **75 passed**.
+
+## Regression / discipline
+Full offline suite **884 passed**. No `PIPELINE_STAGES` edit → 2D default byte-for-byte identical.
+`flow_metrics` stays numpy-only.
+
+## Not done (later items)
+`tools`/`web` surfacing lands with #76 — the report-assembly & web panels for all of #69–#75.

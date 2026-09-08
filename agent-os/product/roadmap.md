@@ -964,8 +964,14 @@ Follow-ons #75–#76.)
 
 **Phase 17.4 — Longitudinal story**
 
-75. [ ] Longitudinal flow-accumulation animation — Animate `longitudinal_profile()` walking
+75. [x] Longitudinal flow-accumulation animation — Animate `longitudinal_profile()` walking
 accumulated flow down the mainstem — a direct visual bridge between the *art* and the *data*. `M`
+(Shipped 2026-09-07. `src/flow_metrics.py` gains `ProfileFrame` + `longitudinal_frames(accum_flow,
+hydroseq, dnhydroseq, path)` — builds the profile via `longitudinal_profile` (same validation) then
+emits one reveal frame per path position: `revealed` is the headwater→reach polyline, `fraction` is
+accumulated flow as a share of the mouth's (`0..1`, monotone; `0` when the mouth carries no flow).
+The GIF rendering itself lands with the #76 `tools/` animation renderer. Numpy-only, no pipeline
+wiring. Suite 884 passing; 2D default byte-identical. Follow-on #76 (assembly & web).)
 
 **Phase 17.5 — Assembly & web surfacing**
 

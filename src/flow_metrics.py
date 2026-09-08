@@ -45,6 +45,8 @@ __all__ = [
     "subset_series",
     "outlet_index",
     "longitudinal_profile",
+    "ProfileFrame",
+    "longitudinal_frames",
     "REGIME_SNOW_MIN",
     "REGIME_RAIN_MAX",
     "SnowRegime",
@@ -365,6 +367,51 @@ def longitudinal_profile(accum_flow, hydroseq, dnhydroseq, path) -> np.ndarray:
             )
     rows = [index_of[h] for h in path]
     return accum[rows]
+
+
+# --- #75 longitudinal flow-accumulation animation ------------------------
+#
+# Walk :func:`longitudinal_profile` down the mainstem one reach at a time, so the
+# report can animate accumulated flow filling in from the headwater to the mouth —
+# a direct visual bridge between the art and the data. The GIF rendering lives in
+# ``tools/``; this emits the pure per-step reveal frames it draws.
+
+
+@dataclass(frozen=True)
+class ProfileFrame:
+    """One animation step revealing the longitudinal profile down to ``step``."""
+
+    step: int
+    hydroseq: float
+    accum_flow: float
+    revealed: tuple[float, ...]
+    fraction: float
+
+
+def longitudinal_frames(accum_flow, hydroseq, dnhydroseq, path) -> list[ProfileFrame]:
+    """Progressive-reveal frames of the longitudinal profile down a mainstem ``path``.
+
+    Builds the profile via :func:`longitudinal_profile` (same validation), then emits
+    one :class:`ProfileFrame` per path position: ``revealed`` is the polyline from the
+    headwater down to that reach, and ``fraction`` is its accumulated flow as a share
+    of the mouth's (``0..1``, monotone non-decreasing; ``0`` throughout when the mouth
+    carries no flow). Feeds a ``tools/`` animation renderer.
+    """
+    profile = longitudinal_profile(accum_flow, hydroseq, dnhydroseq, path)
+    final = float(profile[-1])
+    frames: list[ProfileFrame] = []
+    for step, h in enumerate(path):
+        value = float(profile[step])
+        frames.append(
+            ProfileFrame(
+                step=step,
+                hydroseq=float(h),
+                accum_flow=value,
+                revealed=tuple(float(v) for v in profile[: step + 1]),
+                fraction=value / final if final > 0 else 0.0,
+            )
+        )
+    return frames
 
 
 # --- #69 snow-vs-rain regime signature -----------------------------------

@@ -18,6 +18,7 @@ from src.flow_metrics import (
     DecadeFDC,
     MeltTimingTrend,
     PhaseComposite,
+    ProfileFrame,
     RecordBook,
     SnowRegime,
     TimingTrend,
@@ -36,6 +37,7 @@ from src.flow_metrics import (
     record_book,
     flashiness,
     flow_duration,
+    longitudinal_frames,
     longitudinal_profile,
     low_flow,
     mann_kendall,
@@ -715,3 +717,49 @@ def test_composite_hydrographs_guards() -> None:
         composite_hydrographs({2000: np.ones(12)}, {2000: 0.0}, warm_min=-0.5, cool_max=0.5)
     with pytest.raises(FlowMetricsError):
         composite_hydrographs({2000: np.ones((2, 12))}, {2000: 1.0})  # not single [12]
+
+
+# --- #75 longitudinal flow-accumulation animation ----------------------------
+
+def _mainstem():
+    accum = np.array([5.0, 12.0, 20.0])
+    hydroseq = np.array([30.0, 20.0, 10.0])
+    dnhydroseq = np.array([20.0, 10.0, 0.0])
+    return accum, hydroseq, dnhydroseq, [30, 20, 10]
+
+
+def test_longitudinal_frames_progressive_reveal() -> None:
+    accum, hydroseq, dnhydroseq, path = _mainstem()
+    frames = longitudinal_frames(accum, hydroseq, dnhydroseq, path)
+    assert len(frames) == 3
+    assert isinstance(frames[0], ProfileFrame)
+    # Frame k reveals the profile from the headwater down to position k.
+    assert frames[0].revealed == (5.0,)
+    assert frames[1].revealed == (5.0, 12.0)
+    assert frames[2].revealed == (5.0, 12.0, 20.0)
+    assert [f.step for f in frames] == [0, 1, 2]
+    assert [f.hydroseq for f in frames] == [30.0, 20.0, 10.0]
+    assert [f.accum_flow for f in frames] == [5.0, 12.0, 20.0]
+
+
+def test_longitudinal_frames_fraction_monotone_to_one() -> None:
+    accum, hydroseq, dnhydroseq, path = _mainstem()
+    frames = longitudinal_frames(accum, hydroseq, dnhydroseq, path)
+    fractions = [f.fraction for f in frames]
+    assert fractions[-1] == pytest.approx(1.0)          # full mainstem revealed
+    assert fractions[0] == pytest.approx(5.0 / 20.0)
+    assert all(a <= b for a, b in zip(fractions, fractions[1:]))  # non-decreasing
+
+
+def test_longitudinal_frames_zero_final_fraction_is_zero() -> None:
+    accum = np.zeros(3)
+    hydroseq = np.array([30.0, 20.0, 10.0])
+    dnhydroseq = np.array([20.0, 10.0, 0.0])
+    frames = longitudinal_frames(accum, hydroseq, dnhydroseq, [30, 20, 10])
+    assert all(f.fraction == 0.0 for f in frames)       # no divide-by-zero blowup
+
+
+def test_longitudinal_frames_propagates_profile_errors() -> None:
+    accum, hydroseq, dnhydroseq, _ = _mainstem()
+    with pytest.raises(FlowMetricsError):
+        longitudinal_frames(accum, hydroseq, dnhydroseq, [30, 10])  # broken chain
