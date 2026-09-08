@@ -67,4 +67,33 @@ One roadmap item at a time. Only Task Group 1 (#69) is implemented this session.
 - [x] 7.2 `src/flow_metrics.py` — add `ProfileFrame` + `longitudinal_frames` over
   `longitudinal_profile`. Export.
 - [x] 7.3 Full offline suite green (884); roadmap #75 ticked; report updated. No `PIPELINE_STAGES`.
-## Task Group 8 — #76 Report assembly & web surfacing · not started
+## Task Group 8 — #76 Report assembly & web surfacing
+
+Surface the seven new statistics (#69–#75) in the report product. The metrics are already
+implemented and offline-tested in `src/flow_metrics.py`; #76 is the assembly glue —
+`tools/report_common.py` figures + `web/report.html` panels on the shared `web/shared/*`
+foundation. `tools/` (heavy GIS + matplotlib) is outside the offline suite, so the *testable*
+surface is the pure node-loadable JS in `web/shared/hydro-ux.js`. Data reality: the report's
+flow series is flow-only (`{year:[12]}` per watershed), so #70–#74 wire directly; #69 (snow
+regime) needs precip/temp and #75 (longitudinal animation) needs network topology — those stay
+in the render tools; the web report shows #69's regime as a synthetic mock badge.
+
+- [x] 8.1 Tests first (node, run only these): `tests/test_report_web.cjs` — `classifyRegime`
+  boundaries (snowmelt/transitional/rain + bad thresholds), `centerOfTimingIndex` (flow-weighted,
+  0-based, empty→NaN), and `sampleReport()` carries `regime`/`analogs`/`recordBook`/`fdc`/`composites`
+  with sane shapes (FDC non-increasing in q; composites 12-long). **+5, green.**
+- [x] 8.2 `web/shared/hydro-ux.js` — added pure helpers `classifyRegime(fraction, snowMin, rainMax)`
+  and `centerOfTimingIndex(v)` (+ private `_pearson`); extended `sampleReport()` with `regime`,
+  `analogs`, `recordBook`, `fdc`/`fdcQuantiles`, `composites` derived from synthetic per-year
+  hydrographs; exported the two helpers. Existing `REPORT_SAMPLE` fields unchanged.
+- [x] 8.3 `web/report.html` — added panels: regime badge, analog-year list, drought/flood record
+  book, decade flow-duration overlay (log-y sparklines), ENSO composite hydrographs. Reused
+  `buildSparkline`/tile helpers; `file://`-safe.
+- [x] 8.4 Ran `node tests/test_report_web.cjs` (5) and `node tests/test_recipe_roundtrip.cjs` (11) — green.
+- [x] 8.5 `tools/report_common.py` — added `fig_timing_drift` (#70 CT drift via
+  `center_of_timing_trend`), `fig_analog_years` (#71), `fig_record_book` (#72), `fig_decade_fdc`
+  (#73 log-scale decade overlays), `fig_composites` (#74) over `ws.outlet`/`index_by_year`; wired
+  into `build_report` behind a `creative` flag; added `--no-creative` to `build_watershed_report.py`.
+  `py_compile` OK on both. (#69 snow-regime + #75 longitudinal need extra inputs → render tools.)
+- [x] 8.6 Closed out: roadmap #76 ticked, this group, `implementation/report.md` appended; full offline
+  Python suite **884** green + node **5+11** green; no `PIPELINE_STAGES` edit (2D byte-identical).

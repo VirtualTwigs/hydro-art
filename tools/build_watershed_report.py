@@ -45,6 +45,9 @@ def main() -> int:
                     help="Climate index for the teleconnection panel (#51).")
     ap.add_argument("--no-index", action="store_true",
                     help="Skip the climate-index teleconnection panel.")
+    ap.add_argument("--no-creative", action="store_true",
+                    help="Skip the #76 creative-analytics panels (timing drift, "
+                         "analog years, record book, decade FDC, composites).")
     ap.add_argument("--root", default=DEFAULT_ROOT,
                     help="External root holding prism/, nwis/, climate/ snapshots.")
     ap.add_argument("--min-order", type=int, default=1)
@@ -86,7 +89,8 @@ def main() -> int:
 
     summary = build_report(
         ws, gauge_obs=gauge_obs, gauge_loc=gauge_loc, index_by_year=index_by_year,
-        index_name=args.index.upper(), out_dir=Path(args.out_dir),
+        index_name=args.index.upper(), creative=not args.no_creative,
+        out_dir=Path(args.out_dir),
     )
     print(f"\nwrote figures to {args.out_dir}/")
     print(json.dumps(summary, indent=2, sort_keys=True, default=str))

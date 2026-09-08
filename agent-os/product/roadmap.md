@@ -975,10 +975,21 @@ wiring. Suite 884 passing; 2D default byte-identical. Follow-on #76 (assembly & 
 
 **Phase 17.5 — Assembly & web surfacing**
 
-76. [ ] Report assembly & web view — Fold the new panels into `tools/report_common.py` +
+76. [x] Report assembly & web view — Fold the new panels into `tools/report_common.py` +
 `tools/build_watershed_report.py` (figures to `notebooks/figures/`) and surface the new metrics/
 toggles in `web/report.html` on the shared `web/shared/*` foundation (no per-page duplication,
 honoring the Epoch 9 anti-drift rule). `M`
+(Done 2026-09-07 — `tools/report_common.py` gains five figures over the outlet `{year:[12]}` series,
+each driving an already-tested `src.flow_metrics` function: `fig_timing_drift` (#70 CT drift),
+`fig_analog_years` (#71), `fig_record_book` (#72), `fig_decade_fdc` (#73 log-scale decade overlays),
+`fig_composites` (#74); wired into `build_report` behind a `creative` flag + `--no-creative` CLI
+toggle. `web/report.html` surfaces regime / analog-years / record-book / decade-FDC / composites
+panels over the shared `web/shared/hydro-ux.js` foundation; two new pure helpers there
+(`classifyRegime`, `centerOfTimingIndex`) mirror the Python thresholds and are node-tested
+(`tests/test_report_web.cjs`, +5). #69 snow-regime needs precip/temp and #75 longitudinal needs
+network topology — those stay in the render tools; the web report shows the regime as a synthetic
+mock badge. Python suite 884 passing (no `src/` change); node 5+11 green; no `PIPELINE_STAGES` touched
+→ 2D default byte-identical. **Epoch 17 complete.**)
 
 Epoch gate: from a single watershed selection, the report additionally shows a snow-vs-rain regime
 verdict, a center-of-timing drift trend, an analog-year match, a drought/flood record book, a

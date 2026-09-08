@@ -227,3 +227,72 @@ Full offline suite **884 passed**. No `PIPELINE_STAGES` edit → 2D default byte
 
 ## Not done (later items)
 `tools`/`web` surfacing lands with #76 — the report-assembly & web panels for all of #69–#75.
+
+---
+
+# Implementation report — #76 Report assembly & web surfacing
+
+**Date:** 2026-09-07 · **Epoch 17, Phase 17.5, item #76** · the assembly item — **Epoch 17 close.**
+
+## What shipped
+The seven new statistics (#69–#75) were already pure/offline-tested in `src/flow_metrics.py`; #76 is
+the surfacing glue. No `src/` change, nothing in `PIPELINE_STAGES`.
+
+### `tools/report_common.py` (heavy GIS + matplotlib; outside every suite)
+Five figures over the outlet `{year:[12]}` series (+ the climate index for composites), each driving
+an already-tested `src.flow_metrics` function:
+- `fig_timing_drift` — `center_of_timing_trend` (#70): per-year CT + Sen's-slope drift line, days/decade.
+- `fig_analog_years` — `analog_years` (#71): horizontal bar of top-6 shape-similarity matches to the latest year.
+- `fig_record_book` — `record_book` (#72): monospace driest-summer / wettest-peak leaderboards with percentiles.
+- `fig_decade_fdc` — `decade_flow_duration` (#73): log-scale flow-duration curves, one viridis line per decade.
+- `fig_composites` — `composite_hydrographs` (#74): warm/neutral/cool mean hydrographs (ONI ±0.5).
+
+Wired into `build_report` behind a `creative=True` flag; `build_watershed_report.py` gains a
+`--no-creative` toggle. Both files `py_compile` clean.
+
+### `web/report.html` + `web/shared/hydro-ux.js` (shared foundation, `file://`-safe)
+- Two **pure, node-loadable** helpers in `hydro-ux.js`: `classifyRegime(fraction, snowMin, rainMax)`
+  (mirrors the Python `REGIME_SNOW_MIN=0.4`/`REGIME_RAIN_MAX=0.2` thresholds, validates
+  `0<=rainMax<snowMin<=1`) and `centerOfTimingIndex(v)` (0-based flow-weighted month, `NaN` on empty/
+  all-zero). Both exported.
+- `sampleReport()` gains deterministic `regime`, `analogs`, `recordBook`, `fdc`/`fdcQuantiles`, and
+  `composites` sections, derived from synthetic per-year hydrographs (a private `_pearson` powers the
+  analog ranking). Existing `REPORT_SAMPLE` fields are untouched (new `rnd` draws only append), so the
+  prior panels render identically.
+- `report.html` adds five panels — snow-vs-rain regime badge, analog-year list, drought/flood record
+  book, decade flow-duration overlay (stacked sparklines), and ENSO composite hydrographs — reusing
+  `buildSparkline` and the existing tile styles.
+
+## Scope note (honest data reality)
+The report's flow series is flow-only, so #70–#74 wire directly. **#69** (snow regime) needs precip/temp
+and **#75** (longitudinal animation) needs network topology — those remain render-tool territory; the
+web report shows the regime as a synthetic **mock badge**, consistent with the page being a deterministic
+sample export.
+
+## Tests
+- `tests/test_report_web.cjs` (+5, node/stdlib-only): `classifyRegime` boundaries + bad-threshold
+  throws; `centerOfTimingIndex` weighting + `NaN` guards; `sampleReport()` carries the new sections with
+  sane shapes (analogs descending; record ranks 1-first; FDC non-increasing in q; composites 12-long).
+- `tests/test_recipe_roundtrip.cjs` unchanged (11) — still green.
+- The `tools/` matplotlib figures are outside every suite (like all `tools/`); verified via `py_compile`.
+  The inline `report.html` script was parse-checked and all `doc.*` fields it reads confirmed present.
+
+Node: `test_report_web.cjs` **5** + `test_recipe_roundtrip.cjs` **11** green.
+
+## Regression / discipline
+Full offline Python suite **884 passed** (unchanged — no `src/` edit). No `PIPELINE_STAGES` edit → 2D
+default byte-for-byte identical. `src/` stays GDAL/network-free; `tools/ → src/` dependency one-way;
+`hydro-ux.js` stays Node-loadable (no top-level `document`/`window`).
+
+## Not done
+No live browser render check — no Chrome extension was connected this session; the page was verified
+statically (script parses, sample-doc fields present) rather than visually.
+
+---
+
+# Epoch 17 close — Creative report analytics (#69–#76)
+
+All eight items shipped one-at-a-time under the offline discipline: seven pure numpy-only
+`src/flow_metrics.py` (+ `src/monthly_flow.py`) statistics with offline tests (#69–#75), then the
+`tools/`/`web` assembly (#76). Nothing entered `PIPELINE_STAGES`; the 2D default render is byte-for-byte
+unchanged throughout. Final: Python suite **884**; node **5+11**.

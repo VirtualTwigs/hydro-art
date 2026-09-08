@@ -337,6 +337,98 @@ def fig_enso(ws: WatershedSeries, index_by_year: dict[int, float], ax,
     return {"enso_r": r0, "enso_r_lag1": r1, "enso_n": int(len(metric))}
 
 
+# --- #76 creative-analytics panels (Epoch 17) -----------------------------
+# Each drives an already-offline-tested src.flow_metrics function off the
+# outlet's {year:[12]} series (+ the climate index for composites). No new data
+# source, nothing in PIPELINE_STAGES — the stats deepen, the report shows them.
+
+def fig_timing_drift(ws: WatershedSeries, ax) -> dict:
+    """Whole-hydrograph center-of-timing per year + Sen's-slope drift (#70)."""
+    tt = fm.center_of_timing_trend(ws.outlet)
+    years = list(tt.years)
+    centers = np.array(tt.center_months)
+    ax.plot(years, centers, "o-", color="#00e5ff", lw=1.2, ms=4, label="center of timing")
+    x = np.arange(len(years))
+    fit = np.median(centers) + tt.slope_months_per_year * (x - np.median(x))
+    ax.plot(years, fit, "--", color="#9d00ff", lw=1.2,
+            label=f"Sen {tt.days_per_decade:+.1f} d/dec")
+    ax.set_ylabel("center month (1–12)")
+    ax.set_title(f"Timing drift — {tt.trend} ({tt.days_per_decade:+.1f} days/decade)")
+    ax.legend(fontsize=8, frameon=False)
+    return {"ct_trend": tt.trend, "ct_days_per_decade": tt.days_per_decade,
+            "ct_slope_months_per_year": tt.slope_months_per_year}
+
+
+def fig_analog_years(ws: WatershedSeries, ax, *, n: int = 6) -> dict:
+    """Historical years ranked by monthly-shape similarity to the latest year (#71)."""
+    target = ws.years[-1]
+    analogs = fm.analog_years(ws.outlet, target, n=n)
+    labels = [str(a.year) for a in analogs]
+    sims = [a.similarity for a in analogs]
+    ax.barh(labels, sims, color="#00e5ff")
+    ax.invert_yaxis()
+    ax.set_xlabel("shape similarity (Pearson r)")
+    ax.set_title(f"Analog years — most like {target}")
+    return {"analog_target": target,
+            "analog_years": [{"year": a.year, "similarity": round(a.similarity, 3)}
+                             for a in analogs]}
+
+
+def fig_record_book(ws: WatershedSeries, ax, *, n: int = 5) -> dict:
+    """Driest-summer and wettest-peak leaderboards as a text panel (#72)."""
+    rb = fm.record_book(ws.outlet, n=n)
+    lines = ["Driest summers (Jun–Aug low):"]
+    for e in rb.driest_summers:
+        lines.append(f"  #{e.rank}  {e.year}  {e.value:8.2f} cfs  p{e.percentile * 100:.0f}")
+    lines += ["", "Wettest years (annual peak):"]
+    for e in rb.wettest_years:
+        lines.append(f"  #{e.rank}  {e.year}  {e.value:8.1f} cfs  p{e.percentile * 100:.0f}")
+    ax.text(0.02, 0.98, "\n".join(lines), transform=ax.transAxes, va="top", ha="left",
+            family="monospace", fontsize=9, color="#e6ebf5")
+    ax.set_axis_off()
+    ax.set_title("Drought / flood record book")
+    return {"driest_summers": [[e.year, round(e.value, 2)] for e in rb.driest_summers],
+            "wettest_years": [[e.year, round(e.value, 1)] for e in rb.wettest_years]}
+
+
+def fig_decade_fdc(ws: WatershedSeries, ax) -> dict:
+    """Log-scale flow-duration curves, one per decade, overlaid (#73)."""
+    quantiles = [0, 5, 10, 25, 50, 75, 90, 95, 100]
+    decades = fm.decade_flow_duration(ws.outlet, quantiles)
+    cmap = plt.get_cmap("viridis")
+    span = max(1, len(decades) - 1)
+    for i, d in enumerate(decades):
+        ax.plot(d.quantiles, np.clip(d.flows, FLOOR, None), "-o", ms=3,
+                color=cmap(i / span), label=f"{d.decade}s")
+    ax.set_yscale("log")
+    ax.set_xlabel("exceedance quantile (%)")
+    ax.set_ylabel("flow (cfs, log)")
+    ax.set_title("Flow-duration curves by decade")
+    ax.legend(fontsize=7, frameon=False, ncol=2)
+    return {"fdc_decades": [d.decade for d in decades]}
+
+
+def fig_composites(ws: WatershedSeries, index_by_year: dict[int, float], ax,
+                   *, index_name: str = "ONI") -> dict:
+    """Mean hydrograph per warm/neutral/cool climate phase (#74)."""
+    pc = fm.composite_hydrographs(ws.outlet, index_by_year)
+    m = range(1, 13)
+    for name, vec, color in (("warm", pc.warm, "#ff6b6b"),
+                             ("neutral", pc.neutral, "#8891a8"),
+                             ("cool", pc.cool, "#00e5ff")):
+        if vec is not None:
+            ax.plot(m, vec, "-o", ms=3, lw=1.4, color=color,
+                    label=f"{name} ({len(getattr(pc, name + '_years'))})")
+    ax.set_xticks(list(m))
+    ax.set_xticklabels(MONTH_ABBR, fontsize=7)
+    ax.set_ylabel("flow (cfs)")
+    ax.set_title(f"{index_name} composite hydrographs")
+    ax.legend(fontsize=8, frameon=False)
+    return {"composite_warm_years": list(pc.warm_years),
+            "composite_neutral_years": list(pc.neutral_years),
+            "composite_cool_years": list(pc.cool_years)}
+
+
 def build_report(
     ws: WatershedSeries,
     *,
@@ -344,6 +436,7 @@ def build_report(
     gauge_loc: tuple[float, float, str] | None = None,
     index_by_year: dict[int, float] | None = None,
     index_name: str = "ONI",
+    creative: bool = True,
     out_dir: Path = FIG_DIR,
 ) -> dict:
     """Render the full panel set to ``out_dir``; return a metrics summary dict."""
@@ -401,6 +494,33 @@ def build_report(
         _style(ax)
         summary.update(fig_enso(ws, index_by_year, ax, index_name=index_name))
         _save(fig, "enso")
+
+    if creative:
+        fig, ax = plt.subplots(figsize=(8, 4), facecolor="#07080c")
+        _style(ax)
+        summary.update(fig_timing_drift(ws, ax))
+        _save(fig, "timing_drift")
+
+        fig, ax = plt.subplots(figsize=(6, 4), facecolor="#07080c")
+        _style(ax)
+        summary.update(fig_analog_years(ws, ax))
+        _save(fig, "analog_years")
+
+        fig, ax = plt.subplots(figsize=(6, 4), facecolor="#07080c")
+        _style(ax)
+        summary.update(fig_record_book(ws, ax))
+        _save(fig, "record_book")
+
+        fig, ax = plt.subplots(figsize=(7, 4), facecolor="#07080c")
+        _style(ax)
+        summary.update(fig_decade_fdc(ws, ax))
+        _save(fig, "decade_fdc")
+
+        if index_by_year:
+            fig, ax = plt.subplots(figsize=(6, 4), facecolor="#07080c")
+            _style(ax)
+            summary.update(fig_composites(ws, index_by_year, ax, index_name=index_name))
+            _save(fig, "composites")
 
     return summary
 

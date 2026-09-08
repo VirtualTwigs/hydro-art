@@ -649,6 +649,43 @@
       + `<path d="${d}"/>${dot}</svg>`;
   }
 
+  // Snow-vs-rain regime label from the annual snowmelt fraction — mirrors
+  // src.flow_metrics.classify_regime (#69). Thresholds validate 0<=rainMax<snowMin<=1.
+  const REGIME_SNOW_MIN = 0.4, REGIME_RAIN_MAX = 0.2;
+  function classifyRegime(fraction, snowMin, rainMax) {
+    snowMin = snowMin == null ? REGIME_SNOW_MIN : snowMin;
+    rainMax = rainMax == null ? REGIME_RAIN_MAX : rainMax;
+    if (!(rainMax >= 0 && rainMax < snowMin && snowMin <= 1)) {
+      throw new Error("bad regime thresholds: need 0<=rainMax<snowMin<=1");
+    }
+    if (fraction >= snowMin) return "snowmelt";
+    if (fraction <= rainMax) return "rain";
+    return "transitional";
+  }
+
+  // Flow-weighted center-of-timing as a 0-based month index (Σ i·v / Σ v). NaN for
+  // an empty or all-zero vector (no mass to weight). The Python center_of_timing is
+  // 1-based; here 0-based to index MONTH_ABBR directly (matches the doc's monthIndex).
+  function centerOfTimingIndex(v) {
+    let num = 0, den = 0;
+    (v || []).forEach((x, i) => { if (isFinite(x)) { num += i * x; den += x; } });
+    return den > 0 ? num / den : NaN;
+  }
+
+  // Pearson correlation of two equal-length vectors; NaN when either is constant.
+  function _pearson(a, b) {
+    const n = Math.min(a.length, b.length);
+    let sa = 0, sb = 0;
+    for (let i = 0; i < n; i++) { sa += a[i]; sb += b[i]; }
+    const ma = sa / n, mb = sb / n;
+    let num = 0, da = 0, db = 0;
+    for (let i = 0; i < n; i++) {
+      const x = a[i] - ma, y = b[i] - mb;
+      num += x * y; da += x * x; db += y * y;
+    }
+    return (da > 0 && db > 0) ? num / Math.sqrt(da * db) : NaN;
+  }
+
   // A deterministic sample report document (delivery.py-style export) so the page
   // renders standalone over file:// with no build. Mirrors the ux.md mock (Salmon
   // Creek); real reports come from tools/build_watershed_report.py (#54).
@@ -667,6 +704,75 @@
       const oni = Number((Math.sin(i * 1.3) * 1.4).toFixed(2));
       return { year: y, oni, peak: peak[i], phase: oni >= 0 ? "wet" : "dry" };
     });
+
+    // --- #76 derived sections (from synthetic per-year hydrographs) ----------
+    // A 12-month hydrograph per year: the seasonal shape, scaled to the year's
+    // peak and given a small deterministic phase jitter so analog shapes vary.
+    const perYear = years.map((y, i) => {
+      const shift = (rnd() - 0.5) * 2.2;
+      const scale = peak[i] / peak[0];
+      return MONTH_ABBR.map((_, m) =>
+        Number(Math.max(0, scale * (6 + 5 * Math.cos((m - shift) / 12 * 2 * Math.PI))).toFixed(2)));
+    });
+
+    // Analog years (#71): most similar monthly *shape* to the latest year.
+    const target = perYear[perYear.length - 1];
+    const analogs = years.slice(0, -1)
+      .map((y, i) => ({ year: y, similarity: Number(_pearson(perYear[i], target).toFixed(3)) }))
+      .filter((a) => isFinite(a.similarity))
+      .sort((a, b) => b.similarity - a.similarity || a.year - b.year)
+      .slice(0, 6);
+
+    // Drought/flood record book (#72): rank by summer-low (asc) and peak (desc).
+    const rankBy = (vals, ascending) =>
+      years.map((y, i) => ({ year: y, value: vals[i] }))
+        .sort((a, b) => (ascending ? a.value - b.value : b.value - a.value) || a.year - b.year)
+        .slice(0, 5)
+        .map((r, i) => ({ year: r.year, value: r.value, rank: i + 1 }));
+    const recordBook = { driest: rankBy(summerLow, true), wettest: rankBy(peak, false) };
+
+    // Decade flow-duration curves (#73): pool each decade's monthly flows, take
+    // exceedance quantiles (non-increasing in q by construction).
+    const fdcQuantiles = [0, 10, 25, 50, 75, 90, 100];
+    const byDecade = {};
+    years.forEach((y, i) => {
+      const d = Math.floor(y / 10) * 10;
+      (byDecade[d] = byDecade[d] || []).push(...perYear[i]);
+    });
+    const exceedance = (sorted, q) => {
+      if (!sorted.length) return NaN;
+      const pos = (1 - q / 100) * (sorted.length - 1);
+      const lo = Math.floor(pos), hi = Math.ceil(pos);
+      return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+    };
+    const fdc = Object.keys(byDecade).sort((a, b) => a - b).map((d) => {
+      const sorted = byDecade[d].slice().sort((a, b) => a - b);
+      return { decade: Number(d), flows: fdcQuantiles.map((q) => Number(exceedance(sorted, q).toFixed(2))) };
+    });
+
+    // ENSO/PDO composite hydrographs (#74): mean hydrograph per phase (ONI ±0.5).
+    const phaseMean = (pred) => {
+      const rows = perYear.filter((_, i) => pred(enso[i].oni));
+      if (!rows.length) return new Array(12).fill(0);
+      return MONTH_ABBR.map((_, m) =>
+        Number((rows.reduce((s, v) => s + v[m], 0) / rows.length).toFixed(2)));
+    };
+    const composites = {
+      warm: phaseMean((o) => o >= 0.5),
+      neutral: phaseMean((o) => o > -0.5 && o < 0.5),
+      cool: phaseMean((o) => o <= -0.5),
+    };
+
+    // Snow-vs-rain regime (#69): a synthetic snowmelt fraction + melt-pulse center.
+    const meltShape = MONTH_ABBR.map((_, m) => Math.max(0, Math.cos((m - 4) / 12 * 2 * Math.PI)));
+    const regimeFraction = 0.52;
+    const regime = {
+      fraction: regimeFraction,
+      label: classifyRegime(regimeFraction),
+      meltCenterMonth: Number(centerOfTimingIndex(meltShape).toFixed(1)),
+      driftDaysPerDecade: -2.4, // melt pulse arriving earlier
+    };
+
     return {
       watershed: "Salmon Creek",
       place: "Clark County, WA",
@@ -680,6 +786,12 @@
       longRecord: { years, peak, summerLow },
       typicalYear: { months: MONTH_ABBR.slice(), mean, lo, hi },
       enso,
+      regime,
+      analogs,
+      recordBook,
+      fdc,
+      fdcQuantiles,
+      composites,
     };
   }
   const REPORT_SAMPLE = sampleReport();
@@ -697,6 +809,7 @@
     PRESETS, presetById, applyPreset,
     drawSwatches, fillCounties, buildTimeline, paintTimeline, seg, bindRange,
     ordinal, trendArrow, fmtNum, verdictClass, verdictLabel,
+    classifyRegime, centerOfTimingIndex,
     sparklinePoints, sparklinePath, buildSparkline, sampleReport, REPORT_SAMPLE,
   };
   global.HydroUX = HydroUX;

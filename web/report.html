@@ -17,6 +17,16 @@
   .section-note { color: var(--muted); font-size: 11px; margin: 2px 0 10px; }
   .vmetrics { display: flex; gap: 16px; color: var(--muted); font-size: 11px; }
   .vmetrics b { color: var(--ink); }
+  .mini-list { list-style: none; margin: 6px 0 0; padding: 0; }
+  .mini-list li { display: flex; gap: 10px; align-items: baseline; padding: 3px 0;
+    border-bottom: 1px solid var(--line); font-size: 13px; }
+  .mini-list li b { min-width: 46px; }
+  .mini-list .muted { color: var(--muted); font-size: 11px; }
+  .spark-row { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+  .spark-row span { color: var(--muted); font-size: 11px; width: 54px; flex: none; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px;
+    font-weight: 600; border: 1px solid var(--line); margin-right: 6px; }
+  .chip.ok { color: #35e08b; } .chip.warn { color: #ffcf5a; } .chip.danger { color: #ff6b6b; }
 </style>
 </head>
 <body>
@@ -61,11 +71,50 @@
   </div>
 </div>
 
+<div class="chart-row">
+  <div class="chart-card" id="regimeCard">
+    <h3>Snow-vs-rain regime</h3>
+    <div class="section-note">Is this a snowmelt or a rain river — and is that shifting?</div>
+    <div id="regimeBody"></div>
+  </div>
+  <div class="chart-card">
+    <h3>Analog years — most like <span id="analogTarget"></span></h3>
+    <div class="section-note">Ranked by monthly-shape correlation (magnitude removed).</div>
+    <ol class="mini-list" id="analogList"></ol>
+  </div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card">
+    <h3>Record book — driest summers</h3>
+    <div class="section-note">Lowest Jun–Aug flow on record.</div>
+    <ol class="mini-list" id="driestList"></ol>
+  </div>
+  <div class="chart-card">
+    <h3>Record book — wettest years</h3>
+    <div class="section-note">Highest annual peak on record.</div>
+    <ol class="mini-list" id="wettestList"></ol>
+  </div>
+</div>
+
+<div class="chart-row">
+  <div class="chart-card">
+    <h3>Flow-duration curves — decade overlays</h3>
+    <div class="section-note" id="fdcNote"></div>
+    <div id="fdcSpark"></div>
+  </div>
+  <div class="chart-card">
+    <h3>Climate composites — mean hydrograph by phase</h3>
+    <div class="section-note">Warm (El Niño) · neutral · cool (La Niña), ONI ±0.5.</div>
+    <div id="compositeSpark"></div>
+  </div>
+</div>
+
 <div class="hint">
   Static, file://-safe report over the shared foundation. Metrics come from the
   offline <code>src/flow_metrics.py</code> layer (here, a deterministic sample
   document); real reports are exported by
-  <code>tools/build_watershed_report.py</code> (#54).
+  <code>tools/build_watershed_report.py</code> (#54, #76).
 </div>
 
 <script src="shared/hydro-ux.js"></script>
@@ -141,6 +190,51 @@
     }
   }
 
+  function renderRegime() {
+    const r = doc.regime;
+    const cls = r.label === "snowmelt" ? "ok" : r.label === "rain" ? "danger" : "warn";
+    const drift = r.driftDaysPerDecade;
+    $("regimeBody").innerHTML =
+      `<div style="font-size:15px;margin-bottom:4px">` +
+      `<span class="chip ${cls}">${r.label.toUpperCase()}</span>` +
+      `snowmelt fraction <b>${UX.fmtNum(r.fraction, 2)}</b></div>` +
+      `<div class="section-note" style="margin:0">melt pulse centered on ` +
+      `<b>${UX.MONTH_ABBR[Math.round(r.meltCenterMonth)]}</b>, arriving ` +
+      `${UX.trendArrow(drift)} ${UX.fmtNum(Math.abs(drift))} days/decade ` +
+      `${drift < 0 ? "earlier" : "later"}.</div>`;
+  }
+
+  function renderAnalogs() {
+    $("analogTarget").textContent = doc.range[1];
+    $("analogList").innerHTML = doc.analogs
+      .map((a) => `<li><b>${a.year}</b><span class="muted">r ${UX.fmtNum(a.similarity, 2)}</span></li>`)
+      .join("");
+  }
+
+  function renderRecordBook() {
+    const row = (e) => `<li><span class="muted">#${e.rank}</span><b>${e.year}</b>` +
+      `<span class="muted">${UX.fmtNum(e.value)} cfs</span></li>`;
+    $("driestList").innerHTML = doc.recordBook.driest.map(row).join("");
+    $("wettestList").innerHTML = doc.recordBook.wettest.map(row).join("");
+  }
+
+  function renderFdc() {
+    $("fdcNote").textContent =
+      `Exceedance quantiles ${doc.fdcQuantiles.join(", ")}% · pooled monthly flow (cfs).`;
+    $("fdcSpark").innerHTML = doc.fdc
+      .map((d) => `<div class="spark-row"><span>${d.decade}s</span>` +
+        UX.buildSparkline(d.flows, { w: 340, h: 40, label: d.decade + "s FDC" }) + `</div>`)
+      .join("");
+  }
+
+  function renderComposites() {
+    const c = doc.composites;
+    $("compositeSpark").innerHTML = [["warm", c.warm], ["neutral", c.neutral], ["cool", c.cool]]
+      .map(([name, v]) => `<div class="spark-row"><span>${name}</span>` +
+        UX.buildSparkline(v, { w: 340, h: 40, label: name + " composite" }) + `</div>`)
+      .join("");
+  }
+
   function renderHeader() {
     $("wsName").textContent = doc.watershed;
     $("wsPlace").textContent = doc.place;
@@ -160,6 +254,11 @@
   buildRangeOptions();
   renderTiles();
   renderCharts();
+  renderRegime();
+  renderAnalogs();
+  renderRecordBook();
+  renderFdc();
+  renderComposites();
 
   $("ensoToggle").addEventListener("change", (e) => {
     state.showEnso = e.target.checked;
