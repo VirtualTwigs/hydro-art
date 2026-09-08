@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hydro Art — Product & Engineering Interview</title>
+  <style>
+    :root { --ink:#eaf3ff; --muted:#9db0c8; --navy:#07111f; --panel:#0c1b2d; --cyan:#42e8ff; --violet:#b877ff; --gold:#ffd166; --line:rgba(149,204,255,.22); }
+    * { box-sizing:border-box } body { margin:0; background:#020711; color:var(--ink); font-family:Inter, ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; overflow:hidden }
+    .deck { height:100vh; position:relative; background:radial-gradient(circle at 80% 12%,#172952 0,transparent 33%),radial-gradient(circle at 5% 92%,#20134a 0,transparent 34%),var(--navy) }
+    .slide { display:none; height:100%; padding:clamp(34px,7vw,104px); padding-bottom:85px; grid-template-rows:auto 1fr; gap:28px; animation:in .35s ease-out }
+    .slide.active { display:grid } @keyframes in { from {opacity:0; transform:translateY(12px)} to {opacity:1; transform:none} }
+    .eyebrow { color:var(--cyan); font-size:13px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; margin:0 0 13px }
+    h1 { font-size:clamp(46px,7vw,102px); line-height:.94; letter-spacing:-.065em; margin:0; max-width:1000px } h2 { font-size:clamp(32px,4.3vw,64px); line-height:1; letter-spacing:-.05em; margin:0; max-width:1000px }
+    h3 { margin:0 0 9px; font-size:19px } p,li { font-size:clamp(16px,1.55vw,21px); line-height:1.45 } .lede { max-width:780px; font-size:clamp(21px,2.3vw,31px); color:#d3e1f2; margin:27px 0 }
+    .accent { color:var(--cyan) } .violet { color:var(--violet) } .gold { color:var(--gold) }.muted { color:var(--muted) }
+    .columns { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; align-items:center; max-width:1180px }.three { display:grid; grid-template-columns:repeat(3,1fr); gap:17px; max-width:1200px; align-content:start }
+    .card { border:1px solid var(--line); padding:22px; border-radius:15px; background:linear-gradient(135deg,rgba(19,41,67,.86),rgba(10,21,37,.86)); box-shadow:0 18px 50px rgba(0,0,0,.18) }.card p { margin:0; font-size:16px; color:#c9d8e9 }.card ul { margin:8px 0 0; padding-left:20px }.card li { font-size:16px; margin:5px 0 }
+    .numbers { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; max-width:1100px; align-self:center }.number { border-top:2px solid var(--cyan); padding-top:13px }.number b { display:block; font-size:clamp(34px,5vw,70px); letter-spacing:-.07em }.number span { color:var(--muted); font-size:15px }
+    .pipeline { display:flex; flex-wrap:wrap; gap:9px; max-width:1160px; align-content:center }.step { background:#102a46; border:1px solid #285277; border-radius:99px; padding:11px 16px; font-weight:700; font-size:15px }.arrow { color:var(--cyan); align-self:center; font-size:24px }
+    .photo { width:100%; height:min(51vh,480px); object-fit:cover; border-radius:18px; border:1px solid var(--line); box-shadow:0 25px 80px rgba(0,0,0,.4) }.quote { font-size:clamp(26px,3.2vw,47px); line-height:1.12; max-width:1040px; letter-spacing:-.04em; align-self:center }.quote span { color:var(--cyan) }
+    .timeline { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; align-self:center; max-width:1200px }.milestone { border-left:2px solid var(--violet); padding:0 8px 13px 15px; min-height:145px }.milestone small { color:var(--cyan); font-weight:800 }.milestone b { display:block; margin:7px 0 }.milestone p { color:var(--muted); font-size:14px; margin:0 }
+    .notes { display:none; position:absolute; right:22px; bottom:64px; max-width:550px; padding:14px 18px; background:#fff7d6; color:#342600; border-radius:10px; font-size:14px; line-height:1.35; box-shadow:0 10px 34px #0008 }.notes.show { display:block }
+    .controls { position:fixed; bottom:22px; left:0; width:100%; display:flex; align-items:center; justify-content:space-between; padding:0 28px; color:var(--muted); z-index:4 }.controls button { background:#102a46; border:1px solid #315e87; color:var(--ink); padding:9px 13px; border-radius:8px; cursor:pointer; font:inherit }.controls button:hover { border-color:var(--cyan); color:var(--cyan) }.progress { position:fixed; top:0; height:4px; background:linear-gradient(90deg,var(--cyan),var(--violet)); z-index:5; transition:width .25s }
+    kbd { border:1px solid #446480; border-radius:4px; padding:1px 5px; font-size:12px } @media(max-width:720px) { .columns,.three { grid-template-columns:1fr }.numbers { grid-template-columns:repeat(2,1fr) }.timeline { grid-template-columns:1fr 1fr }.slide { overflow:auto; padding:34px 26px 76px }.photo { height:240px } }
+    @media print { body { overflow:visible } .deck { height:auto; background:white; color:#07111f }.slide,.slide.active { display:grid; height:100vh; page-break-after:always; background:white }.controls,.progress { display:none }.card { background:#f4f8fd }.notes { display:none!important } }
+  </style>
+</head>
+<body>
+<main class="deck">
+  <div class="progress"></div>
+  <section class="slide active">
+    <div><p class="eyebrow">Product & engineering interview · September 2026</p><h1>Turn public river data into <span class="accent">original, print-ready art.</span></h1><p class="lede">Hydro Art is a reproducible GIS-to-SVG product: one command transforms authoritative hydrography into editable, museum-scale maps.</p></div>
+    <div class="columns"><div><p class="muted">Presented by</p><h2>Neil Joseph Runde</h2><p>Product-minded engineer · data systems · AI-assisted delivery</p></div><img class="photo" src="experiments/assets/washington-hydrographic-map.jpg" alt="Hydrographic vector artwork of Washington"></div>
+    <aside class="notes">Open with the outcome: “I built the system that makes original hydrographic artwork repeatable—not a one-off map.”</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">01 · The customer problem</p><h2>Beautiful river art is typically <span class="violet">manual, fragile, or legally ambiguous.</span></h2></div>
+    <div class="three"><article class="card"><h3>Creators</h3><p>Need high-detail, original wall art without tracing another artist’s work or hand-editing GIS files.</p></article><article class="card"><h3>Cartographers</h3><p>Need clean, repeatable renderings from large, imperfect public datasets.</p></article><article class="card"><h3>Designers</h3><p>Need editable vector output—not a flattened image—so a map can become a print, product, or story.</p></article></div>
+    <aside class="notes">The product is positioned at the intersection of creative tooling and trustworthy geospatial computation. The key differentiator is original-by-construction.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">02 · Product</p><h2>An automated <span class="accent">public-data → vector-art</span> engine.</h2></div>
+    <div class="columns"><div><p class="quote">“A clean, editable SVG that stays crisp at any print size—built from public hydrography, not copied artwork.”</p><p class="muted">Initial regions: Washington, Oregon, California, Idaho. Output: layered SVG, with optional PDF/PNG/TIFF/EPS workflows.</p></div><img class="photo" src="experiments/assets/washington-annual-flow-poster.jpg" alt="Washington annual flow poster"></div>
+    <aside class="notes">Name the output contract: an editable, scalable SVG. Explain that the aesthetic is intentional—neon colors, black ground—while the geographic source remains authoritative.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">03 · How it works</p><h2>A fixed 12-stage pipeline makes creative output <span class="gold">repeatable.</span></h2></div>
+    <div class="pipeline"><span class="step">Download</span><span class="arrow">→</span><span class="step">Extract</span><span class="arrow">→</span><span class="step">Validate</span><span class="arrow">→</span><span class="step">Repair geometry</span><span class="arrow">→</span><span class="step">Reproject</span><span class="arrow">→</span><span class="step">Clip</span><span class="arrow">→</span><span class="step">Build river graph</span><span class="arrow">→</span><span class="step">Compute watersheds</span><span class="arrow">→</span><span class="step">Assign colors</span><span class="arrow">→</span><span class="step">Generate SVG</span><span class="arrow">→</span><span class="step">Optimize</span><span class="arrow">→</span><span class="step">Export</span></div>
+    <aside class="notes">Mention the important engineering choices: EPSG:5070 as a shared internal CRS; a directed river graph; deterministic watershed colors rather than random styling; and SVG groups by watershed.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">04 · River-line math</p><h2>Every channel width can follow <span class="accent">measured discharge</span>, not an arbitrary brush.</h2></div>
+    <div class="columns"><div class="card"><h3>Log-normalized flow → stroke width</h3><p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:18px; color:#fff; margin:18px 0">wᵢ = wₘᵢₙ + (wₘₐₓ − wₘᵢₙ) · tᵢ<sup>γ</sup></p><p style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:15px; color:#b9d8f2">tᵢ = [ln(max(Qᵢ, ε)) − ln(Qₗₒ)] / [ln(Qₕᵢ) − ln(Qₗₒ)]</p><p>For each river segment, <b>Q</b> is NHDPlus EROM mean-annual discharge (QAMA, cfs). The logarithm accommodates roughly five orders of magnitude, keeping headwaters visible while letting main stems widen at tributary junctions.</p></div><div class="card"><h3>Scale-aware art direction</h3><ul><li><b>State:</b> log ramp, 0.35–3.5 width units (~10:1) for huge flow ranges.</li><li><b>Basin:</b> shaped ramp, γ = 0.45, 0.35–2.1; expands readable mid-range channels.</li><li><b>Watershed:</b> γ = 0.5, 0.35–1.4; aligns with the useful √Q hydraulic-geometry intuition.</li><li><b>Safeguards:</b> nonpositive Q is floored at ε = 0.01; equal-flow networks render uniformly and deterministically.</li></ul></div></div>
+    <aside class="notes">Explain the formula plainly: calculate a bounded score for a segment’s flow, then map it into a print-safe stroke range. The log is essential at state scale. QAMA is a mean-annual flow measure, so it gives structural hierarchy; the seasonal reports use a different climate-driven disaggregation model.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">05 · Print optimization</p><h2>Preserve the master as vector; rasterize <span class="gold">at the scale the print needs.</span></h2></div>
+    <div class="three"><article class="card"><h3>1. Author clean vectors</h3><p>SVG keeps paths editable and resolution-independent. Optional SVGO compression runs behind a safe seam: if unavailable, the build delivers the original SVG rather than failing.</p></article><article class="card"><h3>2. Tune for physical scale</h3><p>Stroke widths are converted from projected map units to target pixels. Print presets enlarge strokes and prune/thin small waterbodies, points, and structures so they do not become ink noise.</p></article><article class="card"><h3>3. Rasterize without renderer limits</h3><p>Huge SVGs are split by watershed layer, rendered independently with resvg, then alpha-composited. This avoids the ~1,048,576-node renderer cap while retaining all detail.</p></article></div>
+    <div class="numbers"><div class="number"><b>4K–65K</b><span>supported raster-width choices</span></div><div class="number"><b>1.4 px</b><span>typical target river stroke in layered rasterization</span></div><div class="number"><b>2.5 px</b><span>typical target glow blur</span></div><div class="number"><b>SVG first</b><span>PDF/PNG/TIFF derived only when required</span></div></div>
+    <aside class="notes">The print system is not just “export a large PNG.” It separates semantic vector authoring from output-specific rasterization, then applies perceptual controls—minimum stroke, glow, and feature thinning—at the final target scale.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">06 · Jupyter reports · From art to insight</p><h2>The same river network becomes an <span class="accent">explainable watershed story.</span></h2></div>
+    <div class="columns"><div class="card"><h3>Reproducible analytical narratives</h3><ul><li><b>Washington state, 1895–2025:</b> a 131-year, statewide seasonal-flow reconstruction using public-domain NOAA nClimGrid data.</li><li><b>Hydrology beyond averages:</b> flow-duration curves, center-of-timing drift, snow-versus-rain regime, analog years, and drought/flood record books.</li><li><b>Robust inference:</b> Mann–Kendall trend verdicts and Sen’s slope rather than casual short-series extrapolation.</li><li><b>One shared recipe:</b> notebooks call reusable report helpers instead of carrying their own forked statistics or plotting logic.</li></ul><p style="margin-top:14px">The reports state their limits: modeled seasonal behavior is not presented as a gauge record, inputs are rebuildable from snapshots, and validation compares like-for-like drainage areas.</p></div><img class="photo" src="notebooks/figures/salmon_creek_hydrographs.png" alt="Salmon Creek seasonal hydrograph report"></div></div>
+    <aside class="notes">This is worth showing if the interview values data products: the project turns a visual artifact into a decision-support narrative. Stress two practices: model limitations are explicit, and the analysis was corrected when the gauge was matched to the wrong drainage area.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">07 · Architecture principles</p><h2>Keep domain logic <span class="accent">pure</span>; isolate expensive reality at the boundary.</h2></div>
+    <div class="three"><article class="card"><h3>Dependency-injected seams</h3><p>Downloaders, GIS readers, optimizers, exporters, and renderers are replaceable collaborators—not hidden globals.</p></article><article class="card"><h3>Determinism by design</h3><p>Equal inputs create equal outputs. Golden hashes and double-render checks turn “looks right” into a verifiable promise.</p></article><article class="card"><h3>Honest product boundaries</h3><p>Heavy GIS, network, and real-data jobs live in opt-in tools. The core stays fast and portable.</p></article></div>
+    <aside class="notes">This is a good bridge to testing: the architecture was deliberately designed so correctness does not depend on a laptop having GDAL, a network connection, or multi-gigabyte data.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">08 · Unit-test framework</p><h2>Confidence without requiring a GIS workstation.</h2></div>
+    <div class="columns"><div class="card"><h3>Test pyramid</h3><ul><li><b>pytest unit tests</b> for pure configuration, graph, geometry policy, analytics, release, and fulfillment logic.</li><li><b>Offline integration tests</b> run endpoint orchestrators against fake renderers and in-memory inputs.</li><li><b>Golden contracts</b> pin e2e manifest/digest shapes and determinism behavior.</li><li><b>Node round-trip test</b> keeps browser recipe logic portable and honest.</li></ul></div><div class="numbers"><div class="number"><b>880</b><span>tests collected locally</span></div><div class="number"><b>0</b><span>network / GDAL / data dependencies in core suite</span></div><div class="number"><b>94%</b><span>documented coverage baseline at v1.0 release</span></div><div class="number"><b>12</b><span>pipeline stages guarded by tests</span></div></div></div>
+    <aside class="notes">Be precise: 880 is the current collected suite; 94% is the v1.0 release baseline. Remaining coverage is deliberate I/O seam bodies—not a claim that live network/GDAL paths are unit-tested.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">09 · Agent use</p><h2>AI agents accelerated delivery, while <span class="violet">specs and tests retained control.</span></h2></div>
+    <div class="timeline"><article class="milestone"><small>1 · Scope</small><b>One roadmap item</b><p>Define a small product increment and non-goals.</p></article><article class="milestone"><small>2 · Specify</small><b>Requirements + design</b><p>Write a bounded spec, task groups, acceptance checks, and risks.</p></article><article class="milestone"><small>3 · Build</small><b>Agent-assisted implementation</b><p>Implement through existing seams; tests lead each task group.</p></article><article class="milestone"><small>4 · Verify</small><b>Focused → full suite</b><p>Check behavior, regressions, and a real smoke path where warranted.</p></article><article class="milestone"><small>5 · Learn</small><b>Retrospective + handoff</b><p>Record decisions, debt, next steps, and reproducible evidence.</p></article></div>
+    <aside class="notes">Frame agents as a development system, not magic: I use them to accelerate bounded implementation and documentation. Acceptance criteria, architecture boundaries, tests, and real-run validation remain the guardrails.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">10 · Retrospective application</p><h2>Retrospectives changed the next design decision—not just the documentation.</h2></div>
+    <div class="three"><article class="card"><h3>Observation</h3><p>Offline tests could prove contracts, but not whether a human could directly invoke a newly packaged CLI.</p></article><article class="card"><h3>Action</h3><p>Added a uniform repository-path shim to direct-run tools and kept a real invocation harness outside the offline suite.</p></article><article class="card"><h3>Principle carried forward</h3><p>Separate pure contract logic in <code>src/</code> from real artifact generation in <code>tools/</code>; validate both at the right level.</p></article></div>
+    <aside class="notes">This example comes from the Generation 1 release retrospective. It demonstrates learning from the gap between test environment and user environment rather than retroactively defending the test suite.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">11 · My code contributions</p><h2>From a blank scaffold to a <span class="accent">shippable v1.0 system</span> in six weeks.</h2></div>
+    <div class="numbers"><div class="number"><b>139</b><span>commits, all authored by Neil</span></div><div class="number"><b>~77.7k</b><span>net committed lines</span></div><div class="number"><b>4</b><span>production endpoints: digital, animation, print, report</span></div><div class="number"><b>Jul 25–Sep 7</b><span>repository delivery window</span></div></div>
+    <div class="three"><article class="card"><h3>Core product engine</h3><p>GIS-to-SVG pipeline, regional/county scope, water/terrain/infrastructure layers, styling, and multi-format exports.</p></article><article class="card"><h3>Trust & operations</h3><p>Rights gate, deterministic fulfillment manifests, golden-output verification, endpoint contracts, release gate, CI packaging.</p></article><article class="card"><h3>Customer & insight surfaces</h3><p>Web studio, gallery and concierge prototypes, watershed analytics/reporting, notebooks, and operational documentation.</p></article></div>
+    <aside class="notes">These are repository-derived counts: 139 commits by one author, 82,241 additions and 4,582 deletions. Do not over-index on line count—use it to establish scope, then point to the three architectural outcomes.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">12 · What I’d bring</p><h2>I build creative products with the rigor of <span class="gold">production systems.</span></h2></div>
+    <div class="columns"><div><p class="quote">Product intuition turns data into something people want.<br><span>Engineering discipline makes it dependable.</span></p><p class="muted">Questions?</p></div><img class="photo" src="experiments/assets/washington-elevation-report.jpg" alt="Washington elevation report artwork"></div>
+    <aside class="notes">Close by inviting the interviewer to choose a thread: architecture, testing, agent workflow, product strategy, or a particular contribution. Keep it conversational.</aside>
+  </section>
+  <nav class="controls" aria-label="Presentation controls"><button id="prev" aria-label="Previous slide">← Prev</button><span id="counter">1 / 10 · <kbd>←</kbd><kbd>→</kbd> navigate · <kbd>N</kbd> notes</span><button id="next" aria-label="Next slide">Next →</button></nav>
+</main>
+<script>
+  const slides=[...document.querySelectorAll('.slide')], progress=document.querySelector('.progress'), counter=document.querySelector('#counter'); let index=0, notes=false;
+  function render(){slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.querySelector('.notes').classList.toggle('show',notes&&i===index)});counter.innerHTML=`${index+1} / ${slides.length} · <kbd>←</kbd><kbd>→</kbd> navigate · <kbd>N</kbd> notes`;progress.style.width=`${(index+1)/slides.length*100}%`}
+  function move(n){index=Math.max(0,Math.min(slides.length-1,index+n));render()} document.querySelector('#next').onclick=()=>move(1);document.querySelector('#prev').onclick=()=>move(-1);
+  addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();move(1)}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();move(-1)}if(e.key.toLowerCase()==='n'){notes=!notes;render()}if(e.key==='Home'){index=0;render()}if(e.key==='End'){index=slides.length-1;render()}}); render();
+</script>
+</body>
+</html>

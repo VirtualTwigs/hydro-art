@@ -103,6 +103,8 @@ Self-contained HTML/JS (no build step, `file://`-safe). `studio.html` is the **c
 
 **Shared foundation** — `web/shared/ux.css` + `web/shared/hydro-ux.js` (`window.HydroUX`, classic `<script src>`). `hydro-ux.js` mirrors the Python side: option data, procedural preview generator, seasonal flow simulation, `cliMapping`/`yamlMapping` (→ `build.py` command + `config.yaml`), `renderRequest`, DOM view helpers, and the **recipe/preset** layer (`toRecipe`/`encodeRecipe`/`decodeRecipe`/`PRESETS`, round-trip tested in `tests/test_recipe_roundtrip.cjs`). Keep option data, preview, mapping, and recipe logic here — don't duplicate across pages. Mapping emits `color_by`/`width_by`/`--county`/`--months` as real flags; `color_by=elevation` and non-annual `--months` fail fast in the 2D pipeline (honest caveat in the output contract — keep it).
 
+**Customer versus internal UX (proposed).** `web/studio.html` remains the canonical expert control surface, but it is not the planned first-touch buyer experience. The proposed no-account customer journey, operations handoff, asset-library rules, and experimental UX sequence are in `agent-os/specs/2026-09-05-customer-operations-experience/spec.md`; `workflow.mmd` is the compact cradle-to-grave diagram. Treat customer catalog/brief/proposal/proof pages as experiments until the revenue gate permits a production commercial surface.
+
 ## Conventions
 
 - Type hints + docstrings on public functions; `from __future__ import annotations` at top of modules.

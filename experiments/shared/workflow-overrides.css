@@ -1,0 +1,9 @@
+/* Layout corrections kept separate so the workflow view can evolve by section. */
+.library-grid {
+  grid-template-columns: 1.15fr 44px .8fr 44px 1.15fr;
+  gap: 14px;
+}
+
+@media (max-width: 760px) {
+  .library-grid { grid-template-columns: 1fr; }
+}
