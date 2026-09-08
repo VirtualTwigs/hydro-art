@@ -887,7 +887,7 @@ Epoch gate: a build can overlay source-traceable dams, weirs, locks, gaging stat
 distinctly-styled engineered channels on the water art, controllable by preset, with the default
 (infrastructure disabled) output byte-for-byte identical.
 
-## Epoch 17 — Watershed report: creative analytics · proposed
+## Epoch 17 — Watershed report: creative analytics · complete
 
 Deepen the Epoch 12 watershed report from its current seven figures into a richer, more *engaging*
 story, drawing almost entirely on **statistics the engine already computes** (`src/flow_metrics.py`)
@@ -997,7 +997,7 @@ flow-duration curve, ENSO/PDO composite hydrographs, and a longitudinal flow ani
 offline-tested `src/` statistics fed by already-staged data, surfaced in the shared web report; the
 2D pipeline and its byte-for-byte default output are unchanged.
 
-## Epoch 18 — Scale-aware flow-width presets · proposed
+## Epoch 18 — Scale-aware flow-width presets · complete
 
 Turn the flow→width mapping from a set of raw numeric knobs (`width_min`/`width_max`/`width_gamma`)
 into **named, scale-appropriate presets** the way Epoch 1.5 did for waterbodies. The insight is that
@@ -1014,18 +1014,23 @@ stays fully offline-tested, and is **byte-for-byte identical when no preset is n
 
 **Phase 18.1 — Expose the log knob & preset table**
 
-77. [ ] `width_log` setting + `WIDTH_PRESETS` — Add a validated `width_log: bool` field to `Settings`
+77. [x] `width_log` setting + `WIDTH_PRESETS` — Add a validated `width_log: bool` field to `Settings`
 (default `False`, wired through `_resolve_stroke_widths` into `scaled_widths(log=...)`) and a
 `WIDTH_PRESETS` table (`state`/`basin`/`watershed`) + `SUPPORTED_WIDTH_PRESETS` allowlist, mirroring
 `WATERBODY_PRESETS`. Each preset bundles `width_by`/`width_min`/`width_max`/`width_gamma`/`width_log`.
 Fail-fast `ConfigError` validation; preset expansion (`defaults < preset < explicit`) happens at
 config time and is not stored on frozen `Settings`, so a no-preset build stays byte-identical. `S`
+(Verified complete during Epoch 17 close-out 2026-09-07 — `src/config.py` carries the `WIDTH_PRESETS`
+table, `SUPPORTED_WIDTH_PRESETS` allowlist, `width_log` field, and `width_preset` config directive;
+spec `agent-os/specs/2026-09-01-scale-aware-flow-widths/`. Roadmap checkbox reconciled — was stale.)
 
 **Phase 18.2 — CLI surface**
 
-78. [ ] `--width-preset` flag — Add `--width-preset {state,basin,watershed}` to `src/cli.py` with the
+78. [x] `--width-preset` flag — Add `--width-preset {state,basin,watershed}` to `src/cli.py` with the
 usual precedence (`defaults < config.yaml < CLI`; unset argparse flag defaults to `None` so YAML is
 never clobbered), mirroring the waterbody-preset flag wiring. `XS`
+(Verified complete 2026-09-07 — `src/cli.py` wires `--width-preset` and `--width-log`; 22 width/preset
+tests in `tests/test_config.py`/`test_cli.py`/`test_pipeline.py` pass. Roadmap checkbox reconciled.)
 
 Epoch gate: a build can select `state` / `basin` / `watershed` flow-width presets (via config or
 `--width-preset`) that shape the flow→width ramp appropriately for the extent — including the
