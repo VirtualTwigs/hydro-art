@@ -10,6 +10,11 @@ This guide is the practical companion to the design blueprint in
 cradle-to-grave flowchart in that spec's `workflow.mmd`. Read the blueprint for
 *why*; read this for *how to use it today*.
 
+> **Just want one rendered image, end to end?** See
+> `docs/end-to-end-first-image.md` — a hands-on runbook for the live
+> form → job → processing → image path (`serve.py` + `web/studio.html`), plus
+> the CLI equivalent and how to produce a watershed report.
+
 ---
 
 ## How to read this guide
