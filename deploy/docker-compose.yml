@@ -1,0 +1,19 @@
+# Static demo for internal testers.
+#   docker compose -f deploy/docker-compose.yml up --build -d   # or: docker-compose ...
+# Build context is the repo root (parent of deploy/) so .dockerignore applies.
+services:
+  demo:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: hydro-art-demo:latest
+    container_name: hydro-art-demo
+    ports:
+      - "8080:8080"
+    # Local staging dir holding ONLY the two display SVGs the viewer pages fetch,
+    # mounted read-only. It must be a real local dir under $HOME (Docker shares
+    # those) — the repo's own output/ is a symlink to the NAS, which the Docker
+    # VM can't mount. Populate it with:  bash deploy/stage-artifacts.sh
+    volumes:
+      - ./output:/app/output:ro
+    restart: unless-stopped

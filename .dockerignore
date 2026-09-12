@@ -1,0 +1,44 @@
+# Build-context hygiene for the static demo image (deploy/Dockerfile).
+# The image only needs web/ plus the two pre-rendered display SVGs, so keep
+# everything heavy or irrelevant out of the context: the build stays fast and
+# the multi-GB GIS data can never leak into an image layer.
+
+# Bulk GIS data + regenerable artifacts (datasets/ is 10s of GB, output/ has
+# single files reaching ~1 GB). The two display SVGs the pages need are NOT
+# baked in — they're bind-mounted read-only at runtime (see deploy/README.md),
+# so nothing here needs to enter the build context.
+datasets/
+cache/
+logs/
+output/
+
+# Python interpreter, caches, coverage.
+.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage*
+htmlcov/
+.mypy_cache/
+
+# Repo internals not needed by a static web image.
+.git/
+.github/
+agent-os/
+notebooks/
+market-analysis/
+experiments/
+demo/
+docs/
+tests/
+tools/
+src/
+assets/
+*.ipynb
+
+# OS / editor cruft.
+.DS_Store
+**/.DS_Store
+.idea/
+.vscode/

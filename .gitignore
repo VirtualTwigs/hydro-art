@@ -37,3 +37,6 @@ Untitled.ipynb
 
 # Claude Code runtime
 .claude/scheduled_tasks.lock
+
+# Local staging dir for the demo container (copies of NAS-backed display SVGs)
+deploy/output/
