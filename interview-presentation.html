@@ -30,7 +30,23 @@
 <main class="deck">
   <div class="progress"></div>
   <section class="slide active">
-    <div><p class="eyebrow">Product & engineering interview · September 2026</p><h1>Turn public river data into <span class="accent">original, print-ready art.</span></h1><p class="lede">Hydro Art is a reproducible GIS-to-SVG product: one command transforms authoritative hydrography into editable, museum-scale maps.</p></div>
+    <div><p class="eyebrow">Product & engineering interview · September 2026</p><h1>A year as top contributor on <span class="accent">EnablesU.</span></h1><p class="lede">Production AI that cites its sources — a two-sided platform for asking plain-language questions of 1,000-page manuals, every answer traceable to its exact page.</p></div>
+    <div class="numbers"><div class="number"><b>1,270</b><span>commits over the year · all branches</span></div><div class="number"><b>#1 of 11</b><span>contributor on the platform</span></div><div class="number"><b>591</b><span>on the main <code>dev</code> line</span></div><div class="number"><b>5,840</b><span>unique files touched · Oct ’25–Sep ’26</span></div></div>
+    <aside class="notes">Open with the bigger story: “Before the solo project, here’s a year of team production work.” Lead with trust and range — cited, auditable AI on the customer’s own data. Be precise: #1 of 11 on a team codebase, not a solo repo. Both commit figures (591 on dev / 1,270 all-branch) are defensible if challenged.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">EnablesU · the product & my range</p><h2>Full-stack, end-to-end — <span class="accent">search, the reader UI, and the systems that keep it honest.</span></h2></div>
+    <div class="three"><article class="card"><h3>Search & AI</h3><p>3-tier graceful fallback (section → embedding → text) and cited LLM answers over 1,000-page manuals — every citation clickable to its source passage.</p></article><article class="card"><h3>Vista reader UI + design system</h3><p>#1 author of the reader (109 commits vs 53 next). Re-branded the product to a WCAG-audited slate palette and built the shared design system.</p></article><article class="card"><h3>Engineering systems</h3><p>Authored the guard checks, agent-os standards, the loop workflow, and the retrospective cadence that turn a prototype into something a business can trust.</p></article></div>
+    <aside class="notes">Message: full-stack and end-to-end. Pick two and tell a 15-second story each. “Found in: [source]” cited answers land hardest for an AI role. Reader UI + design system are decisively mine — git-verified, 109 commits vs 53 for the next author.</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">EnablesU · how I work — and still shipping</p><h2>Quality as code: <span class="violet">loops, enforced accessibility, and retrospectives that become checks.</span></h2></div>
+    <div><div class="three"><article class="card"><h3>Loop-driven development</h3><p>61 <code>[loop]</code> commits. A triage → write → <b>verify</b> system where the agent that writes code never grades its own work — I authored the standards behind it.</p></article><article class="card"><h3>WCAG as an invariant</h3><p>WCAG-001…004 enforced in a pre-commit guard, a live in-product accessibility panel, and contrast tokens verified in the CSS itself — not a one-time audit.</p></article><article class="card"><h3>Retrospectives → patterns</h3><p>Q1 & Q3 2026 retros and a detection-gap post-mortem feed an 89-entry recurring-pattern registry: each incident becomes a guard check.</p></article></div>
+    <div class="pipeline" style="margin-top:18px"><span class="step" style="background:#141d0a;border-color:#5e7727;color:var(--gold)">Sep ’26 · still shipping</span><span class="step">GTM-311 palette search</span><span class="step">GTM-316 history restore</span><span class="step">GTM-319 landscape reader</span><span class="step">GTM-320 resize-lag</span><span class="step">SEC-001 passage scoping</span><span class="step">Q3 retro</span><span class="step">PR #63</span></div></div>
+    <aside class="notes">Same rigor as the solo project — but on a team codebase. Lead with the write/verify separation; it’s the sophisticated idea. The Sep 2026 tickets show it’s live, current work. Then transition: “Now the solo project that shows this same discipline end-to-end, built alone in six weeks.”</aside>
+  </section>
+  <section class="slide">
+    <div><p class="eyebrow">The solo project · Hydro Art</p><h1>Turn public river data into <span class="accent">original, print-ready art.</span></h1><p class="lede">Hydro Art is a reproducible GIS-to-SVG product: one command transforms authoritative hydrography into editable, museum-scale maps.</p></div>
     <div class="columns"><div><p class="muted">Presented by</p><h2>Neil Joseph Runde</h2><p>Product-minded engineer · data systems · AI-assisted delivery</p></div><img class="photo" src="experiments/assets/washington-hydrographic-map.jpg" alt="Hydrographic vector artwork of Washington"></div>
     <aside class="notes">Open with the outcome: “I built the system that makes original hydrographic artwork repeatable—not a one-off map.”</aside>
   </section>
@@ -96,12 +112,13 @@
     <div class="columns"><div><p class="quote">Product intuition turns data into something people want.<br><span>Engineering discipline makes it dependable.</span></p><p class="muted">Questions?</p></div><img class="photo" src="experiments/assets/washington-elevation-report.jpg" alt="Washington elevation report artwork"></div>
     <aside class="notes">Close by inviting the interviewer to choose a thread: architecture, testing, agent workflow, product strategy, or a particular contribution. Keep it conversational.</aside>
   </section>
-  <nav class="controls" aria-label="Presentation controls"><button id="prev" aria-label="Previous slide">← Prev</button><span id="counter">1 / 10 · <kbd>←</kbd><kbd>→</kbd> navigate · <kbd>N</kbd> notes</span><button id="next" aria-label="Next slide">Next →</button></nav>
+  <nav class="controls" aria-label="Presentation controls"><button id="prev" aria-label="Previous slide">← Prev</button><span id="counter">1 / 10 · <kbd>←</kbd><kbd>→</kbd> navigate · <kbd>N</kbd> notes</span><span style="display:flex;gap:10px"><button id="notesBtn" aria-label="Toggle speaker notes" aria-pressed="false">Notes</button><button id="next" aria-label="Next slide">Next →</button></span></nav>
 </main>
 <script>
   const slides=[...document.querySelectorAll('.slide')], progress=document.querySelector('.progress'), counter=document.querySelector('#counter'); let index=0, notes=false;
-  function render(){slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.querySelector('.notes').classList.toggle('show',notes&&i===index)});counter.innerHTML=`${index+1} / ${slides.length} · <kbd>←</kbd><kbd>→</kbd> navigate · <kbd>N</kbd> notes`;progress.style.width=`${(index+1)/slides.length*100}%`}
-  function move(n){index=Math.max(0,Math.min(slides.length-1,index+n));render()} document.querySelector('#next').onclick=()=>move(1);document.querySelector('#prev').onclick=()=>move(-1);
+  const notesBtn=document.querySelector('#notesBtn');
+  function render(){slides.forEach((s,i)=>{s.classList.toggle('active',i===index);s.querySelector('.notes').classList.toggle('show',notes&&i===index)});counter.innerHTML=`${index+1} / ${slides.length} · <kbd>←</kbd><kbd>→</kbd> navigate · <kbd>N</kbd> notes`;progress.style.width=`${(index+1)/slides.length*100}%`;notesBtn.setAttribute('aria-pressed',notes);notesBtn.style.borderColor=notes?'var(--cyan)':'';notesBtn.style.color=notes?'var(--cyan)':''}
+  function move(n){index=Math.max(0,Math.min(slides.length-1,index+n));render()} document.querySelector('#next').onclick=()=>move(1);document.querySelector('#prev').onclick=()=>move(-1);notesBtn.onclick=()=>{notes=!notes;render()};
   addEventListener('keydown',e=>{if(['ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();move(1)}if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();move(-1)}if(e.key.toLowerCase()==='n'){notes=!notes;render()}if(e.key==='Home'){index=0;render()}if(e.key==='End'){index=slides.length-1;render()}}); render();
 </script>
 </body>
