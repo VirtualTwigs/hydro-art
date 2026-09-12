@@ -160,7 +160,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--png-size",
         type=int,
         default=None,
-        help="Raster export size in pixels: 4096 8192 16384 32768 65536.",
+        help="Raster export size in pixels: 512 1024 2048 4096 8192 16384 32768 "
+        "65536 (512/1024/2048 are draft/preview sizes; default 4096).",
     )
     parser.add_argument(
         "--waterbodies",

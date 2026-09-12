@@ -37,6 +37,17 @@ def test_png_size_accepts_supported_sizes():
         assert build_settings(_base(png_size=size)).png_size == size
 
 
+def test_png_size_draft_tiers_present_and_sorted():
+    # Small draft/preview tiers exist for fast design + e2e iteration (Epoch 24 #94).
+    assert {512, 1024, 2048}.issubset(set(SUPPORTED_PNG_SIZES))
+    assert list(SUPPORTED_PNG_SIZES) == sorted(SUPPORTED_PNG_SIZES)
+
+
+def test_png_size_accepts_draft_tiers():
+    for size in (512, 1024, 2048):
+        assert build_settings(_base(png_size=size)).png_size == size
+
+
 def test_png_size_rejects_unsupported():
     with pytest.raises(ConfigError, match="png_size"):
         build_settings(_base(png_size=1234))

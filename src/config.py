@@ -82,8 +82,20 @@ SUPPORTED_PROJECTIONS: tuple[str, ...] = (INTERNAL_CRS, "EPSG:4326", "EPSG:3857"
 SUPPORTED_OUTPUTS: tuple[str, ...] = ("svg", "pdf", "png", "tiff", "eps")
 
 #: Raster export sizes in pixels (PRD section 23), user selectable via
-#: ``png_size``. The largest relies on the converter's tile rendering.
-SUPPORTED_PNG_SIZES: tuple[int, ...] = (4096, 8192, 16384, 32768, 65536)
+#: ``png_size`` (kept sorted ascending). The small ``512``/``1024``/``2048`` tiers
+#: are draft/preview sizes for fast design + e2e iteration (Epoch 24 #94) — the
+#: default stays ``4096`` (see :data:`DEFAULTS`), so default output is unchanged.
+#: The largest relies on the converter's tile rendering.
+SUPPORTED_PNG_SIZES: tuple[int, ...] = (
+    512,
+    1024,
+    2048,
+    4096,
+    8192,
+    16384,
+    32768,
+    65536,
+)
 
 #: Stream-hierarchy methods (PRD section 12), user selectable.
 SUPPORTED_STREAM_METHODS: tuple[str, ...] = ("strahler", "shreve", "hack", "custom")

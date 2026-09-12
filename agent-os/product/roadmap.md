@@ -1144,6 +1144,44 @@ history, and package the CLI + docs for distribution. `M`
 Epoch gate: `v1.0` is tagged only when the full pyramid is green, determinism holds, and the marketing
 gallery + docs ship — a reproducible Generation 1 production release.
 
+## Epoch 24 — Alpha customer-journey end-to-end tests (browser, low-res proofs) · proposed
+
+Prove the **alpha customer site works end to end in a real browser.** The landing page
+(`web/start.html`, served at the alpha URL) fans out to the four catalog pages — poster
+(`proto-b-guided.html`), watershed report (`report.html`), digital image (`studio.html`), and
+year-in-motion animation (`proto-c-canvas.html`). A scripted **Playwright** harness walks that whole
+journey against a **live `serve.py`** (the real `Pipeline` + `JobRunner` behind `/api/render`),
+producing a **low-resolution proof** for each of the four endpoints so the suite runs fast enough to
+use during design iteration. This is a **non-offline, opt-in harness** (needs the GIS stack + a
+pre-extracted small county, like the Clark County, WA the landing already showcases) that lives
+outside the Python offline suite — the same posture as the Epoch 21 real-data e2e harness. The only
+change that enters the offline suite is a small **draft `png_size` tier** so proofs render quickly.
+
+94. [x] Draft render tier (offline-suite change) — Add a small `png_size` draft/preview tier
+(e.g. 512/1024/2048) to `SUPPORTED_PNG_SIZES` in `src/config.py` (fail-fast validated, default stays
+4096), update the `--png-size` help, and unit-test it in `tests/test_export_config.py`. Default 2D
+output stays byte-identical. `S`
+(`SUPPORTED_PNG_SIZES` now `(512, 1024, 2048, 4096, 8192, 16384, 32768, 65536)`, sorted, default
+still 4096; `--png-size` help lists the draft tiers; `tests/test_export_config.py` asserts the tiers
+are present/sorted/accepted with the default + reject-unsupported paths unchanged. Full offline suite
+892 green; no `PIPELINE_STAGES` edit.)
+95. [ ] Playwright harness scaffold — Add Node + Playwright dev tooling under `tests/e2e/`
+(`package.json`, `playwright.config`), a fixture that boots `serve.py` on a test port with a
+temporary output dir and tears it down, and a smoke test that `start.html` loads with no console
+errors and its catalog/landing assets resolve. Kept out of the Python offline suite. `M`
+96. [ ] Landing + navigation e2e — Assert the landing renders (hero, catalog grid of four cards, how
+-it-works), and that every catalog link + the gallery link navigates to a page that loads without JS
+errors. `S`
+97. [ ] Four-endpoint low-res proof e2e — For each endpoint (poster, report, digital, animation),
+drive the journey to a **low-res proof** via the render backend at the draft tier and assert a proof
+artifact/preview is produced. `L`
+98. [ ] Run docs & optional CI wiring — Document `npx playwright test` (prerequisites: extracted
+county, `serve.py`), and wire an opt-in/gated CI job (never in the offline Python suite). `S`
+
+Epoch gate: `npx playwright test` (against a live `serve.py` on a pre-extracted small county) walks
+`start.html` → all four catalog pages → a low-res proof for each endpoint, green; the draft
+`png_size` tier ships in the offline suite and default 2D output stays byte-identical.
+
 ---
 
 ## Proposed customer-to-operations experience blueprint
