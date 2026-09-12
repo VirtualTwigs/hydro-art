@@ -105,6 +105,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument(
+        "--web-root",
+        default=None,
+        help="Directory served for static files (default: the bundled web/). Pass "
+        "the repo root (e.g. '.') to serve web/start.html's repo-root-absolute "
+        "'/web/...' and '/output/...' assets same-origin with the /api routes — "
+        "used by the alpha customer-journey e2e harness (Epoch 24).",
+    )
+    parser.add_argument(
         "--external-root",
         default=None,
         help="External drive root; expands to <root>/cache, /datasets, /output "
@@ -137,10 +145,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir=roots.output,
         )
     )
+    web_root = Path(args.web_root).resolve() if args.web_root else WEB_ROOT
     url = f"http://{args.host}:{args.port}/"
     console.print(f"[bold green]Control surface:[/] {url}  (Ctrl-C to stop)")
+    console.print(f"[dim]web root:[/] {web_root}")
     try:
-        serve(runner, host=args.host, port=args.port, web_root=WEB_ROOT)
+        serve(runner, host=args.host, port=args.port, web_root=web_root)
     except KeyboardInterrupt:
         console.print("\n[bold]Stopped.[/]")
     return 0

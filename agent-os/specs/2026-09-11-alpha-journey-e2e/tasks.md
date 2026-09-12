@@ -16,6 +16,12 @@ foundation (roadmap + spec + config + unit tests) before any Playwright harness 
 - [x] 1.5 Full offline suite for regressions; **892 green**; no `PIPELINE_STAGES` touched (2D byte-identical).
 - [x] 1.6 Tick roadmap #94; write `implementation/report.md`.
 
+> **Status (2026-09-11):** Groups 2–5 are **authored** under `tests/e2e/` and the `serve.py
+> --web-root` support they need is in place; the server contract is validated (see
+> `implementation/report.md`). Boxes stay unticked until a full `npx playwright test` green run
+> (the epoch gate) is demonstrated on an environment with Playwright installed + a pre-extracted
+> county in `datasets/`.
+
 ## Task Group 2 — #95 Playwright harness scaffold (after commit)
 
 - [ ] 2.1 `tests/e2e/package.json` (dev-dep `@playwright/test`), `playwright.config`, `README.md`.

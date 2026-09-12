@@ -1,0 +1,77 @@
+// #95 smoke + #96 landing/navigation e2e for the alpha customer site (web/start.html).
+// These run without the GIS stack — they only exercise static delivery + client JS.
+const { test, expect } = require('@playwright/test');
+const path = require('path');
+const fs = require('fs');
+const { CATALOG } = require('../helpers');
+
+// serve.py is launched with --web-root <repo>, so /output/landing/* maps to
+// <repo>/output/landing/*. Those WebP assets are staged (deploy/stage-artifacts.sh)
+// or come off the NAS symlink; skip the asset check when they aren't present.
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const LANDING_DIR = path.join(REPO_ROOT, 'output', 'landing');
+
+// Collect console errors + uncaught page errors on the current page.
+function trackErrors(page) {
+  const errors = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(`console: ${m.text()}`);
+  });
+  page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  return errors;
+}
+
+test.describe('Alpha landing (#95, #96)', () => {
+  test('start.html loads with no console errors', async ({ page }) => {
+    const errors = trackErrors(page);
+    const resp = await page.goto('/web/start.html', { waitUntil: 'load' });
+    expect(resp?.status()).toBe(200);
+    await expect(page).toHaveTitle(/Hydro-Art/i);
+    await expect(page.locator('h1.head')).toBeVisible();
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('landing art + font assets resolve (no 404s)', async ({ page }) => {
+    test.skip(
+      !fs.existsSync(LANDING_DIR),
+      'landing assets not staged at the served root — run deploy/stage-artifacts.sh (or mount the NAS) so /output/landing/* resolves'
+    );
+    const failed = [];
+    page.on('response', (r) => {
+      const u = r.url();
+      const asset = u.includes('/output/landing/') || u.includes('/web/shared/fonts/');
+      if (asset && r.status() >= 400) failed.push(`${r.status()} ${u}`);
+    });
+    await page.goto('/web/start.html', { waitUntil: 'networkidle' });
+    expect(failed, failed.join('\n')).toEqual([]);
+  });
+
+  test('catalog shows the four endpoint cards + how-it-works', async ({ page }) => {
+    await page.goto('/web/start.html');
+    await expect(page.locator('#catalog-grid .card')).toHaveCount(4);
+    for (const { card } of CATALOG) {
+      await expect(
+        page.locator('#catalog-grid').getByRole('heading', { name: card })
+      ).toBeVisible();
+    }
+    await expect(page.locator('.steps .step')).toHaveCount(3);
+  });
+
+  for (const { card, page: dest } of CATALOG) {
+    test(`catalog "${card}" link navigates to ${dest} without JS errors`, async ({ page }) => {
+      const errors = trackErrors(page);
+      await page.goto('/web/start.html', { waitUntil: 'load' });
+      await Promise.all([
+        page.waitForURL(`**${dest}`),
+        page.locator(`#catalog-grid a.cover[href="${dest}"]`).click(),
+      ]);
+      await page.waitForLoadState('load');
+      expect(errors, errors.join('\n')).toEqual([]);
+    });
+  }
+
+  test('gallery link resolves', async ({ page }) => {
+    const resp = await page.goto('/web/gallery.html', { waitUntil: 'load' });
+    expect(resp?.status()).toBe(200);
+  });
+});
