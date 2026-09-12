@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art — rivers, made to order</title>
+<meta name="description" content="Original neon river art and watershed reports, drawn from public-domain USGS hydrography. Choose a place; get a poster or a report." />
+
+<!-- Self-hosted type: Fraunces (editorial serif) + DM Mono (atlas labels). -->
+<style>
+  @font-face { font-family:"Fraunces"; src:url("/web/shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Fraunces Display"; src:url("/web/shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
+
+  :root{
+    /* Brand tokens — matched to web/shared/ux.css so the surfaces stay cohesive. */
+    --bg:#07080c; --bg-2:#0a0c13; --panel:#10121b; --panel-2:#171a26; --line:#232838;
+    --ink:#e6ebf5; --muted:#8891a8; --faint:#5b6480;
+    --cyan:#00ffff; --violet:#9d00ff; --azure:#0a5cff; --spring:#00ffab; --amber:#ffb300;
+    --serif:"Fraunces", Georgia, "Times New Roman", serif;
+    --display:"Fraunces Display", "Fraunces", Georgia, serif;
+    --mono:"DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --edge:1px solid var(--line);
+    --shadow:0 24px 60px rgba(0,0,0,.55);
+    --maxw:1240px;
+  }
+
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--serif); font-weight:380; line-height:1.5;
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+    overflow-x:hidden;
+  }
+  ::selection{ background:var(--cyan); color:#04121a; }
+  a{ color:inherit; text-decoration:none; }
+  img{ max-width:100%; display:block; }
+
+  /* ---- Atmosphere: gradient wash, graticule, grain, vignette ---- */
+  .atmos{ position:fixed; inset:0; z-index:0; pointer-events:none; }
+  .atmos .wash{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(120% 90% at 78% -10%, rgba(0,255,255,.10), transparent 55%),
+      radial-gradient(90% 80% at 8% 8%, rgba(157,0,255,.12), transparent 60%),
+      radial-gradient(120% 120% at 50% 120%, rgba(10,92,255,.10), transparent 55%);
+  }
+  .atmos .grid{
+    position:absolute; inset:0; opacity:.35;
+    background-image:
+      linear-gradient(to right, rgba(140,160,190,.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(140,160,190,.05) 1px, transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
+            mask-image:radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
+  }
+  .atmos .vignette{
+    position:absolute; inset:0;
+    box-shadow:inset 0 0 240px 40px rgba(0,0,0,.6);
+    background:radial-gradient(120% 120% at 50% 40%, transparent 55%, rgba(0,0,0,.5));
+  }
+  .grain{
+    position:fixed; inset:-50%; z-index:1; pointer-events:none; opacity:.05;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    animation:grain 8s steps(6) infinite;
+  }
+  @keyframes grain{ 0%{transform:translate(0,0)} 20%{transform:translate(-6%,3%)} 40%{transform:translate(4%,-5%)} 60%{transform:translate(-3%,6%)} 80%{transform:translate(6%,2%)} 100%{transform:translate(0,0)} }
+
+  .wrap{ position:relative; z-index:2; max-width:var(--maxw); margin:0 auto; padding:0 28px; }
+
+  /* ---- Nav ---- */
+  header.nav{ position:relative; z-index:3; }
+  .nav-inner{ display:flex; align-items:center; gap:20px; padding:22px 0 6px; }
+  .mark{ display:flex; align-items:baseline; gap:12px; }
+  .mark .logo{ font-family:var(--display); font-weight:600; font-size:22px; letter-spacing:.01em; }
+  .mark .logo b{ color:var(--cyan); font-weight:600; }
+  .mark .kicker{ font-family:var(--mono); font-size:10.5px; letter-spacing:.28em; text-transform:uppercase; color:var(--faint); }
+  .nav-inner .spacer{ flex:1; }
+  .nav-links{ display:flex; gap:26px; font-family:var(--mono); font-size:12px; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; }
+  .nav-links a{ position:relative; padding-bottom:3px; transition:color .2s; }
+  .nav-links a::after{ content:""; position:absolute; left:0; right:100%; bottom:0; height:1px; background:var(--cyan); transition:right .25s ease; }
+  .nav-links a:hover{ color:var(--ink); } .nav-links a:hover::after{ right:0; }
+
+  /* ---- Hero ---- */
+  .hero{ display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center; padding:52px 0 40px; min-height:78vh; }
+  .eyebrow{ font-family:var(--mono); font-size:12px; letter-spacing:.26em; text-transform:uppercase; color:var(--cyan); display:flex; align-items:center; gap:12px; }
+  .eyebrow::before{ content:""; width:34px; height:1px; background:linear-gradient(90deg,var(--cyan),transparent); }
+  h1.head{
+    font-family:var(--display); font-weight:600; line-height:.96; letter-spacing:-.015em;
+    font-size:clamp(46px, 7vw, 92px); margin:20px 0 0;
+  }
+  h1.head .em{
+    font-style:normal; color:transparent;
+    background:linear-gradient(100deg, var(--cyan), var(--spring) 40%, var(--violet));
+    -webkit-background-clip:text; background-clip:text;
+  }
+  .lede{ font-size:clamp(17px,1.5vw,21px); color:#c3ccde; max-width:30em; margin:24px 0 0; font-weight:360; }
+  .cta-row{ display:flex; gap:14px; margin-top:34px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--mono); font-size:13px; letter-spacing:.06em; text-transform:uppercase;
+    padding:15px 24px; border-radius:2px; border:1px solid var(--line); background:transparent; color:var(--ink);
+    cursor:pointer; transition:transform .15s, border-color .2s, background .2s, box-shadow .2s; display:inline-flex; align-items:center; gap:10px;
+  }
+  .btn .arw{ transition:transform .2s; }
+  .btn:hover{ transform:translateY(-2px); } .btn:hover .arw{ transform:translateX(4px); }
+  .btn.solid{ background:var(--cyan); color:#031318; border-color:var(--cyan); font-weight:500; box-shadow:0 0 0 rgba(0,255,255,0); }
+  .btn.solid:hover{ box-shadow:0 12px 34px rgba(0,255,255,.28); }
+  .btn.ghost:hover{ border-color:var(--cyan); color:var(--cyan); }
+  .trust{ margin-top:26px; font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:var(--faint); display:flex; gap:18px; flex-wrap:wrap; }
+  .trust span{ display:flex; align-items:center; gap:7px; } .trust i{ width:5px; height:5px; border-radius:50%; background:var(--spring); font-style:normal; }
+
+  /* ---- Hero artwork: a framed, living specimen ---- */
+  .frame{
+    position:relative; border-radius:4px; padding:16px; background:
+      linear-gradient(180deg, #0d0f18, #090b12); border:var(--edge);
+    box-shadow:var(--shadow); overflow:hidden;
+  }
+  .frame::before{ content:""; position:absolute; inset:0; border-radius:4px; padding:1px; pointer-events:none;
+    background:linear-gradient(140deg, rgba(0,255,255,.35), transparent 40%, rgba(157,0,255,.3));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude; }
+  .art-stage{ position:relative; aspect-ratio:1600/2004; border-radius:2px; overflow:hidden; background:#05060a; }
+  .art-stage img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .art-stage .sheen{ position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(80% 55% at 50% 0%, rgba(255,255,255,.06), transparent 60%); }
+  .plate{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 4px 4px; font-family:var(--mono); }
+  .plate .name{ font-size:13px; letter-spacing:.04em; color:var(--ink); }
+  .plate .coord{ font-size:10.5px; letter-spacing:.1em; color:var(--faint); }
+  .plate .season{ font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--cyan); display:flex; align-items:center; gap:7px; }
+  .plate .season b{ width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 10px var(--cyan); }
+
+  /* ---- Section headings ---- */
+  .sec{ padding:74px 0 10px; }
+  .sec-head{ display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:34px; border-bottom:var(--edge); padding-bottom:18px; }
+  .sec-head h2{ font-family:var(--display); font-weight:600; font-size:clamp(28px,3.4vw,40px); margin:0; letter-spacing:-.01em; }
+  .sec-head .num{ font-family:var(--mono); font-size:11px; letter-spacing:.24em; color:var(--faint); text-transform:uppercase; }
+  .sec-head p{ margin:8px 0 0; color:var(--muted); max-width:34em; font-size:15.5px; }
+
+  /* ---- Catalog cards ---- */
+  .catalog{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .card{ grid-column:span 1; position:relative; display:flex; flex-direction:column; border:var(--edge); border-radius:4px; background:linear-gradient(180deg,var(--panel),var(--bg-2)); overflow:hidden; transition:transform .25s, border-color .25s, box-shadow .25s; }
+  .card.feature{ grid-column:span 2; }
+  .card:hover{ transform:translateY(-4px); border-color:rgba(0,255,255,.4); box-shadow:0 24px 50px rgba(0,0,0,.5); }
+  .card .thumb{ position:relative; aspect-ratio:4/3; background:#05060a; overflow:hidden; }
+  .card.feature .thumb{ aspect-ratio:16/9; }
+  .card .thumb img{ width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.01); transition:transform .5s ease; }
+  .card:hover .thumb img{ transform:scale(1.05); }
+  .card .tagpill{ position:absolute; top:12px; left:12px; font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; padding:5px 9px; border-radius:2px; background:rgba(4,8,12,.7); border:1px solid var(--line); color:var(--cyan); backdrop-filter:blur(6px); }
+  .card .body{ padding:20px 20px 22px; display:flex; flex-direction:column; gap:10px; flex:1; }
+  .card .body h3{ font-family:var(--display); font-weight:600; font-size:22px; margin:0; }
+  .card.feature .body h3{ font-size:27px; }
+  .card .promise{ color:var(--muted); font-size:14.5px; margin:0; flex:1; }
+  .card .fmts{ font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); }
+  .card .foot{ display:flex; align-items:center; justify-content:space-between; margin-top:6px; padding-top:14px; border-top:var(--edge); }
+  .card .price{ font-family:var(--mono); font-size:13px; color:var(--ink); } .card .price b{ color:var(--spring); font-weight:500; font-size:19px; }
+  .card .price em{ font-style:normal; color:var(--faint); font-size:11px; }
+  .card .go{ font-family:var(--mono); font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--cyan); display:inline-flex; align-items:center; gap:8px; }
+  .card .go .arw{ transition:transform .2s; } .card:hover .go .arw{ transform:translateX(5px); }
+  .card a.cover{ position:absolute; inset:0; z-index:2; }
+
+  /* ---- How it works ---- */
+  .steps{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+  .step{ border:var(--edge); border-radius:4px; padding:26px 24px; background:linear-gradient(180deg,var(--panel),var(--bg-2)); position:relative; overflow:hidden; }
+  .step .idx{ font-family:var(--display); font-weight:600; font-size:52px; line-height:1; color:transparent; -webkit-text-stroke:1px var(--line); }
+  .step h4{ font-family:var(--display); font-weight:600; font-size:19px; margin:14px 0 6px; }
+  .step p{ margin:0; color:var(--muted); font-size:14.5px; }
+  .step .spark{ position:absolute; right:-10px; top:-10px; width:80px; height:80px; border-radius:50%; background:radial-gradient(circle,rgba(0,255,255,.18),transparent 70%); }
+
+  /* ---- Footer ---- */
+  footer{ margin-top:90px; border-top:var(--edge); padding:40px 0 60px; }
+  .foot-grid{ display:flex; justify-content:space-between; gap:24px; flex-wrap:wrap; align-items:center; }
+  .foot-grid .brand{ font-family:var(--display); font-weight:600; font-size:20px; }
+  .foot-grid .attr{ font-family:var(--mono); font-size:11px; letter-spacing:.03em; color:var(--faint); max-width:44em; }
+  .foot-grid .attr a{ color:var(--muted); border-bottom:1px dotted var(--faint); }
+
+  /* ---- Reveal on load / scroll ---- */
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+  .reveal.in{ opacity:1; transform:none; }
+  [data-delay="1"]{ transition-delay:.08s } [data-delay="2"]{ transition-delay:.16s } [data-delay="3"]{ transition-delay:.24s }
+  [data-delay="4"]{ transition-delay:.32s } [data-delay="5"]{ transition-delay:.40s } [data-delay="6"]{ transition-delay:.48s }
+
+  @media (max-width:980px){
+    .hero{ grid-template-columns:1fr; gap:34px; padding-top:24px; min-height:0; }
+    .hero .frame{ order:-1; max-width:440px; }
+    .catalog{ grid-template-columns:repeat(2,1fr); }
+    .card.feature{ grid-column:span 2; }
+    .steps{ grid-template-columns:1fr; }
+  }
+  @media (max-width:600px){
+    .catalog{ grid-template-columns:1fr; } .card.feature{ grid-column:span 1; }
+    .nav-links{ display:none; }
+  }
+  @media (prefers-reduced-motion:reduce){ .grain{ animation:none; } .reveal{ transition:none; opacity:1; transform:none; } }
+</style>
+</head>
+<body>
+  <div class="atmos"><div class="wash"></div><div class="grid"></div><div class="vignette"></div></div>
+  <div class="grain"></div>
+
+  <header class="nav">
+    <div class="wrap nav-inner">
+      <div class="mark">
+        <span class="logo">Hydro<b>·</b>Art</span>
+        <span class="kicker">Cartographic editions</span>
+      </div>
+      <span class="spacer"></span>
+      <nav class="nav-links">
+        <a href="#catalog">The catalog</a>
+        <a href="#how">How it works</a>
+        <a href="/web/gallery.html">Gallery</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="wrap hero">
+      <div class="hero-copy">
+        <div class="eyebrow reveal" data-delay="1">Public-domain hydrography · Made to order</div>
+        <h1 class="head reveal" data-delay="2">Your rivers,<br>rendered as <span class="em">living art</span>.</h1>
+        <p class="lede reveal" data-delay="3">
+          We turn the actual river network of any place in the Pacific&nbsp;Northwest into
+          a luminous, one-of-a-kind print — or a plain-language report on how its water moves
+          through the year. Pick a place; we draw its water.
+        </p>
+        <div class="cta-row reveal" data-delay="4">
+          <a class="btn solid" href="/web/proto-b-guided.html">Design a poster <span class="arw">→</span></a>
+          <a class="btn ghost" href="/web/report.html">Build a report <span class="arw">→</span></a>
+        </div>
+        <div class="trust reveal" data-delay="5">
+          <span><i></i>No account needed</span>
+          <span><i></i>USGS public-domain data</span>
+          <span><i></i>One free revision</span>
+        </div>
+      </div>
+
+      <div class="frame reveal" data-delay="3">
+        <div class="art-stage">
+          <img src="/output/landing/clark-flow.webp" width="1600" height="2004"
+               alt="Animated neon map of Clark County, Washington rivers cycling through a year of flow" />
+          <div class="sheen"></div>
+        </div>
+        <div class="plate">
+          <div>
+            <div class="name">Clark County, Washington</div>
+            <div class="coord">45.78° N · 122.48° W · NHDPlus HR</div>
+          </div>
+          <div class="season"><b></b><span>A year of flow</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATALOG -->
+    <section class="wrap sec" id="catalog">
+      <div class="sec-head reveal">
+        <div>
+          <div class="num">01 — The catalog</div>
+          <h2>Choose your piece</h2>
+          <p>Every edition is drawn from the same real river data. What changes is how you want to hold it — on a wall, on a screen, in motion, or as a story about the water.</p>
+        </div>
+      </div>
+      <div class="catalog" id="catalog-grid">
+        <article class="card feature reveal" data-delay="1">
+          <div class="thumb">
+            <img src="/output/landing/clark-poster.webp" width="1204" height="1500"
+                 alt="Neon watershed-colored print of the Clark County river network" loading="lazy" />
+            <span class="tagpill">Poster / Print</span>
+          </div>
+          <div class="body">
+            <h3>Archival poster</h3>
+            <p class="promise">A museum-grade print of your river network on archival paper — sizes up to 24×36. The piece people ask about.</p>
+            <div class="fmts">PNG · PDF · TIFF · framed on request</div>
+            <div class="foot">
+              <div class="price"><em>from</em> <b>$110</b></div>
+              <span class="go">Start design <span class="arw">→</span></span>
+            </div>
+          </div>
+          <a class="cover" href="/web/proto-b-guided.html" aria-label="Archival poster"></a>
+        </article>
+
+        <article class="card feature reveal" data-delay="2">
+          <div class="thumb">
+            <img src="/output/landing/clark-report.webp" width="1400" height="1275"
+                 style="object-position:center top"
+                 alt="Salmon Creek watershed report — river network map with year-over-year and typical-year flow charts" loading="lazy" />
+            <span class="tagpill">Report</span>
+          </div>
+          <div class="body">
+            <h3>Watershed report</h3>
+            <p class="promise">A plain-language visual study of how your watershed's water moves across the year and the decades — hydrograph, trend, and drought story.</p>
+            <div class="fmts">HTML · print-ready figures</div>
+            <div class="foot">
+              <div class="price"><em>from</em> <b>$95</b></div>
+              <span class="go">Start report <span class="arw">→</span></span>
+            </div>
+          </div>
+          <a class="cover" href="/web/report.html" aria-label="Watershed report"></a>
+        </article>
+
+        <article class="card reveal" data-delay="3">
+          <div class="thumb">
+            <img src="/output/landing/wa-elevation.webp" width="1600" height="1114"
+                 alt="Elevation-tinted render of the Washington State river network" loading="lazy" />
+            <span class="tagpill">Digital</span>
+          </div>
+          <div class="body">
+            <h3>Digital image</h3>
+            <p class="promise">A high-resolution file for screens, social, or your own printing — in neon or elevation-tinted styles.</p>
+            <div class="fmts">SVG · PNG</div>
+            <div class="foot">
+              <div class="price"><em>from</em> <b>$38</b></div>
+              <span class="go">Start design <span class="arw">→</span></span>
+            </div>
+          </div>
+          <a class="cover" href="/web/studio.html" aria-label="Digital image"></a>
+        </article>
+
+        <article class="card reveal" data-delay="4">
+          <div class="thumb">
+            <img src="/output/landing/clark-flow.webp" width="1600" height="2004"
+                 alt="Animated loop of Clark County rivers swelling and receding through the seasons" loading="lazy" />
+            <span class="tagpill">Animation</span>
+          </div>
+          <div class="body">
+            <h3>Year in motion</h3>
+            <p class="promise">A short loop of your rivers swelling and receding through the seasons.</p>
+            <div class="fmts">GIF · MP4</div>
+            <div class="foot">
+              <div class="price"><em>from</em> <b>$64</b></div>
+              <span class="go">Start design <span class="arw">→</span></span>
+            </div>
+          </div>
+          <a class="cover" href="/web/proto-c-canvas.html" aria-label="Year in motion"></a>
+        </article>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="wrap sec" id="how">
+      <div class="sec-head reveal">
+        <div>
+          <div class="num">02 — How it works</div>
+          <h2>Three steps, no jargon</h2>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="step reveal" data-delay="1"><div class="spark"></div><div class="idx">1</div><h4>Pick a place</h4><p>Choose a region and, if you like, a specific county or river basin. No map coordinates to hunt down.</p></div>
+        <div class="step reveal" data-delay="2"><div class="spark"></div><div class="idx">2</div><h4>We draw its water</h4><p>Your rivers are rendered from official USGS data into your chosen style — neon or elevation-tinted.</p></div>
+        <div class="step reveal" data-delay="3"><div class="spark"></div><div class="idx">3</div><h4>Approve the proof</h4><p>You get a proof to review. One revision is included. Then we deliver files or a printed edition.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot-grid">
+      <div>
+        <div class="brand">Hydro·Art</div>
+        <div class="attr" style="margin-top:8px">
+          Rivers &amp; watersheds from the USGS National Hydrography Dataset (NHDPlus HR / WBD) — public domain.
+          Elevation from the USGS 3DEP program. Each edition ships with its data provenance.
+        </div>
+      </div>
+      <div class="attr">A Runde Strategies edition · no account · no tracking</div>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    // Staggered reveal on scroll; the hero + nav reveal immediately.
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); } });
+    }, { threshold:0.12 });
+    document.querySelectorAll(".reveal").forEach(function(el){ io.observe(el); });
+    requestAnimationFrame(function(){
+      document.querySelectorAll(".hero .reveal, .nav .reveal").forEach(function(el){ el.classList.add("in"); });
+    });
+  })();
+  </script>
+</body>
+</html>
