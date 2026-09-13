@@ -5,11 +5,11 @@ const path = require('path');
 const fs = require('fs');
 const { CATALOG } = require('../helpers');
 
-// serve.py is launched with --web-root <repo>, so /output/landing/* maps to
-// <repo>/output/landing/*. Those WebP assets are staged (deploy/stage-artifacts.sh)
-// or come off the NAS symlink; skip the asset check when they aren't present.
+// global-setup.js stages a real served root from deploy/output/, so /output/landing/*
+// maps to deploy/output/landing/*. Those WebP assets come from deploy/stage-artifacts.sh;
+// skip the asset check when they haven't been staged there yet.
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
-const LANDING_DIR = path.join(REPO_ROOT, 'output', 'landing');
+const LANDING_DIR = path.join(REPO_ROOT, 'deploy', 'output', 'landing');
 
 // Collect console errors + uncaught page errors on the current page.
 function trackErrors(page) {

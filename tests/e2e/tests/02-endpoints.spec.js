@@ -19,6 +19,12 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const PYTHON = process.env.PYTHON || path.join(REPO_ROOT, '.venv', 'bin', 'python');
 const DATASETS = path.join(REPO_ROOT, 'datasets');
 
+// A Clark County /api/render proof measures ~6 min (full-state GIS load dominates;
+// see helpers.js renderViaApi). test.slow() only triples the 120s base to 360s —
+// too tight — so give the two API-render tests an explicit budget above the poll
+// deadline (RENDER_TIMEOUT_MS, default 10 min) plus setup/teardown margin.
+const API_RENDER_TIMEOUT_MS = Number(process.env.RENDER_TIMEOUT_MS || 600_000) + 120_000;
+
 // A pre-extracted county means at least one non-empty entry under datasets/.
 const HAVE_DATA = fs.existsSync(DATASETS) && fs.readdirSync(DATASETS).length > 0;
 
@@ -40,6 +46,7 @@ test.describe('Endpoint low-res proofs (#97)', () => {
   test.slow(); // real renders take longer than the default budget
 
   test('digital image — SVG proof via /api/render at the draft tier', async ({ request, baseURL }) => {
+    test.setTimeout(API_RENDER_TIMEOUT_MS);
     const { job } = await renderViaApi(request, baseURL, {
       region: REGION,
       county: COUNTY,
@@ -52,6 +59,7 @@ test.describe('Endpoint low-res proofs (#97)', () => {
   });
 
   test('poster / print image — draft PNG proof via /api/render', async ({ request, baseURL }) => {
+    test.setTimeout(API_RENDER_TIMEOUT_MS);
     const { job } = await renderViaApi(request, baseURL, {
       region: REGION,
       county: COUNTY,

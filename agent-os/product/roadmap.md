@@ -1144,7 +1144,7 @@ history, and package the CLI + docs for distribution. `M`
 Epoch gate: `v1.0` is tagged only when the full pyramid is green, determinism holds, and the marketing
 gallery + docs ship — a reproducible Generation 1 production release.
 
-## Epoch 24 — Alpha customer-journey end-to-end tests (browser, low-res proofs) · proposed
+## Epoch 24 — Alpha customer-journey end-to-end tests (browser, low-res proofs) · complete
 
 Prove the **alpha customer site works end to end in a real browser.** The landing page
 (`web/start.html`, served at the alpha URL) fans out to the four catalog pages — poster
@@ -1165,18 +1165,33 @@ output stays byte-identical. `S`
 still 4096; `--png-size` help lists the draft tiers; `tests/test_export_config.py` asserts the tiers
 are present/sorted/accepted with the default + reject-unsupported paths unchanged. Full offline suite
 892 green; no `PIPELINE_STAGES` edit.)
-95. [ ] Playwright harness scaffold — Add Node + Playwright dev tooling under `tests/e2e/`
+95. [x] Playwright harness scaffold — Add Node + Playwright dev tooling under `tests/e2e/`
 (`package.json`, `playwright.config`), a fixture that boots `serve.py` on a test port with a
 temporary output dir and tears it down, and a smoke test that `start.html` loads with no console
 errors and its catalog/landing assets resolve. Kept out of the Python offline suite. `M`
-96. [ ] Landing + navigation e2e — Assert the landing renders (hero, catalog grid of four cards, how
+(`playwright.config.js` boots `serve.py --web-root <staged> --port <PORT>`; `global-setup.js` stages a
+real served root — copies of `web/` + `deploy/output/` — because `serve.py`'s path-traversal guard
+resolves+rejects the repo's NAS `output/` symlink. Staging runs at config load, not the `globalSetup`
+hook, since Playwright probes webServer readiness first. `PORT`/`BASE_URL` env knobs.)
+96. [x] Landing + navigation e2e — Assert the landing renders (hero, catalog grid of four cards, how
 -it-works), and that every catalog link + the gallery link navigates to a page that loads without JS
 errors. `S`
-97. [ ] Four-endpoint low-res proof e2e — For each endpoint (poster, report, digital, animation),
+(`tests/01-landing.spec.js` 8/8 green in ~4s: smoke + hero + no-console-errors + landing-asset/font
+resolution + per-card navigation.)
+97. [x] Four-endpoint low-res proof e2e — For each endpoint (poster, report, digital, animation),
 drive the journey to a **low-res proof** via the render backend at the draft tier and assert a proof
 artifact/preview is produced. `L`
-98. [ ] Run docs & optional CI wiring — Document `npx playwright test` (prerequisites: extracted
+(`tests/02-endpoints.spec.js`: digital SVG + poster PNG via `/api/render` at the draft `png_size`
+tier; report figures via `tools/build_watershed_report.py`; animation GIF via `tools/render_monthly.py`.
+Measured a Clark County `/api/render` proof at ~6 min — the full-Washington GIS load dominates (county
+clip → SVG → PNG is ~13s once reprojected), so the draft tier only speeds rasterization;
+`RENDER_TIMEOUT_MS` default raised to 10 min + explicit per-test budget. County value is the Census
+`NAME` `Clark` (not `NAMELSAD`). Skips when `datasets/` empty or the tool prerequisites are unmet.)
+98. [x] Run docs & optional CI wiring — Document `npx playwright test` (prerequisites: extracted
 county, `serve.py`), and wire an opt-in/gated CI job (never in the offline Python suite). `S`
+(`tests/e2e/README.md` documents prerequisites — extracted county, the `/tmp/counties_shp/` Census
+counties shapefile the county clip needs, env knobs, and the staged-root rationale. CI wiring stays a
+separate gated job per the offline-suite discipline; not added to `ci.yml`.)
 
 Epoch gate: `npx playwright test` (against a live `serve.py` on a pre-extracted small county) walks
 `start.html` → all four catalog pages → a low-res proof for each endpoint, green; the draft

@@ -51,3 +51,38 @@ are same-origin. `playwright.config.js` boots `serve.py --web-root . --port <POR
 `datasets/` and the GIS stack. Roadmap #95–#98 are therefore left **unchecked** until that run is
 demonstrated. The harness + the `serve.py --web-root` change are **left uncommitted** for review
 (the pre-commit foundation was committed separately, per the "commit before development" instruction).
+
+## #95–#98 — Epoch gate GREEN (2026-09-12)
+
+`npx playwright test` — **13/13 passed (13.7m)** against a live `serve.py --web-root <staged>` on a
+staged Clark County, WA (`datasets/nhdplus_hr` + `datasets/wbd`, GIS stack, PNG_SIZE=1024):
+
+- `01-landing.spec.js` — **8/8** (~4s): smoke, hero, no-console-errors, landing-asset/font resolution,
+  per-card + gallery navigation.
+- `02-endpoints.spec.js` — **5/5**: digital SVG (6.0m) + poster PNG (6.0m, magic-byte check) via
+  `/api/render` at the draft tier; studio Run button live (0.8s); watershed report figures (18.4s);
+  animation GIF (1.2m).
+
+**Findings that changed the harness (vs. the pre-commit authoring):**
+- **Staged real served-root.** Serving the repo root directly makes `/output/landing/*.webp` 404 —
+  `serve.py`'s path-traversal guard resolves the repo's NAS `output/` symlink and refuses the escape,
+  tripping the landing suite's strict no-console-errors check. New `global-setup.js` stages a real
+  (non-symlinked) root: copies of `web/` + `deploy/output/`, served via `--web-root <staged>`. Staging
+  runs at **config load**, not the `globalSetup` hook, because Playwright probes webServer readiness
+  first (a `globalSetup`-hook stage would 404-timeout). The `serve.py --web-root .` from the authoring
+  note is replaced by `--web-root <staged>`.
+- **`/api/render` county proof is ~6 min.** `validate` loads the whole Washington region (27 layers,
+  ~2.3M geometries); repair + reproject over that dominates. The county clip → graph → watersheds →
+  SVG → PNG export is only ~13s once reprojected — so the draft `png_size` (#94) barely helps here (it
+  only speeds rasterization, not the GIS load). `RENDER_TIMEOUT_MS` default raised 300s → **600s**, with
+  an explicit per-test budget (`test.slow()`'s 3× of the 120s base was too tight).
+- **County value is the Census `NAME`.** `src/counties.py` matches `NAME` (`Clark`), not `NAMELSAD`
+  (`Clark County`); helper default corrected to `Clark`.
+- **Census counties shapefile prerequisite.** The county clip reads
+  `/tmp/counties_shp/cb_2023_us_county_500k.shp` (public-domain Census cartographic boundaries, ~12 MB
+  zipped). README documents staging it; **not committed** (regenerable external data). The
+  report/animation proofs don't need it — they bbox-clip via `tools/render_common.CLARK_BBOX_4326`.
+- The landing-asset skip-guard now reads `deploy/output/landing/` (the staging source of truth).
+
+All four endpoints produce a real low-res proof; provenance is public-domain USGS/Census; nothing marked
+sellable. Suite stays out of `ci.yml` (offline-suite discipline); any CI wiring is a separate gated job.

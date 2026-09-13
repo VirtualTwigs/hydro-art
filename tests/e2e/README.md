@@ -23,10 +23,19 @@ for each product endpoint.
 
 ## How the server is wired
 
-`playwright.config.js` boots `serve.py --web-root . --port <PORT>` from the repo root, so
-`start.html`'s repo-root-absolute assets (`/web/...`, `/output/...`) **and** the `/api/*`
-render routes are served **same-origin**. (The bundled `serve.py` default web root is
-`web/`, which does not resolve start.html's `/web/...` links — hence `--web-root .`.)
+`playwright.config.js` boots `serve.py --web-root <staged> --port <PORT>`, where `<staged>`
+is a real directory (`tests/e2e/.served-root/`, git-ignored) that `global-setup.js` fills
+with copies of `web/` **and** `deploy/output/` at config-load time. So `start.html`'s
+repo-root-absolute assets (`/web/...`, `/output/...`) **and** the `/api/*` render routes are
+served **same-origin**.
+
+Why a staged copy instead of `--web-root .`? `serve.py`'s path-traversal guard resolves
+symlinks and refuses anything outside the web root, and the repo's own `output/` is a symlink
+to the NAS — so serving the repo root directly makes every `/output/landing/*.webp` **404**,
+tripping the landing suite's strict "no console errors" checks. The container deploy sidesteps
+this by bind-mounting the real `deploy/output`; the harness mirrors that with the staged root.
+Staging runs at **config load** (not the Playwright `globalSetup` hook) because Playwright
+awaits the `webServer` readiness probe *before* `globalSetup`, which would 404-timeout.
 
 If a plain `python -m http.server` is running on the same port, stop it first (it has no
 `/api`), or set `PORT`/`BASE_URL` (below).
@@ -38,6 +47,17 @@ If a plain `python -m http.server` is running on the same port, stop it first (i
   for the #97 proofs. #95/#96 only need `serve.py` importable.
 - A pre-extracted county under `datasets/` (the harness targets **Clark County, WA** by
   default — the pipeline's demo county). Downloads are skipped when the dataset dir exists.
+- For the two `/api/render` proofs (digital image, poster), the Census cartographic-boundary
+  counties shapefile at `/tmp/counties_shp/cb_2023_us_county_500k.shp` (the path
+  `src/counties.py` reads). Stage it once — it is **not** committed (public-domain Census
+  data, ~12 MB zipped):
+  ```bash
+  curl -sSL -o /tmp/cb_counties.zip \
+    https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_county_500k.zip
+  unzip -o /tmp/cb_counties.zip -d /tmp/counties_shp
+  ```
+  Without it the county clip fails; the report/animation proofs don't need it (they
+  bbox-clip to Clark's extent via `tools/render_common.CLARK_BBOX_4326`).
 
 ## Run
 
@@ -56,7 +76,8 @@ npx playwright test tests/01-landing.spec.js   # landing/nav only (no GIS needed
 | `PORT` | `8080` | Port the harness starts `serve.py` on. |
 | `BASE_URL` | `http://127.0.0.1:$PORT` | Point at an already-running `serve.py` (must expose `/api`); enables `reuseExistingServer`. |
 | `PNG_SIZE` | `1024` | Draft raster tier for proofs. Bump (e.g. `4096`) for a final high-res confirmation pass. |
-| `HARNESS_REGION` / `HARNESS_COUNTY` | `Washington` / `Clark County` | Target place for the proofs. |
+| `HARNESS_REGION` / `HARNESS_COUNTY` | `Washington` / `Clark` | Target place for the proofs. `HARNESS_COUNTY` is the Census `NAME` value (bare, no " County" suffix) — `src/counties.py` matches `NAME`, not `NAMELSAD`. |
+| `RENDER_TIMEOUT_MS` | `600000` | Deadline for a `/api/render` proof. Generous on purpose: a Clark County proof measures **~6 min** because `validate` loads the whole Washington region (~2.3M geometries) and repair+reproject over that dominates — the county clip → graph → watersheds → SVG → PNG is only ~13s once reprojected, so the draft tier (which only speeds rasterization) barely helps. |
 | `PYTHON` | `.venv/bin/python` | Interpreter used for `serve.py` + the render tools. |
 
 ## Notes
