@@ -1,0 +1,73 @@
+{
+  "attribution": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
+  "deliverables": [
+    {
+      "filename": "ORD-1001_washington-clark_neon-basin_18x24.png",
+      "fmt": "png",
+      "height_px": 7200,
+      "kind": "print",
+      "sha256": "e3d031bbf3002147afb58efd43f5b1feb971caa22dee236689b26b19d4528e82",
+      "width_px": 5400
+    },
+    {
+      "filename": "ORD-1001_washington-clark_neon-basin_18x24.pdf",
+      "fmt": "pdf",
+      "height_px": 7200,
+      "kind": "print",
+      "sha256": "fdc8fc12b337ef31d985ecccc129a0b3806524c9ff1df674f953b0754130c8f9",
+      "width_px": 5400
+    },
+    {
+      "filename": "ORD-1001_washington-clark_neon-basin_18x24.svg",
+      "fmt": "svg",
+      "height_px": null,
+      "kind": "vector",
+      "sha256": "b885553767c5099c98620a0056aae2ad988fed13f7a7a55b37b3e7809d46181f",
+      "width_px": null
+    },
+    {
+      "filename": "ORD-1001_washington-clark_neon-basin_18x24_license.txt",
+      "fmt": "txt",
+      "height_px": null,
+      "kind": "license",
+      "sha256": "547343225d18ac9a4faa6093bc78e74c7504d6569dd400da320d8b0c7bcc3ce2",
+      "width_px": null
+    }
+  ],
+  "order": {
+    "add_ons": [
+      "svg",
+      "commercial_license"
+    ],
+    "buyer_ref": null,
+    "county": "Clark",
+    "formats": [
+      "png",
+      "pdf"
+    ],
+    "order_id": "ORD-1001",
+    "region": "Washington",
+    "size": "18x24",
+    "style": "neon-basin"
+  },
+  "schema": "hydro-art/fulfillment-manifest@1",
+  "sources": [
+    {
+      "name": "USGS NHDPlus HR",
+      "version": null
+    },
+    {
+      "name": "USGS NHD",
+      "version": null
+    },
+    {
+      "name": "USGS WBD",
+      "version": null
+    }
+  ],
+  "title_block": {
+    "credit": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
+    "subtitle": "Washington \u00b7 Hydrographic river network",
+    "title": "Clark County Watersheds"
+  }
+}
