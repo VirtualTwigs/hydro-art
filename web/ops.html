@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hydro-Art / Operations</title>
+<link rel="stylesheet" href="shared/editorial.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
+  a { color: inherit; }
+
+  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
+  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
+  .brand b { color: var(--accent); }
+  .top nav { margin-left: auto; display: flex; gap: 14px; font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
+  .top nav a { text-decoration: none; }
+  .top nav a:hover, .top nav a.active { color: var(--accent); text-decoration: underline; }
+
+  .wrap { max-width: 1200px; margin: auto; padding: 40px 4vw 85px; }
+  .eyebrow { margin: 0 0 8px; color: var(--accent); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+  h1 { font: 700 36px var(--ui-serif); letter-spacing: -.03em; margin: 0 0 24px; }
+
+  /* Metrics bar */
+  .metrics { display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap; }
+  .metric { background: var(--paper-bright); border: 1px solid var(--line); padding: 14px 18px; min-width: 120px; }
+  .metric b { display: block; font: 700 28px/1 var(--ui-serif); }
+  .metric small { font: 10px var(--ui-mono); color: var(--muted); text-transform: uppercase; }
+
+  /* Filters */
+  .filters { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn { border: 1px solid var(--line); background: var(--paper-bright); padding: 6px 12px; font: 11px var(--ui-mono); cursor: pointer; text-transform: uppercase; letter-spacing: .04em; }
+  .filter-btn:hover { background: #e0eee8; }
+  .filter-btn.active { border-color: var(--accent); background: var(--accent); color: white; }
+
+  /* Order table */
+  .board { border: 1px solid var(--line); background: var(--paper-bright); overflow-x: auto; }
+  .board-head { display: grid; grid-template-columns: 160px 1fr 120px 120px 140px 140px; gap: 12px; align-items: center; padding: 12px 16px; background: var(--panel-2); color: var(--muted); font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
+  .order-row { display: grid; grid-template-columns: 160px 1fr 120px 120px 140px 140px; gap: 12px; align-items: center; padding: 13px 16px; border-top: 1px solid var(--line); font-size: 14px; cursor: pointer; transition: background .1s; }
+  .order-row:hover { background: #eef5f0; }
+
+  .status { display: inline-block; padding: 3px 7px; font: 9px var(--ui-mono); text-transform: uppercase; border: 1px solid; border-radius: 2px; }
+  .status-submitted  { color: #735a26; background: #fbf0d6; border-color: #d4b86a; }
+  .status-accepted   { color: #21655f; background: #dff0e9; border-color: #8cc4b0; }
+  .status-rendering  { color: #5e518b; background: #eeeafa; border-color: #b5a3d6; }
+  .status-proof_ready { color: #21655f; background: #d0f0e8; border-color: #6cb89e; }
+  .status-approved   { color: #236c6a; background: #c8ede6; border-color: #4daa9e; }
+  .status-fulfilled  { color: #555; background: #e8e8e8; border-color: #bbb; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state h2 { font: 700 24px var(--ui-serif); color: var(--ink); margin-bottom: 8px; }
+
+  /* Detail panel */
+  .detail-panel { display: none; position: fixed; top: 0; right: 0; width: 480px; height: 100vh; background: var(--paper); border-left: 1px solid var(--line); box-shadow: -4px 0 20px rgba(0,0,0,.08); overflow-y: auto; z-index: 100; padding: 28px; }
+  .detail-panel.open { display: block; }
+  .detail-panel h2 { font: 700 24px var(--ui-serif); margin: 0 0 16px; }
+  .detail-panel .close-btn { position: absolute; top: 16px; right: 16px; border: none; background: none; font: 700 20px var(--ui-sans); cursor: pointer; color: var(--muted); }
+  .detail-row { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding: 10px 0; font-size: 14px; }
+  .detail-row dt { color: var(--muted); }
+  .detail-row dd { margin: 0; font-weight: 600; text-align: right; }
+  .action-bar { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { display: inline-block; border: 1px solid var(--accent); padding: 10px 16px; background: var(--accent); color: white; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+  .btn:hover { opacity: .9; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn.danger { background: var(--danger); border-color: var(--danger); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .render-status { margin-top: 16px; padding: 12px; background: var(--panel-2); font-size: 13px; display: none; }
+
+  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+
+  @media (max-width: 900px) {
+    .board-head, .order-row { grid-template-columns: 140px 1fr 100px 100px; }
+    .board-head > :nth-child(5), .board-head > :nth-child(6),
+    .order-row > :nth-child(5), .order-row > :nth-child(6) { display: none; }
+    .detail-panel { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="order.html">Hydro<b>&#9671;</b>Art</a>
+  <nav>
+    <a href="order.html">Order</a>
+    <a href="ops.html" class="active">Operations</a>
+    <a href="studio.html">Studio</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <p class="eyebrow">Operations dashboard</p>
+  <h1>Orders</h1>
+
+  <div class="metrics" id="metrics"></div>
+
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="submitted">Submitted</button>
+    <button class="filter-btn" data-filter="accepted">Accepted</button>
+    <button class="filter-btn" data-filter="rendering">Rendering</button>
+    <button class="filter-btn" data-filter="proof_ready">Proof ready</button>
+    <button class="filter-btn" data-filter="approved">Approved</button>
+    <button class="filter-btn" data-filter="fulfilled">Fulfilled</button>
+  </div>
+
+  <div class="board" id="board">
+    <div class="board-head">
+      <span>Order ID</span>
+      <span>Location</span>
+      <span>Product</span>
+      <span>Status</span>
+      <span>Email</span>
+      <span>Created</span>
+    </div>
+    <div id="order-rows"></div>
+  </div>
+
+  <div class="empty-state" id="empty-state" style="display:none;">
+    <h2>No orders yet</h2>
+    <p>Orders placed via the <a href="order.html">order page</a> will appear here.</p>
+  </div>
+</main>
+
+<!-- Detail slide-out panel -->
+<div class="detail-panel" id="detail-panel">
+  <button class="close-btn" id="detail-close">&times;</button>
+  <h2 id="detail-id">—</h2>
+  <dl>
+    <div class="detail-row"><dt>Status</dt><dd id="detail-status">—</dd></div>
+    <div class="detail-row"><dt>Product</dt><dd id="detail-product">—</dd></div>
+    <div class="detail-row"><dt>Location</dt><dd id="detail-location">—</dd></div>
+    <div class="detail-row"><dt>Style</dt><dd id="detail-style">—</dd></div>
+    <div class="detail-row"><dt>Size</dt><dd id="detail-size">—</dd></div>
+    <div class="detail-row"><dt>Email</dt><dd id="detail-email">—</dd></div>
+    <div class="detail-row"><dt>Created</dt><dd id="detail-created">—</dd></div>
+    <div class="detail-row"><dt>Render job</dt><dd id="detail-job">—</dd></div>
+    <div class="detail-row"><dt>Delivery</dt><dd id="detail-delivery">—</dd></div>
+  </dl>
+  <div class="action-bar" id="detail-actions"></div>
+  <div class="render-status" id="render-status"></div>
+</div>
+
+<footer class="footer">
+  <span>HYDRO-ART / OPERATIONS</span>
+  <span>&copy; 2026 RUNDE STRATEGIES</span>
+</footer>
+
+<script>
+"use strict";
+(function () {
+  var orders = [];
+  var currentFilter = "all";
+  var selectedId = null;
+
+  function load() {
+    fetch("/api/orders")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        orders = data.orders || [];
+        renderMetrics();
+        renderRows();
+        if (selectedId) showDetail(selectedId);
+      })
+      .catch(function (err) { console.error("Failed to load orders:", err); });
+  }
+
+  function renderMetrics() {
+    var el = document.getElementById("metrics");
+    var counts = {};
+    orders.forEach(function (o) { counts[o.status] = (counts[o.status] || 0) + 1; });
+    el.innerHTML =
+      '<div class="metric"><b>' + orders.length + '</b><small>Total</small></div>' +
+      '<div class="metric"><b>' + (counts.submitted || 0) + '</b><small>Submitted</small></div>' +
+      '<div class="metric"><b>' + (counts.rendering || 0) + '</b><small>Rendering</small></div>' +
+      '<div class="metric"><b>' + (counts.proof_ready || 0) + '</b><small>Proof ready</small></div>' +
+      '<div class="metric"><b>' + (counts.approved || 0) + '</b><small>Approved</small></div>';
+  }
+
+  function renderRows() {
+    var container = document.getElementById("order-rows");
+    var emptyEl = document.getElementById("empty-state");
+    var boardEl = document.getElementById("board");
+
+    var filtered = currentFilter === "all"
+      ? orders
+      : orders.filter(function (o) { return o.status === currentFilter; });
+
+    if (filtered.length === 0) {
+      boardEl.style.display = "none";
+      emptyEl.style.display = "block";
+      return;
+    }
+    boardEl.style.display = "block";
+    emptyEl.style.display = "none";
+
+    container.innerHTML = filtered.map(function (o) {
+      var loc = (o.order && o.order.county ? o.order.county + ", " + o.order.region : "—");
+      var created = o.created_at ? o.created_at.substring(0, 10) : "—";
+      return '<div class="order-row" data-id="' + o.request_id + '">' +
+        '<span style="font:700 14px var(--ui-mono)">' + o.request_id + '</span>' +
+        '<span>' + loc + '</span>' +
+        '<span>' + (o.product || "—") + '</span>' +
+        '<span><span class="status status-' + o.status + '">' + o.status.replace("_", " ") + '</span></span>' +
+        '<span style="font-size:12px;color:var(--muted)">' + (o.email || "—") + '</span>' +
+        '<span style="font-size:12px;color:var(--muted)">' + created + '</span>' +
+        '</div>';
+    }).join("");
+
+    container.querySelectorAll(".order-row").forEach(function (row) {
+      row.addEventListener("click", function () {
+        showDetail(row.getAttribute("data-id"));
+      });
+    });
+  }
+
+  function showDetail(id) {
+    selectedId = id;
+    var o = orders.find(function (x) { return x.request_id === id; });
+    if (!o) return;
+
+    var panel = document.getElementById("detail-panel");
+    document.getElementById("detail-id").textContent = o.request_id;
+    document.getElementById("detail-status").innerHTML = '<span class="status status-' + o.status + '">' + o.status.replace("_"," ") + '</span>';
+    document.getElementById("detail-product").textContent = o.product || "—";
+    document.getElementById("detail-location").textContent = o.order ? o.order.county + " County, " + o.order.region : "—";
+    document.getElementById("detail-style").textContent = o.order ? o.order.style : "—";
+    document.getElementById("detail-size").textContent = o.order ? o.order.size : "—";
+    document.getElementById("detail-email").textContent = o.email || "—";
+    document.getElementById("detail-created").textContent = o.created_at || "—";
+    document.getElementById("detail-job").textContent = o.job_id || "none";
+    var deliveryEl = document.getElementById("detail-delivery");
+    if (o.status === "fulfilled" && o.job_id) {
+      deliveryEl.innerHTML = '<a href="delivery.html?order=' + o.request_id + '" style="color:var(--accent);text-decoration:underline">delivery.html?order=' + o.request_id + '</a>';
+    } else {
+      deliveryEl.textContent = "—";
+    }
+
+    var actions = document.getElementById("detail-actions");
+    actions.innerHTML = "";
+    document.getElementById("render-status").style.display = "none";
+
+    if (o.status === "submitted") {
+      actions.innerHTML = '<button class="btn" id="act-accept">Accept order</button>';
+      document.getElementById("act-accept").addEventListener("click", function () { patchStatus(id, "accepted"); });
+    } else if (o.status === "accepted") {
+      actions.innerHTML = '<button class="btn" id="act-render">Start render</button>';
+      document.getElementById("act-render").addEventListener("click", function () { startRender(id); });
+    } else if (o.status === "rendering" && o.job_id) {
+      pollJob(o.job_id, id);
+    } else if (o.status === "proof_ready") {
+      actions.innerHTML =
+        '<a class="btn" href="proof.html?order=' + id + '">View proof</a>' +
+        '<button class="btn ghost" id="act-approve">Approve</button>';
+      document.getElementById("act-approve").addEventListener("click", function () { patchStatus(id, "approved"); });
+    } else if (o.status === "approved") {
+      actions.innerHTML = '<button class="btn" id="act-fulfill">Mark fulfilled</button>';
+      document.getElementById("act-fulfill").addEventListener("click", function () {
+        patchStatus(id, "fulfilled");
+      });
+    } else if (o.status === "fulfilled") {
+      var deliveryLink = window.location.origin + "/delivery.html?order=" + id;
+      actions.innerHTML =
+        '<a class="btn" href="delivery.html?order=' + id + '" target="_blank">View delivery page</a>' +
+        '<button class="btn ghost" id="act-copy-link">Copy buyer link</button>' +
+        '<div id="copy-feedback" style="margin-top:8px;font:12px var(--ui-mono);color:var(--accent);display:none">Link copied!</div>';
+      document.getElementById("act-copy-link").addEventListener("click", function () {
+        navigator.clipboard.writeText(deliveryLink).then(function () {
+          var fb = document.getElementById("copy-feedback");
+          fb.style.display = "block";
+          setTimeout(function () { fb.style.display = "none"; }, 2000);
+        });
+      });
+    }
+
+    panel.classList.add("open");
+  }
+
+  function patchStatus(id, status) {
+    fetch("/api/orders/" + id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: status }),
+    })
+      .then(function () { load(); })
+      .catch(function (err) { alert("Error: " + err.message); });
+  }
+
+  function startRender(id) {
+    var statusEl = document.getElementById("render-status");
+    statusEl.textContent = "Starting render...";
+    statusEl.style.display = "block";
+
+    fetch("/api/orders/" + id + "/render", { method: "POST" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) {
+          statusEl.textContent = "Error: " + data.error;
+          return;
+        }
+        statusEl.textContent = "Render job started: " + data.job;
+        load();
+        pollJob(data.job, id);
+      })
+      .catch(function (err) {
+        statusEl.textContent = "Error: " + err.message;
+      });
+  }
+
+  function pollJob(jobId, orderId) {
+    var statusEl = document.getElementById("render-status");
+    statusEl.style.display = "block";
+    statusEl.textContent = "Rendering... (job " + jobId.substring(0, 8) + ")";
+
+    var interval = setInterval(function () {
+      fetch("/api/jobs/" + jobId)
+        .then(function (r) { return r.json(); })
+        .then(function (job) {
+          if (job.state === "succeeded") {
+            clearInterval(interval);
+            statusEl.textContent = "Render complete!";
+            // Auto-transition to proof_ready
+            patchStatus(orderId, "proof_ready");
+          } else if (job.state === "failed") {
+            clearInterval(interval);
+            statusEl.textContent = "Render failed: " + (job.error || "unknown error");
+          } else {
+            statusEl.textContent = "Rendering... (job " + jobId.substring(0, 8) + ", state: " + job.state + ")";
+          }
+        })
+        .catch(function () {
+          clearInterval(interval);
+          statusEl.textContent = "Lost connection to job.";
+        });
+    }, 2000);
+  }
+
+  // --- Filters ---
+  document.querySelectorAll(".filter-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      currentFilter = btn.getAttribute("data-filter");
+      renderRows();
+    });
+  });
+
+  // --- Close detail panel ---
+  document.getElementById("detail-close").addEventListener("click", function () {
+    document.getElementById("detail-panel").classList.remove("open");
+    selectedId = null;
+  });
+
+  // --- Auto-refresh ---
+  load();
+  setInterval(load, 5000);
+})();
+</script>
+</body>
+</html>

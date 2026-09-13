@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hydro-Art / Place an Order</title>
+<link rel="stylesheet" href="shared/editorial.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
+  a { color: inherit; }
+
+  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
+  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
+  .brand b { color: var(--accent); }
+  .top nav { margin-left: auto; display: flex; gap: 14px; font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
+  .top nav a { text-decoration: none; }
+  .top nav a:hover, .top nav a.active { color: var(--accent); text-decoration: underline; }
+
+  .wrap { max-width: 860px; margin: auto; padding: 55px 5vw 85px; }
+  .eyebrow { margin: 0 0 12px; color: var(--accent); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+  h1 { font: 700 clamp(32px,4vw,52px)/.94 var(--ui-serif); letter-spacing: -.04em; margin: 0 0 20px; }
+  .lede { max-width: 680px; color: var(--muted); font-size: 18px; line-height: 1.55; margin: 0 0 32px; }
+
+  /* Steps */
+  .step { display: none; }
+  .step.active { display: block; }
+  .step-label { font: 10px var(--ui-mono); color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; }
+
+  /* Choice grid */
+  .choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0 28px; }
+  .choice { border: 1px solid var(--line); background: var(--paper-bright); padding: 20px; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
+  .choice:hover { background: #e0eee8; }
+  .choice.selected { border: 2px solid var(--accent); padding: 19px; background: #e0eee8; }
+  .choice b { display: block; font: 700 20px var(--ui-serif); margin-bottom: 4px; }
+  .choice small { display: block; color: var(--muted); font-size: 13px; }
+
+  /* Form fields */
+  .field { margin-bottom: 20px; }
+  .field label { display: block; font: 700 14px var(--ui-sans); margin-bottom: 6px; }
+  .field select, .field input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); background: var(--paper-bright); font: 15px var(--ui-sans); color: var(--ink); }
+  .field select:focus, .field input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+
+  /* Buttons */
+  .btn { display: inline-block; border: 1px solid var(--accent); padding: 12px 20px; background: var(--accent); color: white; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+  .btn:hover { opacity: .9; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 12px; margin-top: 28px; }
+
+  /* Summary / proposal */
+  .summary { background: #102321; color: #edf4ee; padding: 28px; margin-top: 24px; }
+  .summary h2 { font: 700 36px var(--ui-serif); margin: 0 0 16px; }
+  .summary dl { margin: 0; }
+  .summary dl div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #54776e; padding: 11px 0; font-size: 14px; }
+  .summary dt { color: #c7dad3; }
+  .summary dd { margin: 0; text-align: right; }
+
+  /* Confirmation */
+  .confirmation { text-align: center; padding: 60px 20px; }
+  .confirmation h1 { font-size: clamp(28px,3.5vw,42px); }
+  .confirmation .order-id { font: 700 28px var(--ui-mono); color: var(--accent); margin: 16px 0; }
+  .confirmation p { color: var(--muted); max-width: 500px; margin: 0 auto 12px; }
+
+  .error-msg { color: var(--danger); font-size: 14px; margin-top: 8px; display: none; }
+
+  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+
+  @media (max-width: 600px) {
+    .choice-grid { grid-template-columns: 1fr; }
+    .btn-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="order.html">Hydro<b>&#9671;</b>Art</a>
+  <nav>
+    <a href="order.html" class="active">Order</a>
+    <a href="ops.html">Operations</a>
+    <a href="studio.html">Studio</a>
+  </nav>
+</header>
+
+<main class="wrap">
+
+  <!-- Step 1: Choose product -->
+  <div class="step active" id="step-product">
+    <p class="eyebrow">Step 1 of 4</p>
+    <h1>What would you like?</h1>
+    <p class="lede">Choose the type of artifact. We will guide the remaining choices and send a clear proposal.</p>
+    <div class="choice-grid" id="product-grid">
+      <button class="choice" data-product="Digital image">
+        <b>Digital image</b>
+        <small>High-resolution image for screens or personal use</small>
+      </button>
+      <button class="choice" data-product="Fine-art print">
+        <b>Fine-art print</b>
+        <small>Archival pigment print, museum-grade paper</small>
+      </button>
+      <button class="choice" data-product="Moving water study">
+        <b>Moving water study</b>
+        <small>Animated GIF / MP4 showing seasonal flow</small>
+      </button>
+      <button class="choice" data-product="Water story report">
+        <b>Water story report</b>
+        <small>Historical analysis of a watershed's water patterns</small>
+      </button>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="btn-to-place" disabled>Continue</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Choose place -->
+  <div class="step" id="step-place">
+    <p class="eyebrow">Step 2 of 4</p>
+    <h1>Where?</h1>
+    <p class="lede">Choose a state and county. The artwork will show the full watershed network for that county.</p>
+    <div class="field">
+      <label for="sel-state">State</label>
+      <select id="sel-state"><option value="">Select a state...</option></select>
+    </div>
+    <div class="field">
+      <label for="sel-county">County</label>
+      <select id="sel-county" disabled><option value="">Select a county...</option></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn ghost" id="btn-back-product">Back</button>
+      <button class="btn" id="btn-to-options" disabled>Continue</button>
+    </div>
+  </div>
+
+  <!-- Step 3: Style & size -->
+  <div class="step" id="step-options">
+    <p class="eyebrow">Step 3 of 4</p>
+    <h1>Style and size</h1>
+    <p class="lede">Choose an art direction and print size.</p>
+    <div class="field">
+      <label for="sel-style">Art direction</label>
+      <select id="sel-style">
+        <option value="neon-basin">Neon basin (colorful watershed map)</option>
+        <option value="elevation-tint">Elevation tint (terrain-shaded)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sel-size">Size</label>
+      <select id="sel-size">
+        <option value="12x16">12 x 16 in</option>
+        <option value="18x24" selected>18 x 24 in</option>
+        <option value="24x36">24 x 36 in</option>
+      </select>
+    </div>
+    <div class="btn-row">
+      <button class="btn ghost" id="btn-back-place">Back</button>
+      <button class="btn" id="btn-to-review">Continue</button>
+    </div>
+  </div>
+
+  <!-- Step 4: Review & submit -->
+  <div class="step" id="step-review">
+    <p class="eyebrow">Step 4 of 4</p>
+    <h1>Review your proposal</h1>
+    <p class="lede">Confirm the details and enter your email. We will send a proposal for your review.</p>
+
+    <div class="summary" id="proposal-summary">
+      <h2 id="review-product">—</h2>
+      <dl>
+        <div><dt>Location</dt><dd id="review-location">—</dd></div>
+        <div><dt>Style</dt><dd id="review-style">—</dd></div>
+        <div><dt>Size</dt><dd id="review-size">—</dd></div>
+      </dl>
+    </div>
+
+    <div class="field" style="margin-top: 24px;">
+      <label for="inp-email">Your email address</label>
+      <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+
+    <div class="error-msg" id="submit-error"></div>
+    <div class="btn-row">
+      <button class="btn ghost" id="btn-back-options">Back</button>
+      <button class="btn" id="btn-submit">Send proposal</button>
+    </div>
+  </div>
+
+  <!-- Confirmation -->
+  <div class="step" id="step-confirm">
+    <div class="confirmation">
+      <p class="eyebrow">Proposal submitted</p>
+      <h1>Thank you!</h1>
+      <div class="order-id" id="confirm-id">—</div>
+      <p>Your proposal has been received. An operations coordinator will review it and follow up at <strong id="confirm-email"></strong>.</p>
+      <div style="background: var(--paper-bright); border: 1px solid var(--line); padding: 20px; max-width: 480px; margin: 24px auto; text-align: left;">
+        <p class="eyebrow" style="margin-bottom: 12px;">What happens next</p>
+        <ol style="margin:0; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.8;">
+          <li>A coordinator reviews your proposal</li>
+          <li>Your artwork is rendered at full resolution</li>
+          <li>You receive a proof to review and approve</li>
+          <li>Final files are delivered for download</li>
+        </ol>
+      </div>
+      <p style="font-size:13px; color: var(--muted); margin-top:16px;">Track your order: <a id="confirm-delivery-link" href="#" style="color:var(--accent)">delivery page</a></p>
+      <div class="btn-row" style="justify-content: center; margin-top: 24px;">
+        <a class="btn ghost" href="ops.html">View in operations</a>
+        <a class="btn" href="order.html">New order</a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <span>HYDRO-ART / INTERNAL TESTING</span>
+  <span>&copy; 2026 RUNDE STRATEGIES</span>
+</footer>
+
+<script src="shared/hydro-ux.js"></script>
+<script>
+"use strict";
+(function () {
+  var H = window.HydroUX;
+
+  // --- State ----
+  var state = { product: "", region: "", county: "", style: "neon-basin", size: "18x24" };
+
+  // --- Step navigation ---
+  var steps = ["step-product", "step-place", "step-options", "step-review", "step-confirm"];
+  function showStep(id) {
+    steps.forEach(function (s) {
+      document.getElementById(s).classList.toggle("active", s === id);
+    });
+  }
+
+  // --- Step 1: Product ---
+  var productBtns = document.querySelectorAll("#product-grid .choice");
+  var btnToPlace = document.getElementById("btn-to-place");
+  productBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      productBtns.forEach(function (b) { b.classList.remove("selected"); });
+      btn.classList.add("selected");
+      state.product = btn.getAttribute("data-product");
+      btnToPlace.disabled = false;
+    });
+  });
+  btnToPlace.addEventListener("click", function () { showStep("step-place"); });
+
+  // --- Step 2: Place ---
+  var selState = document.getElementById("sel-state");
+  var selCounty = document.getElementById("sel-county");
+  var btnToOptions = document.getElementById("btn-to-options");
+
+  H.STATES.forEach(function (s) {
+    var opt = document.createElement("option");
+    opt.value = s.id;
+    opt.textContent = s.label;
+    selState.appendChild(opt);
+  });
+
+  selState.addEventListener("change", function () {
+    state.region = selState.value;
+    selCounty.innerHTML = '<option value="">Select a county...</option>';
+    selCounty.disabled = !state.region;
+    btnToOptions.disabled = true;
+    if (state.region && H.COUNTIES[state.region]) {
+      H.COUNTIES[state.region].forEach(function (c) {
+        var opt = document.createElement("option");
+        opt.value = c;
+        opt.textContent = c;
+        selCounty.appendChild(opt);
+      });
+    }
+  });
+
+  selCounty.addEventListener("change", function () {
+    state.county = selCounty.value;
+    btnToOptions.disabled = !state.county;
+  });
+
+  btnToOptions.addEventListener("click", function () { showStep("step-options"); });
+  document.getElementById("btn-back-product").addEventListener("click", function () { showStep("step-product"); });
+
+  // --- Step 3: Options ---
+  var selStyle = document.getElementById("sel-style");
+  var selSize = document.getElementById("sel-size");
+
+  selStyle.addEventListener("change", function () { state.style = selStyle.value; });
+  selSize.addEventListener("change", function () { state.size = selSize.value; });
+
+  document.getElementById("btn-to-review").addEventListener("click", function () {
+    state.style = selStyle.value;
+    state.size = selSize.value;
+    // Populate review
+    document.getElementById("review-product").textContent = state.product;
+    document.getElementById("review-location").textContent = state.county + " County, " + state.region;
+    document.getElementById("review-style").textContent = selStyle.options[selStyle.selectedIndex].text;
+    document.getElementById("review-size").textContent = selSize.options[selSize.selectedIndex].text;
+    showStep("step-review");
+  });
+  document.getElementById("btn-back-place").addEventListener("click", function () { showStep("step-place"); });
+
+  // --- Step 4: Review & submit ---
+  document.getElementById("btn-back-options").addEventListener("click", function () { showStep("step-options"); });
+
+  var btnSubmit = document.getElementById("btn-submit");
+  var errorEl = document.getElementById("submit-error");
+
+  btnSubmit.addEventListener("click", function () {
+    var email = document.getElementById("inp-email").value.trim();
+    if (!email) {
+      errorEl.textContent = "Please enter your email address.";
+      errorEl.style.display = "block";
+      return;
+    }
+    errorEl.style.display = "none";
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "Submitting...";
+
+    var payload = {
+      email: email,
+      product: state.product,
+      region: state.region,
+      county: state.county,
+      style: state.style,
+      size: state.size,
+      formats: ["png"],
+    };
+
+    fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then(function (resp) { return resp.json().then(function (d) { return { ok: resp.ok, data: d }; }); })
+      .then(function (r) {
+        if (!r.ok) {
+          errorEl.textContent = r.data.error || "Something went wrong.";
+          errorEl.style.display = "block";
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = "Send proposal";
+          return;
+        }
+        document.getElementById("confirm-id").textContent = r.data.request_id;
+        document.getElementById("confirm-email").textContent = email;
+        var dlLink = document.getElementById("confirm-delivery-link");
+        dlLink.href = "delivery.html?order=" + r.data.request_id;
+        dlLink.textContent = r.data.request_id;
+        showStep("step-confirm");
+      })
+      .catch(function (err) {
+        errorEl.textContent = "Network error: " + err.message;
+        errorEl.style.display = "block";
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Send proposal";
+      });
+  });
+})();
+</script>
+</body>
+</html>

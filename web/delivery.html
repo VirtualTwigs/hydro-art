@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hydro-Art / Your Order</title>
+<link rel="stylesheet" href="shared/editorial.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
+  a { color: inherit; }
+
+  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
+  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
+  .brand b { color: var(--accent); }
+
+  .wrap { max-width: 900px; margin: auto; padding: 50px 5vw 85px; }
+  .eyebrow { margin: 0 0 8px; color: var(--accent); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+  h1 { font: 700 clamp(28px,3.5vw,44px)/.96 var(--ui-serif); letter-spacing: -.03em; margin: 0 0 8px; }
+  .subtitle { color: var(--muted); font-size: 17px; margin: 0 0 32px; }
+
+  .artwork-frame { background: #0a1a18; border: 1px solid #2a4a44; padding: 24px; margin-bottom: 32px; display: flex; align-items: center; justify-content: center; min-height: 350px; overflow: hidden; }
+  .artwork-frame svg { max-width: 100%; max-height: 500px; }
+  .artwork-frame .loading { color: #7eaaa1; font: 14px var(--ui-mono); }
+
+  .delivery-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+  .info-card { background: var(--paper-bright); border: 1px solid var(--line); padding: 20px; }
+  .info-card h3 { font: 700 16px var(--ui-serif); margin: 0 0 12px; }
+  .info-row { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding: 8px 0; font-size: 14px; }
+  .info-row dt { color: var(--muted); }
+  .info-row dd { margin: 0; font-weight: 600; }
+
+  .download-section { background: #102321; color: #edf4ee; padding: 28px; margin-bottom: 32px; }
+  .download-section h2 { font: 700 24px var(--ui-serif); margin: 0 0 16px; }
+  .download-section p { color: #a8c4b8; font-size: 14px; margin: 0 0 20px; }
+  .download-links { display: flex; gap: 12px; flex-wrap: wrap; }
+  .dl-btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #4daa9e; padding: 12px 20px; background: transparent; color: #edf4ee; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: background .15s; }
+  .dl-btn:hover { background: #1a3a34; }
+  .dl-btn .icon { font-size: 16px; }
+
+  .attribution { background: var(--panel); border: 1px solid var(--line); padding: 16px 20px; font-size: 13px; color: var(--muted); }
+  .attribution b { color: var(--ink); }
+
+  .not-ready { text-align: center; padding: 80px 20px; }
+  .not-ready h2 { font: 700 28px var(--ui-serif); margin: 0 0 12px; }
+  .not-ready p { color: var(--muted); max-width: 440px; margin: 0 auto; }
+
+  .status-banner { padding: 12px 20px; font: 12px var(--ui-mono); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 24px; }
+  .status-banner.pending { background: #fbf0d6; color: #735a26; border: 1px solid #d4b86a; }
+  .status-banner.ready { background: #d0f0e8; color: #21655f; border: 1px solid #6cb89e; }
+
+  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+
+  @media (max-width: 640px) {
+    .delivery-grid { grid-template-columns: 1fr; }
+    .download-links { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="order.html">Hydro<b>&#9671;</b>Art</a>
+</header>
+
+<main class="wrap" id="content">
+  <div class="not-ready" id="loading-state">
+    <p>Loading your order...</p>
+  </div>
+</main>
+
+<footer class="footer">
+  <span>HYDRO-ART</span>
+  <span>&copy; 2026 RUNDE STRATEGIES</span>
+</footer>
+
+<script>
+"use strict";
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var orderId = params.get("order");
+  var content = document.getElementById("content");
+
+  if (!orderId) {
+    content.innerHTML = '<div class="not-ready"><h2>No order specified</h2><p>This link should include an order ID. If you received this link, please contact us.</p></div>';
+    return;
+  }
+
+  fetch("/api/orders/" + orderId)
+    .then(function (r) {
+      if (!r.ok) throw new Error("Order not found");
+      return r.json();
+    })
+    .then(function (data) { renderDelivery(data); })
+    .catch(function (err) {
+      content.innerHTML = '<div class="not-ready"><h2>Order not found</h2><p>' + err.message + '</p></div>';
+    });
+
+  function renderDelivery(req) {
+    var order = req.order || {};
+    var isFulfilled = req.status === "fulfilled" || req.status === "approved";
+    var hasJob = !!req.job_id;
+    var countyLabel = (order.county || "") + " County";
+    var regionLabel = order.region || "";
+    var sizeLabels = { "12x16": "12 x 16 in", "18x24": "18 x 24 in", "24x36": "24 x 36 in" };
+    var styleLabels = { "neon-basin": "Neon Basin", "elevation-tint": "Elevation Tint" };
+
+    if (!isFulfilled && !hasJob) {
+      content.innerHTML =
+        '<p class="eyebrow">Order ' + req.request_id + '</p>' +
+        '<h1>Your order is being prepared</h1>' +
+        '<div class="status-banner pending">Status: ' + req.status.replace("_", " ") + '</div>' +
+        '<div class="not-ready">' +
+          '<h2>Not ready yet</h2>' +
+          '<p>Your artwork is being created. You will receive a link when it is ready for review.</p>' +
+        '</div>';
+      return;
+    }
+
+    var statusClass = isFulfilled ? "ready" : "pending";
+    var statusText = isFulfilled ? "Your artwork is ready" : "Status: " + req.status.replace("_", " ");
+
+    content.innerHTML =
+      '<p class="eyebrow">Order ' + req.request_id + '</p>' +
+      '<h1>' + countyLabel + ', ' + regionLabel + '</h1>' +
+      '<p class="subtitle">' + (req.product || "Hydrographic artwork") + ' &middot; ' + (styleLabels[order.style] || order.style || "") + '</p>' +
+      '<div class="status-banner ' + statusClass + '">' + statusText + '</div>' +
+
+      // Artwork preview
+      '<div class="artwork-frame" id="canvas">' +
+        (hasJob ? '<div class="loading" id="art-loading">Loading artwork...</div>' : '<div class="loading">No preview available</div>') +
+      '</div>' +
+
+      // Details grid
+      '<div class="delivery-grid">' +
+        '<div class="info-card">' +
+          '<h3>Order details</h3>' +
+          '<dl>' +
+            '<div class="info-row"><dt>Order</dt><dd>' + req.request_id + '</dd></div>' +
+            '<div class="info-row"><dt>Product</dt><dd>' + (req.product || "—") + '</dd></div>' +
+            '<div class="info-row"><dt>Location</dt><dd>' + countyLabel + ', ' + regionLabel + '</dd></div>' +
+            '<div class="info-row"><dt>Style</dt><dd>' + (styleLabels[order.style] || order.style || "—") + '</dd></div>' +
+            '<div class="info-row"><dt>Size</dt><dd>' + (sizeLabels[order.size] || order.size || "—") + '</dd></div>' +
+          '</dl>' +
+        '</div>' +
+        '<div class="info-card">' +
+          '<h3>Delivery</h3>' +
+          '<dl>' +
+            '<div class="info-row"><dt>Email</dt><dd>' + (req.email || "—") + '</dd></div>' +
+            '<div class="info-row"><dt>Status</dt><dd>' + req.status.replace("_", " ") + '</dd></div>' +
+            '<div class="info-row"><dt>Created</dt><dd>' + (req.created_at ? req.created_at.substring(0, 10) : "—") + '</dd></div>' +
+            '<div class="info-row"><dt>Format</dt><dd>' + (order.formats || []).join(", ") + '</dd></div>' +
+          '</dl>' +
+        '</div>' +
+      '</div>' +
+
+      // Download section
+      (hasJob ?
+        '<div class="download-section">' +
+          '<h2>Download your artwork</h2>' +
+          '<p>Click a format below to download. Files are generated at full resolution for the selected size.</p>' +
+          '<div class="download-links" id="download-links"></div>' +
+        '</div>' : '') +
+
+      // Attribution
+      '<div class="attribution">' +
+        '<b>Data sources:</b> USGS NHDPlus HR &middot; USGS NHD &middot; USGS WBD<br>' +
+        'Hydrographic artwork produced by Runde Strategies. All source data is U.S. federal public domain.' +
+      '</div>';
+
+    // Load artwork preview
+    if (hasJob) {
+      fetch("/api/jobs/" + req.job_id + "/artifact?fmt=svg")
+        .then(function (r) {
+          if (!r.ok) throw new Error("not ready");
+          return r.text();
+        })
+        .then(function (svg) {
+          document.getElementById("canvas").innerHTML = svg;
+        })
+        .catch(function () {
+          var el = document.getElementById("art-loading");
+          if (el) el.textContent = "Artwork preview not yet available.";
+        });
+
+      // Build download links
+      var dlContainer = document.getElementById("download-links");
+      if (dlContainer) {
+        var formats = [
+          { fmt: "svg", label: "SVG", icon: "&lt;/&gt;", desc: "Vector" },
+          { fmt: "png", label: "PNG", icon: "&#9634;", desc: "High-res raster" },
+          { fmt: "pdf", label: "PDF", icon: "&#9776;", desc: "Print-ready" },
+        ];
+        dlContainer.innerHTML = formats.map(function (f) {
+          return '<a class="dl-btn" href="/api/jobs/' + req.job_id + '/artifact?fmt=' + f.fmt + '" download="' + req.request_id + '.' + f.fmt + '">' +
+            '<span class="icon">' + f.icon + '</span>' +
+            '<span>' + f.label + '<br><small style="font-weight:400;font-size:9px;opacity:.7">' + f.desc + '</small></span>' +
+          '</a>';
+        }).join("");
+      }
+    }
+  }
+})();
+</script>
+</body>
+</html>

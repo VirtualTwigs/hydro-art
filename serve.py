@@ -25,7 +25,9 @@ from typing import Callable, Sequence
 
 from rich.console import Console
 
+from src.email_delivery import APP_PASSWORD_ENV, SmtpSender
 from src.jobs import JobRunner
+from src.orders import OrderStore
 from src.server import serve
 from src.storage import (
     DEFAULT_LOCAL_ROOTS,
@@ -145,12 +147,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir=roots.output,
         )
     )
+    order_store = OrderStore(roots.output / "orders")
+    email_sender = SmtpSender()
     web_root = Path(args.web_root).resolve() if args.web_root else WEB_ROOT
     url = f"http://{args.host}:{args.port}/"
     console.print(f"[bold green]Control surface:[/] {url}  (Ctrl-C to stop)")
     console.print(f"[dim]web root:[/] {web_root}")
+    console.print(f"[dim]order store:[/] {order_store._dir}")
+    console.print(
+        f"[dim]email:[/] {'[green]configured[/]' if email_sender.configured else '[yellow]not configured[/] (set ' + APP_PASSWORD_ENV + ')'}"
+    )
     try:
-        serve(runner, host=args.host, port=args.port, web_root=web_root)
+        serve(runner, host=args.host, port=args.port, web_root=web_root, order_store=order_store, email_sender=email_sender)
     except KeyboardInterrupt:
         console.print("\n[bold]Stopped.[/]")
     return 0

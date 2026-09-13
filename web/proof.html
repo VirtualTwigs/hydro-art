@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hydro-Art / Proof Review</title>
+<link rel="stylesheet" href="shared/editorial.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
+  a { color: inherit; }
+
+  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
+  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
+  .brand b { color: var(--accent); }
+  .top nav { margin-left: auto; display: flex; gap: 14px; font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
+  .top nav a { text-decoration: none; }
+  .top nav a:hover { color: var(--accent); }
+
+  .wrap { max-width: 1100px; margin: auto; padding: 40px 4vw 85px; }
+  .eyebrow { margin: 0 0 8px; color: var(--accent); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+  h1 { font: 700 32px var(--ui-serif); letter-spacing: -.03em; margin: 0 0 24px; }
+
+  .proof-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start; }
+  .proof-canvas { background: #0a1a18; border: 1px solid var(--line); min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .proof-canvas svg, .proof-canvas img { max-width: 100%; max-height: 600px; }
+  .proof-canvas .loading { color: #7eaaa1; font: 14px var(--ui-mono); }
+
+  .proof-details { background: var(--paper-bright); border: 1px solid var(--line); padding: 24px; }
+  .proof-details h3 { font: 700 20px var(--ui-serif); margin: 0 0 16px; }
+  .detail-row { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding: 10px 0; font-size: 14px; }
+  .detail-row dt { color: var(--muted); }
+  .detail-row dd { margin: 0; font-weight: 600; text-align: right; }
+
+  .status { display: inline-block; padding: 3px 7px; font: 9px var(--ui-mono); text-transform: uppercase; border: 1px solid; border-radius: 2px; }
+  .status-proof_ready { color: #21655f; background: #d0f0e8; border-color: #6cb89e; }
+  .status-approved { color: #236c6a; background: #c8ede6; border-color: #4daa9e; }
+
+  .action-bar { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn { display: inline-block; border: 1px solid var(--accent); padding: 10px 16px; background: var(--accent); color: white; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+  .btn:hover { opacity: .9; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .feedback { margin-top: 16px; padding: 12px; font-size: 14px; display: none; border-radius: 2px; }
+  .feedback.ok { display: block; background: #d0f0e8; color: #21655f; }
+  .feedback.err { display: block; background: #f8e1dc; color: #944138; }
+
+  .empty-state { text-align: center; padding: 80px 20px; color: var(--muted); }
+
+  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+
+  @media (max-width: 800px) { .proof-layout { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="order.html">Hydro<b>&#9671;</b>Art</a>
+  <nav>
+    <a href="order.html">Order</a>
+    <a href="ops.html">Operations</a>
+    <a href="studio.html">Studio</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <div id="content">
+    <div class="empty-state" id="loading-state">
+      <p>Loading proof...</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <span>HYDRO-ART / PROOF REVIEW</span>
+  <span>&copy; 2026 RUNDE STRATEGIES</span>
+</footer>
+
+<script>
+"use strict";
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var orderId = params.get("order");
+  var content = document.getElementById("content");
+
+  if (!orderId) {
+    content.innerHTML = '<div class="empty-state"><h2>No order specified</h2><p>Add <code>?order=REQ-...</code> to the URL, or navigate from the <a href="ops.html">operations dashboard</a>.</p></div>';
+    return;
+  }
+
+  fetch("/api/orders/" + orderId)
+    .then(function (r) {
+      if (!r.ok) throw new Error("Order not found");
+      return r.json();
+    })
+    .then(function (data) { renderProof(data); })
+    .catch(function (err) {
+      content.innerHTML = '<div class="empty-state"><h2>Error</h2><p>' + err.message + '</p></div>';
+    });
+
+  function renderProof(req) {
+    var order = req.order || {};
+    var hasArtifact = req.job_id && (req.status === "proof_ready" || req.status === "approved" || req.status === "fulfilled");
+
+    content.innerHTML =
+      '<p class="eyebrow">Proof review</p>' +
+      '<h1>' + req.request_id + '</h1>' +
+      '<div class="proof-layout">' +
+        '<div class="proof-canvas" id="canvas">' +
+          (hasArtifact
+            ? '<div class="loading" id="art-loading">Loading artwork...</div>'
+            : '<div class="loading">No rendered proof available yet. Status: ' + req.status + '</div>') +
+        '</div>' +
+        '<div class="proof-details">' +
+          '<h3>Order details</h3>' +
+          '<dl>' +
+            '<div class="detail-row"><dt>Status</dt><dd><span class="status status-' + req.status + '">' + req.status.replace("_"," ") + '</span></dd></div>' +
+            '<div class="detail-row"><dt>Product</dt><dd>' + (req.product || "—") + '</dd></div>' +
+            '<div class="detail-row"><dt>Location</dt><dd>' + (order.county || "—") + ' County, ' + (order.region || "—") + '</dd></div>' +
+            '<div class="detail-row"><dt>Style</dt><dd>' + (order.style || "—") + '</dd></div>' +
+            '<div class="detail-row"><dt>Size</dt><dd>' + (order.size || "—") + '</dd></div>' +
+            '<div class="detail-row"><dt>Email</dt><dd>' + (req.email || "—") + '</dd></div>' +
+          '</dl>' +
+          '<div class="action-bar" id="proof-actions"></div>' +
+          '<div class="feedback" id="feedback"></div>' +
+        '</div>' +
+      '</div>';
+
+    // Load artifact if available
+    if (hasArtifact) {
+      fetch("/api/jobs/" + req.job_id + "/artifact?fmt=svg")
+        .then(function (r) {
+          if (!r.ok) throw new Error("Artifact not ready");
+          return r.text();
+        })
+        .then(function (svg) {
+          var canvas = document.getElementById("canvas");
+          canvas.innerHTML = svg;
+        })
+        .catch(function () {
+          document.getElementById("art-loading").textContent = "Could not load artwork.";
+        });
+    }
+
+    // Render action buttons
+    var actions = document.getElementById("proof-actions");
+    if (req.status === "proof_ready") {
+      actions.innerHTML =
+        '<button class="btn" id="act-approve">Approve</button>' +
+        '<button class="btn ghost" id="act-revision">Request revision</button>';
+
+      document.getElementById("act-approve").addEventListener("click", function () {
+        patchStatus(req.request_id, "approved");
+      });
+      document.getElementById("act-revision").addEventListener("click", function () {
+        patchStatus(req.request_id, "submitted");
+      });
+    } else if (req.status === "approved") {
+      actions.innerHTML = '<p style="color:var(--ok);font:700 14px var(--ui-sans);">Approved and ready for fulfillment.</p>';
+    }
+  }
+
+  function patchStatus(id, status) {
+    var feedback = document.getElementById("feedback");
+    fetch("/api/orders/" + id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: status }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) {
+          feedback.className = "feedback err";
+          feedback.textContent = data.error;
+          return;
+        }
+        feedback.className = "feedback ok";
+        feedback.textContent = status === "approved"
+          ? "Proof approved! The order is ready for fulfillment."
+          : "Revision requested. The order has been sent back for rework.";
+        // Refresh after a beat
+        setTimeout(function () { window.location.reload(); }, 1500);
+      })
+      .catch(function (err) {
+        feedback.className = "feedback err";
+        feedback.textContent = "Error: " + err.message;
+      });
+  }
+})();
+</script>
+</body>
+</html>
