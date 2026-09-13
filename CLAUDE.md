@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Hydrographic Vector Art Generator: a Python 3.12+ CLI that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: Oregon, Washington, California, Idaho (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
+Hydrographic Vector Art Generator: a Python 3.12+ CLI (active interpreter: 3.14) that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: Oregon, Washington, California, Idaho (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
 
 ## Commands
 
@@ -17,6 +17,15 @@ node tests/test_recipe_roundtrip.cjs               # web/ recipe roundtrip (syst
 python tools/verify_determinism.py --region Oregon # non-offline: double-render + golden-hash check
 python tools/coverage_report.py --fail-under 90    # offline coverage gate (scoped to src/, non-suite)
 python tools/release_gate.py                        # v1.0 release readiness (goldens + determinism)
+
+# E2E (Playwright, opt-in — NOT part of the offline suite; needs Node 18+)
+cd tests/e2e && npm install && npx playwright install chromium
+npx playwright test                                  # boots serve.py, runs full suite (GIS needed for proofs)
+npx playwright test tests/01-landing.spec.js         # landing/nav only (no GIS needed)
+
+# Internal demo container (static — no live rendering)
+bash deploy/stage-artifacts.sh                       # stage NAS artifacts locally
+docker compose -f deploy/docker-compose.yml up --build -d   # http://localhost:8080/
 ```
 
 No build step (it's a script). `ruff` is the linter (`line-length = 88`). `web/` pages have no build step; the only JS test is the CommonJS `node` roundtrip. **CI** is two GitHub Actions workflows (`.github/workflows/`): `ci.yml` (offline suite + coverage gate + recipe roundtrip) and `reproducibility.yml` (determinism/release gate). Coverage is scoped to `src/` via `[tool.coverage.*]` in `pyproject.toml`; GDAL/network/subprocess seam bodies are covered by injected fakes, not real I/O.

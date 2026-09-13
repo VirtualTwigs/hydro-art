@@ -23,6 +23,13 @@ Use the project interpreter when available:
 .venv/bin/python build.py --region Washington --palette neon
 .venv/bin/ruff check src tests               # lint; install ruff if absent
 node tests/test_recipe_roundtrip.cjs          # test browser recipe logic
+
+# E2E (Playwright, opt-in — NOT part of the offline suite; needs Node 18+)
+cd tests/e2e && npx playwright test           # boots serve.py; GIS needed for proof tests
+npx playwright test tests/01-landing.spec.js  # landing/nav only (no GIS)
+
+# Internal demo container (static, no live rendering)
+bash deploy/stage-artifacts.sh && docker compose -f deploy/docker-compose.yml up --build -d
 ```
 
 `build.py` has no compilation step. Real data runs may require the configured
