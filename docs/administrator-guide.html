@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hydrographic Vector Art — Administrator's Guide (Running the Business)</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #11161f;
+    --panel-2: #161d29;
+    --edge: #223047;
+    --text: #cdd6e4;
+    --muted: #8593a8;
+    --neon: #2ec4ff;
+    --neon-2: #00ffcc;
+    --accent: #ff5cf0;
+    --warn: #ffcc4d;
+    --danger: #ff6b6b;
+    --code-bg: #0d1219;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--neon); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre, kbd {
+    font-family: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--edge);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.86em;
+    color: var(--neon-2);
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--edge);
+    border-left: 3px solid var(--neon);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  pre code { background: none; border: none; padding: 0; color: var(--text); }
+  .layout { display: flex; max-width: 1240px; margin: 0 auto; }
+  nav.toc {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    width: 280px;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 18px 60px 24px;
+    border-right: 1px solid var(--edge);
+    background: linear-gradient(180deg, #0b1119, #0a0e14);
+    flex-shrink: 0;
+  }
+  nav.toc .brand { font-weight: 700; letter-spacing: .3px; font-size: 1.02rem; color: #fff; margin-bottom: 4px; }
+  nav.toc .brand span { color: var(--neon); }
+  nav.toc .tagline { color: var(--muted); font-size: .78rem; margin-bottom: 20px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; }
+  nav.toc li { margin: 1px 0; }
+  nav.toc a {
+    display: block; padding: 5px 10px; border-radius: 6px;
+    color: var(--muted); font-size: .85rem; border-left: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
+  nav.toc a.active { color: var(--neon); border-left-color: var(--neon); background: rgba(46,196,255,.08); }
+  nav.toc .sep { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .1em; margin: 18px 0 6px 10px; }
+  main { flex: 1; min-width: 0; padding: 40px 48px 120px; }
+  header.hero {
+    border: 1px solid var(--edge); border-radius: 14px;
+    padding: 34px 34px 28px; margin-bottom: 40px;
+    background:
+      radial-gradient(1200px 300px at 15% -40%, rgba(46,196,255,.18), transparent),
+      radial-gradient(900px 260px at 90% -30%, rgba(255,92,240,.12), transparent),
+      var(--panel);
+  }
+  header.hero h1 { margin: 0 0 6px; font-size: 2rem; color: #fff; letter-spacing: .2px; }
+  header.hero p { margin: 6px 0 0; color: var(--muted); max-width: 66ch; }
+  header.hero .pill {
+    display: inline-block; margin-top: 16px; margin-right: 8px;
+    font-size: .72rem; color: var(--neon-2);
+    border: 1px solid var(--edge); border-radius: 20px; padding: 3px 11px; background: var(--code-bg);
+  }
+  section { margin: 0 0 52px; scroll-margin-top: 24px; }
+  h2 { font-size: 1.5rem; color: #fff; margin: 0 0 4px; padding-bottom: 10px; border-bottom: 1px solid var(--edge); }
+  h2 .num { color: var(--neon); font-size: .95rem; margin-right: 10px; font-weight: 600; }
+  h3 { font-size: 1.12rem; color: var(--neon-2); margin: 30px 0 8px; }
+  h4 { font-size: .98rem; color: #fff; margin: 22px 0 6px; }
+  p { margin: 10px 0; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: .87rem; background: var(--panel); border-radius: var(--radius); overflow: hidden; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  th { background: var(--panel-2); color: #fff; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+  .note, .warn, .tip { border-radius: var(--radius); padding: 12px 16px; margin: 16px 0; border: 1px solid var(--edge); background: var(--panel-2); }
+  .note { border-left: 3px solid var(--neon); }
+  .tip { border-left: 3px solid var(--neon-2); }
+  .warn { border-left: 3px solid var(--warn); }
+  .note strong, .tip strong, .warn strong { color: #fff; }
+  .lead { font-size: 1.05rem; color: var(--text); }
+  .muted { color: var(--muted); }
+  footer { color: var(--muted); font-size: .82rem; border-top: 1px solid var(--edge); padding-top: 20px; margin-top: 40px; }
+  hr.soft { border: none; border-top: 1px dashed var(--edge); margin: 26px 0; }
+  /* status badges */
+  .tag { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; border-radius: 4px; padding: 1px 7px; margin-left: 8px; vertical-align: middle; border: 1px solid var(--edge); }
+  .tag.works { color: #041; background: var(--neon-2); border-color: var(--neon-2); }
+  .tag.proto { color: #221; background: var(--warn); border-color: var(--warn); }
+  .tag.prop { color: #fff; background: transparent; border-color: var(--muted); color: var(--muted); }
+  .linkcard { display: flex; gap: 14px; border: 1px solid var(--edge); border-radius: var(--radius); padding: 14px 16px; background: var(--panel); margin: 12px 0; }
+  .linkcard .body { flex: 1; }
+  .linkcard h4 { margin: 0 0 3px; }
+  .linkcard p { margin: 2px 0; font-size: .9rem; }
+  @media (max-width: 900px) { nav.toc { display: none; } main { padding: 24px 20px 80px; } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" id="toc">
+    <div class="brand">hydro<span>·</span>art</div>
+    <div class="tagline">Administrator's Guide — Running the Business</div>
+    <ol>
+      <li><a href="#overview">1. What this guide is</a></li>
+      <li><a href="#legend">2. Status legend</a></li>
+      <li><a href="#setup">3. One-time setup</a></li>
+      <li><a href="#startup">4. Daily startup</a></li>
+      <li><a href="#customer">5. Test as a customer</a></li>
+      <li><a href="#intake">6. Order intake</a></li>
+      <li><a href="#proof">7. Proofing</a></li>
+      <li><a href="#confirm">8. Confirming</a></li>
+      <li><a href="#final">9. Final &amp; completing</a></li>
+      <li><a href="#rights">10. Rights &amp; compliance</a></li>
+      <li><a href="#delivery">11. Delivery &amp; lifecycle</a></li>
+      <li><a href="#ledger">12. Capability ledger</a></li>
+    </ol>
+    <div class="sep">Reference</div>
+    <ol>
+      <li><a href="#pages">Pages &amp; links</a></li>
+      <li><a href="user-guide.html">↳ Technical User Guide</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <h1>Administrator's Guide</h1>
+      <p>The operator's path to running the hydro-art business end to end: start the product, test
+      it as a customer, and take an order through proof &rarr; confirm &rarr; final &rarr; complete.
+      Every step is grounded in a real command in this repo and tagged with what actually works
+      today versus what is still a prototype or a proposal.</p>
+      <div>
+        <span class="pill">Operator playbook</span>
+        <span class="pill">Honest status tags</span>
+        <span class="pill">Grounded in real commands</span>
+      </div>
+      <p style="margin-top:18px">This is the <strong>business-operations</strong> layer. For the
+      full <strong>technical</strong> reference (every CLI flag, config key, pipeline stage, tool),
+      see the companion <a href="user-guide.html"><strong>Technical User Guide</strong></a>.</p>
+    </header>
+
+    <!-- 1 -->
+    <section id="overview">
+      <h2><span class="num">01</span>What this guide is</h2>
+      <p class="lead">A new administrator's cradle-to-grave path for operating the product: from a
+      cold machine to a completed, rights-clean, reproducible customer order.</p>
+      <p>It deliberately separates the <em>production</em> capability (rendering, proofing, verifying,
+      and producing final deliverables — all working today) from the <em>customer-facing commerce
+      layer</em> (intake, proposal, approval, delivery automation — mostly prototype or proposed and
+      deferred behind the revenue-first gate). Read <a href="#legend">§2</a> before trusting any step.</p>
+      <div class="note"><strong>Companion documents.</strong>
+        <a href="user-guide.html">Technical User Guide</a> (every flag &amp; tool) ·
+        <a href="operations-and-customer-guide.md">Operations &amp; Customer Guide</a> (the 9-step
+        journey and 8-phase ops lifecycle) ·
+        <a href="end-to-end-first-image.md">First-Image Runbook</a> (fastest path to one render) ·
+        <a href="PRD.md">PRD</a> (product spec).</div>
+    </section>
+
+    <!-- 2 -->
+    <section id="legend">
+      <h2><span class="num">02</span>Status legend</h2>
+      <p>Every capability below carries one of three tags. This is the most important thing in the guide.</p>
+      <table>
+        <tr><th>Tag</th><th>Meaning</th></tr>
+        <tr><td><span class="tag works">Works today</span></td><td>Running code you can execute right now. Verified in this repo.</td></tr>
+        <tr><td><span class="tag proto">Prototype</span></td><td>A click-through concept exists (often archived under <code>archive/</code>), but it is not wired to run the business.</td></tr>
+        <tr><td><span class="tag prop">Proposed</span></td><td>Specified but not built. Deferred behind the revenue-first gate.</td></tr>
+      </table>
+    </section>
+
+    <!-- 3 -->
+    <section id="setup">
+      <h2><span class="num">03</span>One-time setup <span class="tag works">Works today</span></h2>
+      <p>The offline test suite runs without GDAL, but real renders need the heavy GIS stack and staged data.</p>
+      <pre><code># Install the full GIS stack into the venv
+.venv/bin/pip install -r requirements.txt
+
+# Confirm the core install is healthy (offline suite: no GDAL/network/data)
+.venv/bin/python -m pytest -q</code></pre>
+      <table>
+        <tr><th>Prerequisite</th><th>Notes</th></tr>
+        <tr><td>Extracted datasets under <code>datasets/</code></td><td>When present + non-empty, a build does <strong>zero downloads</strong> — no NAS, no network. WA (HUC4 17xx) and 18xx are staged.</td></tr>
+        <tr><td><code>resvg</code> + <code>rsvg-convert</code> on PATH</td><td>PNG / PDF export. Both present.</td></tr>
+        <tr><td>Census counties shapefile at <code>/tmp/counties_shp/cb_2023_us_county_500k.shp</code></td><td>Public-domain, ~12&nbsp;MB. Required <em>only</em> for county clips.</td></tr>
+      </table>
+      <pre><code># Stage the Census counties shapefile (one-time, county clips only)
+curl -sL -o /tmp/counties.zip \
+  https://www2.census.gov/geo/tiger/GENZ2023/shp/cb_2023_us_county_500k.zip
+unzip -o /tmp/counties.zip -d /tmp/counties_shp/</code></pre>
+    </section>
+
+    <!-- 4 -->
+    <section id="startup">
+      <h2><span class="num">04</span>Daily startup <span class="tag works">Works today</span></h2>
+      <pre><code>.venv/bin/python serve.py                 # → http://127.0.0.1:8765/
+.venv/bin/python serve.py --web-root .     # to demo the alpha landing (start.html) same-origin</code></pre>
+      <p>This boots the operator console (<a href="../web/studio.html">studio.html</a>) plus the
+      <code>/api/*</code> render routes on localhost. It is <strong>not</strong> a public storefront.</p>
+      <table>
+        <tr><th>Flag</th><th>Default</th></tr>
+        <tr><td><code>--host</code></td><td><code>127.0.0.1</code></td></tr>
+        <tr><td><code>--port</code></td><td><code>8765</code></td></tr>
+        <tr><td><code>--web-root</code></td><td>bundled <code>web/</code> (pass <code>.</code> to serve <code>start.html</code>'s repo-root-absolute links)</td></tr>
+        <tr><td><code>--cache-dir</code></td><td>NAS when mounted, else local <code>cache/</code></td></tr>
+      </table>
+      <div class="warn"><strong>Timing caveat.</strong> A <em>county</em> render still loads the
+      <em>whole state</em> first (~6&nbsp;min for WA — the GIS load dominates, not rasterization),
+      then clips. Budget turnaround accordingly; the draft tier (<a href="#proof">§7</a>) only speeds
+      the raster step.</div>
+    </section>
+
+    <!-- 5 -->
+    <section id="customer">
+      <h2><span class="num">05</span>Test as a customer <span class="tag works">Works today</span></h2>
+      <h3>Path A — the expert control surface (canonical)</h3>
+      <p>Open <a href="../web/studio.html">studio.html</a> (served: <code>http://127.0.0.1:8765/studio.html</code>).
+      Pick Region <em>Washington</em>, palette <em>neon</em>, width-by <em>flow</em>, annual; optionally
+      County <em>Clark</em>. Click <strong>Run pipeline</strong> — it POSTs the structured request to
+      the local runner; poll the job to <code>succeeded</code> and view the SVG/PNG. Over
+      <code>file://</code> the button is mapping-only.</p>
+      <h3>Path B — the alpha customer journey</h3>
+      <p>With <code>serve.py --web-root .</code>, walk the landing page and its four catalog destinations:</p>
+      <table>
+        <tr><th>Page</th><th>Role</th></tr>
+        <tr><td><a href="../web/start.html">start.html</a></td><td>Alpha landing (e2e-tested)</td></tr>
+        <tr><td><a href="../web/proto-b-guided.html">proto-b-guided.html</a></td><td>Poster / print catalog page</td></tr>
+        <tr><td><a href="../web/proto-c-canvas.html">proto-c-canvas.html</a></td><td>Animation catalog page</td></tr>
+        <tr><td><a href="../web/report.html">report.html</a></td><td>Watershed-report viewer</td></tr>
+        <tr><td><a href="../web/gallery.html">gallery.html</a></td><td>Marketing gallery (rights ledger)</td></tr>
+      </table>
+      <h3>Path C — headless (no browser)</h3>
+      <pre><code>.venv/bin/python build.py --region Washington --palette neon --width-by flow --output svg pdf</code></pre>
+    </section>
+
+    <!-- 6 -->
+    <section id="intake">
+      <h2><span class="num">06</span>Order intake <span class="tag proto">Prototype</span> <span class="tag prop">Proposed</span></h2>
+      <p><strong>Today:</strong> no automated intake. Take the order manually (email / conversation)
+      and transcribe it into an order spec. Templates:</p>
+      <table>
+        <tr><th>Artifact</th><th>Use</th></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/intake-form.md">intake-form.md</a></td><td>What to collect from a buyer</td></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-order-fulfillment/sample_order.json">sample_order.json</a></td><td>The order JSON schema (ORD-1001 reference)</td></tr>
+      </table>
+      <pre><code>{ "order_id": "ORD-1001", "region": "Washington", "county": "Clark",
+  "style": "neon-basin", "size": "18x24", "formats": ["png","pdf"],
+  "add_ons": ["svg","commercial_license"], "buyer_ref": "sample-buyer" }</code></pre>
+      <p class="muted">The no-account customer journey (catalog → brief → proposal → proof) exists only
+      as <strong>archived</strong> click-throughs under <code>archive/experiments/concierge-ux/</code>
+      and the spec at <code>agent-os/specs/2026-09-05-customer-operations-experience/</code>.</p>
+    </section>
+
+    <!-- 7 -->
+    <section id="proof">
+      <h2><span class="num">07</span>Proofing — low-res preview <span class="tag works">Works today</span></h2>
+      <p>Render at a <strong>draft <code>png_size</code></strong> (512 / 1024 / 2048) for a fast, cheap proof:</p>
+      <pre><code>.venv/bin/python build.py --region Washington --county Clark \
+  --palette neon --width-by flow --png-size 1024 --output png</code></pre>
+      <div class="warn"><strong>The draft tier only speeds rasterization.</strong> A county proof
+      still loads the whole state first (~6&nbsp;min for WA). Sending the proof + collecting approval
+      is a manual, off-system step today — the
+      <a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/proof-template.md">proof template</a>
+      is <span class="tag proto">Prototype</span>.</div>
+    </section>
+
+    <!-- 8 -->
+    <section id="confirm">
+      <h2><span class="num">08</span>Confirming — reproducibility gate <span class="tag works">Works today</span></h2>
+      <p>Before promising a customer a stable, re-orderable product, prove determinism:</p>
+      <pre><code>.venv/bin/python tools/verify_determinism.py --region Washington --county Wahkiakum   # double-render + golden hash
+.venv/bin/python tools/release_gate.py                                                # goldens + determinism aggregate</code></pre>
+      <p>Identical inputs must yield byte-identical output. A passing gate is your license to sell.
+      In practice: re-run the exact order and diff the <code>sha256</code> values in the manifest
+      (<a href="#final">§9</a>) — they must match (verified for ORD-1001, all four deliverables
+      identical, PDF included via <code>SOURCE_DATE_EPOCH=0</code>).</p>
+    </section>
+
+    <!-- 9 -->
+    <section id="final">
+      <h2><span class="num">09</span>Final &amp; completing the order <span class="tag works">Works today</span></h2>
+      <p>One command turns a validated order into every promised deliverable plus a provenance manifest:</p>
+      <pre><code>.venv/bin/python tools/fulfill_order.py \
+  --order-id ORD-1001 --region Washington --county Clark \
+  --style neon-basin --size 18x24 --formats png pdf \
+  --add-ons svg commercial_license --huc4 1708</code></pre>
+      <p>Output lands in <code>output/orders/&lt;order_id&gt;/</code>:</p>
+      <table>
+        <tr><th>File</th><th>What it is</th></tr>
+        <tr><td>Stamped print PNG</td><td>e.g. 5400×7200&nbsp;px (18×24" @ 300&nbsp;DPI), title block baked in</td></tr>
+        <tr><td>Print PDF</td><td>timestamp-neutralized, reproducible</td></tr>
+        <tr><td>Editable SVG (add-on)</td><td>layered, stable IDs</td></tr>
+        <tr><td>Commercial-license doc (add-on)</td><td>rights grant</td></tr>
+        <tr><td><code>&lt;id&gt;.manifest.json</code></td><td>per-file sha256 + attribution — the order-completion fingerprint</td></tr>
+      </table>
+      <p>Reference manifest (committed as provenance):
+      <a href="../agent-os/specs/2026-08-30-order-fulfillment/sample_manifest.json">sample_manifest.json</a>.
+      A re-order regenerates byte-for-byte.</p>
+      <div class="warn"><strong>Only <code>neon-basin</code> is wired.</strong> Other styles raise;
+      adding a sellable style is a development task.</div>
+    </section>
+
+    <!-- 10 -->
+    <section id="rights">
+      <h2><span class="num">10</span>Rights &amp; compliance <span class="tag works">Works today · enforced</span></h2>
+      <p><code>src.fulfillment.assert_sellable</code> runs inside fulfillment and is non-negotiable:</p>
+      <table>
+        <tr><th>Source</th><th>Sellable?</th></tr>
+        <tr><td>USGS NHD / NHDPlus HR / WBD</td><td>Yes — public domain, <strong>with attribution</strong> (auto-stamped)</td></tr>
+        <tr><td>Climate: nClimGrid-Monthly (default)</td><td>Yes — public domain, with attribution</td></tr>
+        <tr><td>Climate: PRISM</td><td><strong>Never</strong> sell — A/B comparison only; the gate rejects it</td></tr>
+      </table>
+      <p>Attribution reference:
+      <a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/attribution-line.md">attribution-line.md</a>.</p>
+    </section>
+
+    <!-- 11 -->
+    <section id="delivery">
+      <h2><span class="num">11</span>Delivery &amp; order lifecycle <span class="tag prop">Proposed — not built</span></h2>
+      <p>There is <strong>no</strong> running system for signed proof links, email approval loops,
+      delivery events, or order-status tracking. Delivery today = hand over the files in
+      <code>output/orders/&lt;id&gt;/</code> manually. The customer-facing lifecycle is specified in
+      <code>agent-os/specs/2026-09-05-customer-operations-experience/</code>, gated behind revenue
+      validation. See the <a href="operations-and-customer-guide.md">Operations &amp; Customer Guide</a>
+      for the full proposed 8-phase lifecycle.</p>
+    </section>
+
+    <!-- 12 -->
+    <section id="ledger">
+      <h2><span class="num">12</span>Capability ledger</h2>
+      <table>
+        <tr><th>Function</th><th>Status</th></tr>
+        <tr><td>Env setup, data staging, server startup</td><td><span class="tag works">Works today</span></td></tr>
+        <tr><td>Render (studio / CLI / API), state + county</td><td><span class="tag works">Works today</span></td></tr>
+        <tr><td>Alpha customer catalog journey (e2e-tested)</td><td><span class="tag works">Works today</span></td></tr>
+        <tr><td>Proof via draft <code>png_size</code></td><td><span class="tag works">Works today</span></td></tr>
+        <tr><td>Determinism / release gates</td><td><span class="tag works">Works today</span></td></tr>
+        <tr><td>Final deliverables + manifest (<code>fulfill_order.py</code>)</td><td><span class="tag works">Works today</span> — <code>neon-basin</code> only</td></tr>
+        <tr><td>Rights gate (public-domain enforcement)</td><td><span class="tag works">Works today</span> — enforced</td></tr>
+        <tr><td>Customer intake, proof-approval, catalog UI</td><td><span class="tag proto">Prototype</span> (archived concierge-ux)</td></tr>
+        <tr><td>Order state machine, notifications, delivery events</td><td><span class="tag prop">Proposed</span> — not built</td></tr>
+      </table>
+      <div class="note"><strong>Bottom line.</strong> You can run the <em>production</em> side today —
+      configure, proof, verify, and produce rights-clean, byte-reproducible final deliverables. What's
+      missing is the <em>customer-facing commerce layer</em> (intake → proposal → approval → delivery
+      automation), deliberately deferred behind the revenue-first gate.</div>
+    </section>
+
+    <!-- Pages & links -->
+    <section id="pages">
+      <h2><span class="num">·</span>Pages &amp; links referenced</h2>
+
+      <div class="sep" style="color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin:8px 0">Companion docs</div>
+      <div class="linkcard"><div class="body"><h4><a href="user-guide.html">Technical User Guide</a></h4>
+        <p class="muted">18-section reference: every CLI flag, config key, pipeline stage, and tool. Start here for the "how" behind any command in this guide.</p></div></div>
+      <div class="linkcard"><div class="body"><h4><a href="operations-and-customer-guide.md">Operations &amp; Customer Guide</a></h4>
+        <p class="muted">The 9-step customer journey and proposed 8-phase ops lifecycle, with the same status tags.</p></div></div>
+      <div class="linkcard"><div class="body"><h4><a href="end-to-end-first-image.md">First-Image Runbook</a></h4>
+        <p class="muted">Fastest path from a cold machine to a single rendered image.</p></div></div>
+      <div class="linkcard"><div class="body"><h4><a href="PRD.md">Product Requirements (PRD)</a></h4>
+        <p class="muted">The authoritative product spec.</p></div></div>
+
+      <div class="sep" style="color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin:18px 0 8px">Web pages (served by <code>serve.py</code>)</div>
+      <table>
+        <tr><th>Page</th><th>Served URL</th><th>Role</th></tr>
+        <tr><td><a href="../web/studio.html">studio.html</a></td><td><code>:8765/studio.html</code></td><td>Expert control surface (canonical)</td></tr>
+        <tr><td><a href="../web/start.html">start.html</a></td><td><code>--web-root .</code> then <code>:8765/web/start.html</code></td><td>Alpha landing</td></tr>
+        <tr><td><a href="../web/proto-b-guided.html">proto-b-guided.html</a></td><td>via landing</td><td>Poster / print catalog</td></tr>
+        <tr><td><a href="../web/proto-c-canvas.html">proto-c-canvas.html</a></td><td>via landing</td><td>Animation catalog</td></tr>
+        <tr><td><a href="../web/report.html">report.html</a></td><td>via landing</td><td>Watershed-report viewer</td></tr>
+        <tr><td><a href="../web/gallery.html">gallery.html</a></td><td>via landing</td><td>Marketing gallery</td></tr>
+      </table>
+
+      <div class="sep" style="color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;margin:18px 0 8px">Fulfillment references</div>
+      <table>
+        <tr><th>File</th><th>Use</th></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-order-fulfillment/sample_order.json">sample_order.json</a></td><td>Order JSON schema</td></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-order-fulfillment/sample_manifest.json">sample_manifest.json</a></td><td>Reference provenance manifest</td></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/intake-form.md">intake-form.md</a></td><td>Buyer intake template</td></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/proof-template.md">proof-template.md</a></td><td>Proof message template (prototype)</td></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/attribution-line.md">attribution-line.md</a></td><td>Required attribution wording</td></tr>
+        <tr><td><a href="../agent-os/specs/2026-08-30-revenue-validation-operations/fulfillment-pack/export-checklist.md">export-checklist.md</a></td><td>Pre-delivery export checklist</td></tr>
+      </table>
+    </section>
+
+    <footer>
+      <p>Administrator's Guide — running the hydrographic vector art business. Companion to the
+      <a href="user-guide.html">Technical User Guide</a>. All output is deterministic and built from
+      public-domain USGS hydrography; only rights-clean sources are sellable.</p>
+      <p class="muted">For implementation status see <code>HANDOFF.md</code> and
+      <code>agent-os/product/roadmap.md</code>.</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a')).filter(function (a) {
+      return a.getAttribute('href').charAt(0) === '#';
+    });
+    var sections = links
+      .map(function (a) { return document.getElementById(a.getAttribute('href').slice(1)); })
+      .filter(Boolean);
+    function onScroll() {
+      var pos = window.scrollY + 120;
+      var current = sections[0];
+      for (var i = 0; i < sections.length; i++) {
+        if (sections[i].offsetTop <= pos) current = sections[i];
+      }
+      links.forEach(function (a) {
+        a.classList.toggle('active', a.getAttribute('href') === '#' + (current && current.id));
+      });
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+</body>
+</html>
