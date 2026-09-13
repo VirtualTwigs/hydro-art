@@ -1,8 +1,25 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-09-06, Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+_Last updated: 2026-09-12, Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
 
-## Current state (2026-09-01)
+## Current state (2026-09-12)
+
+- **Epoch 24 DONE (2026-09-12) — alpha customer-journey e2e (#94-98).** #94 (offline suite):
+  draft `png_size` tier (512/1024/2048 added to `SUPPORTED_PNG_SIZES`, default stays 4096, 2D
+  output byte-identical). #95-98: a **non-offline, opt-in Playwright harness** under `tests/e2e/`
+  that walks the alpha site (`web/start.html` → four catalog pages → a low-res proof per endpoint)
+  against a live `serve.py`. Gate green: **`npx playwright test` 13/13 (13.7m)** on a staged Clark
+  County, WA — landing/nav 8/8, digital SVG + poster PNG via `/api/render` at the draft tier,
+  watershed report figures, animation GIF. Real-run-only findings baked into the harness:
+  (1) `serve.py`'s path-traversal guard resolves+rejects the repo's NAS `output/` symlink, so
+  `global-setup.js` stages a REAL (non-symlinked) served root (`web/` + `deploy/output/`) served via
+  `--web-root <staged>`; staging runs at Playwright config load, not the `globalSetup` hook (readiness
+  is probed first). (2) A Clark `/api/render` proof is **~6 min** — the full-Washington GIS load
+  dominates (county clip → SVG → PNG is ~13s once reprojected); `RENDER_TIMEOUT_MS` default → 600s.
+  (3) County value must be the Census `NAME` `Clark` (not `NAMELSAD`); the county clip needs the
+  Census counties shapefile at `/tmp/counties_shp/` (public-domain, documented in the e2e README, not
+  committed). Committed `f01a0c3`; spec `agent-os/specs/2026-09-11-alpha-journey-e2e/`; retrospective
+  `agent-os/retrospectives/2026-09-12-epoch-24-alpha-journey-e2e.md`.
 
 - **Epoch 14 DONE (2026-09-01) — license-free climate source (#60), PRISM Rights gate
   RETIRED.** Swapped the year-over-year / watershed-report climate dependency from PRISM
