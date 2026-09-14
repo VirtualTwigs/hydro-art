@@ -32,10 +32,62 @@ __all__ = [
 #: :data:`src.config.SUPPORTED_REGIONS` (a test asserts full coverage); extend
 #: here whenever a region is added.
 STATE_FIPS: dict[str, str] = {
+    # Northeast
+    "Maine": "23",
+    "New Hampshire": "33",
+    "Vermont": "50",
+    "Massachusetts": "25",
+    "Rhode Island": "44",
+    "Connecticut": "09",
+    "New York": "36",
+    "New Jersey": "34",
+    "Pennsylvania": "42",
+    "Delaware": "10",
+    "Maryland": "24",
+    # Southeast
+    "Virginia": "51",
+    "West Virginia": "54",
+    "North Carolina": "37",
+    "South Carolina": "45",
+    "Georgia": "13",
+    "Florida": "12",
+    "Alabama": "01",
+    "Mississippi": "28",
+    "Tennessee": "47",
+    "Kentucky": "21",
+    # Great Lakes / Midwest
+    "Ohio": "39",
+    "Indiana": "18",
+    "Illinois": "17",
+    "Michigan": "26",
+    "Wisconsin": "55",
+    "Minnesota": "27",
+    # Plains
+    "Iowa": "19",
+    "Missouri": "29",
+    "Arkansas": "05",
+    "Louisiana": "22",
+    "North Dakota": "38",
+    "South Dakota": "46",
+    "Nebraska": "31",
+    "Kansas": "20",
+    "Oklahoma": "40",
+    "Texas": "48",
+    # Mountain
+    "Montana": "30",
+    "Idaho": "16",
+    "Wyoming": "56",
+    "Nevada": "32",
+    "Utah": "49",
+    "Colorado": "08",
+    "Arizona": "04",
+    "New Mexico": "35",
+    # Pacific
     "Oregon": "41",
     "Washington": "53",
     "California": "06",
-    "Idaho": "16",
+    "Hawaii": "15",
+    "Alaska": "02",
 }
 
 #: Default Census cartographic-boundary counties shapefile (matches the path the

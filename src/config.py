@@ -72,7 +72,26 @@ class ConfigError(Exception):
 
 #: Regions supported by the initial release. Keys are the canonical display
 #: names; lookup is case-insensitive (see :func:`_normalize_region`).
-SUPPORTED_REGIONS: tuple[str, ...] = ("Oregon", "Washington", "California", "Idaho")
+SUPPORTED_REGIONS: tuple[str, ...] = (
+    # Northeast
+    "Maine", "New Hampshire", "Vermont", "Massachusetts", "Rhode Island",
+    "Connecticut", "New York", "New Jersey", "Pennsylvania", "Delaware",
+    "Maryland",
+    # Southeast
+    "Virginia", "West Virginia", "North Carolina", "South Carolina",
+    "Georgia", "Florida", "Alabama", "Mississippi", "Tennessee", "Kentucky",
+    # Great Lakes / Midwest
+    "Ohio", "Indiana", "Illinois", "Michigan", "Wisconsin", "Minnesota",
+    # Plains
+    "Iowa", "Missouri", "Arkansas", "Louisiana",
+    "North Dakota", "South Dakota", "Nebraska", "Kansas",
+    "Oklahoma", "Texas",
+    # Mountain
+    "Montana", "Idaho", "Wyoming", "Nevada", "Utah",
+    "Colorado", "Arizona", "New Mexico",
+    # Pacific
+    "Oregon", "Washington", "California", "Hawaii", "Alaska",
+)
 
 #: Coordinate reference systems the pipeline knows how to handle.
 SUPPORTED_PROJECTIONS: tuple[str, ...] = (INTERNAL_CRS, "EPSG:4326", "EPSG:3857")
