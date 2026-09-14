@@ -113,7 +113,7 @@ Self-contained HTML/JS (no build step, `file://`-safe). `studio.html` is the can
 
 ## Known debt / gotchas
 
-- **`ruff` may not be in `.venv`** — configured linter but undeclared/unpinned; `pip install ruff` first.
+- **`ruff` may not be in `.venv`** — declared as an optional dev dep (`pip install -e '.[dev]'`) but not in `requirements.txt`; `pip install ruff` if missing.
 - **DEM/terrain/3D is not wired into `PIPELINE_STAGES`.** `color_by=elevation` and non-annual `--months` ship as real `build.py` flags but **fail fast** in the 2D pipeline; real renders come from `tools/render_state_mono.py` / `tools/render_monthly.py`.
 - **`src/raster.py` mosaic-before-warp** — each 1° 3DEP tile warped independently drifts resolution with latitude; `_require_aligned` uses a *relative* pixel-size tolerance. Don't "simplify" to warp-then-mosaic.
 - **Rights gate (commercial data).** USGS NHDPlus/NHD/WBD are federal public domain — free to sell, but record source + attribution per asset. Climate defaults to **nClimGrid-Monthly** (public domain, sellable with attribution); **PRISM is not public domain — never ship a `--climate-source prism` asset commercially** (A/B only). `fulfillment.assert_sellable` enforces this.
