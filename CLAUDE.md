@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Hydrographic Vector Art Generator: a Python 3.12+ CLI (active interpreter: 3.14) that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: Oregon, Washington, California, Idaho (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
+Hydrographic Vector Art Generator: a Python 3.12+ CLI (active interpreter: 3.14) that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: all 50 US states (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
 
 ## Commands
 
