@@ -189,9 +189,10 @@ def test_width_by_flow_scales_stroke_widths(tmp_path):
     widths = [float(p.get("stroke-width")) for p in _paths(svg)]
     assert widths, "expected per-path stroke widths under width_by=flow"
     # The confluence mainstem (higher stream order) is the widest channel.
-    assert max(widths) == 3.0
-    assert min(widths) == 0.5
+    # Absolute values are in document units (projected meters scaled by
+    # units_per_px), so assert the ratio matches the configured min/max.
     assert max(widths) > min(widths)
+    assert max(widths) / min(widths) == pytest.approx(3.0 / 0.5, rel=1e-3)
 
 
 def test_generate_svg_feeds_downstream_stages(tmp_path):

@@ -52,6 +52,7 @@ from src.rendering import (
     DEFAULT_AREAL_STYLES,
     DEFAULT_HYDRO_STRUCTURE_STYLES,
     DEFAULT_POINT_STYLES,
+    bounds,
     render_svg,
     scaled_widths,
 )
@@ -428,23 +429,44 @@ def _generate_svg_stage(ctx: RunContext) -> None:
 
     stroke_widths = _resolve_stroke_widths(ctx)
 
+    # Settings line_width / glow_radius / waterbody stroke are authored in
+    # pixel-like units, but the SVG viewBox is in projected meters (EPSG:5070).
+    # Scale them into document units so strokes remain visible when rasterised
+    # to the target png_size.
+    _REF_WIDTH = 2048  # reference raster width for stroke scaling
+    ref_px = ctx.settings.png_size or _REF_WIDTH
+    if geometries:
+        min_x, _, max_x, _ = bounds(geometries.values())
+        extent = max_x - min_x
+    else:
+        extent = 0.0
+    units_per_px = extent / ref_px if extent and ref_px else 1.0
+    line_width = ctx.settings.line_width * units_per_px
+    glow_radius = ctx.settings.glow_radius * units_per_px
+
+    if stroke_widths is not None:
+        stroke_widths = {
+            sid: w * units_per_px for sid, w in stroke_widths.items()
+        }
+
     wb = ctx.settings.waterbodies
     pf = ctx.settings.point_features
     af = ctx.settings.areal_features
     hs = ctx.settings.hydro_structures
+    wb_stroke = wb.stroke_width * units_per_px
     svg = render_svg(
         geometries,
         segment_colors,
         watersheds,
         background=ctx.settings.background,
-        line_width=ctx.settings.line_width,
+        line_width=line_width,
         stroke_widths=stroke_widths,
         glow=ctx.settings.glow,
         glow_mode=ctx.settings.glow_mode,
-        glow_radius=ctx.settings.glow_radius,
+        glow_radius=glow_radius,
         waterbodies=waterbody_items or None,
         waterbody_color=wb.color,
-        waterbody_stroke_width=wb.stroke_width,
+        waterbody_stroke_width=wb_stroke,
         waterbody_order=wb.render_order,
         areal_features=areal_items or None,
         areal_feature_styles=_areal_feature_styles(af) if areal_items else None,
