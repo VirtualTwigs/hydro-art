@@ -195,6 +195,50 @@ def test_width_by_flow_scales_stroke_widths(tmp_path):
     assert max(widths) / min(widths) == pytest.approx(3.0 / 0.5, rel=1e-3)
 
 
+def test_stroke_width_scales_with_viewbox_extent(tmp_path):
+    """Regression: stroke widths must be in document units, not raw pixel values.
+
+    The SVG viewBox is in EPSG:5070 projected meters (tens of thousands of
+    units). A raw 0.35px stroke in that coordinate space becomes sub-pixel
+    (~0.003px) when rasterised to 2048px, producing a blank black image.
+    The pipeline must scale line_width by units_per_px so strokes are visible.
+    """
+    settings = build_settings({"region": ["Oregon"], "line_width": 0.35})
+    svg = _pipeline(tmp_path).run(settings).artifacts["svg"]
+    root = ET.fromstring(svg)
+
+    # Parse the viewBox width (projected meters).
+    vb = root.get("viewBox").split()
+    viewbox_width = float(vb[2])
+
+    # The root stroke-width attribute should be scaled to document units,
+    # not the raw 0.35 pixel value.
+    base_stroke = float(root.get("stroke-width"))
+    assert viewbox_width > 1000, "viewBox should be in projected meters"
+    # At 2048px reference, a 0.35px stroke → ~0.35 * (viewbox_width / 2048).
+    # Assert it's at least 1 document unit (i.e. visibly scaled).
+    assert base_stroke > 1.0, (
+        f"stroke-width {base_stroke} is too small for viewBox width "
+        f"{viewbox_width} — strokes will be invisible when rasterised"
+    )
+
+
+def test_stroke_width_tracks_png_size(tmp_path):
+    """Smaller png_size → thicker document-unit strokes (fewer pixels to fill)."""
+    svg_small = _pipeline(tmp_path).run(
+        build_settings({"region": ["Oregon"], "png_size": 512})
+    ).artifacts["svg"]
+    svg_large = _pipeline(tmp_path).run(
+        build_settings({"region": ["Oregon"], "png_size": 4096})
+    ).artifacts["svg"]
+    root_s = ET.fromstring(svg_small)
+    root_l = ET.fromstring(svg_large)
+    stroke_small = float(root_s.get("stroke-width"))
+    stroke_large = float(root_l.get("stroke-width"))
+    # 512px render needs wider document-unit strokes than 4096px.
+    assert stroke_small > stroke_large
+
+
 def test_generate_svg_feeds_downstream_stages(tmp_path):
     import warnings
 
