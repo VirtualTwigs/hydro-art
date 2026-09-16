@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Hydrographic Vector Art Generator: a Python 3.12+ CLI (active interpreter: 3.14) that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: all 50 US states (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
+Hydrographic Vector Art Generator (`hydro-art`, v1.0.0): a Python 3.12+ CLI (active interpreter: 3.14) that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: all 50 US states (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
 
 ## Commands
 
@@ -17,6 +17,8 @@ node tests/test_recipe_roundtrip.cjs               # web/ recipe roundtrip (syst
 python tools/verify_determinism.py --region Oregon # non-offline: double-render + golden-hash check
 python tools/coverage_report.py --fail-under 90    # offline coverage gate (scoped to src/, non-suite)
 python tools/release_gate.py                        # v1.0 release readiness (goldens + determinism)
+python tools/update_status.py                       # stamp HANDOFF.md + roadmap on epoch close
+python tools/detect_unfinished.py                   # report-only: open tasks, missing retros, dirty tree
 
 # E2E (Playwright, opt-in — NOT part of the offline suite; needs Node 18+)
 cd tests/e2e && npm install && npx playwright install chromium
@@ -110,6 +112,7 @@ Self-contained HTML/JS (no build step, `file://`-safe). `studio.html` is the can
 - Frozen dataclasses for value objects; prefer pure functions over stateful classes.
 - Runtime dirs `datasets/`/`cache/`/`output/`/`logs/` are git-ignored (regenerable). `.venv/` is the interpreter.
 - `notebooks/` — ad-hoc GIS exploration; imports GIS eagerly, outside the suite. Committed notebooks are tracked; `.ipynb_checkpoints/` + scratch `Untitled.ipynb` are git-ignored.
+- **Commit style:** Conventional Commit subjects with optional issue refs — `feat(#46): add yearly renderer`, `fix(#32): preserve source CRS`, `docs: update guide`. Keep commits focused.
 
 ## Known debt / gotchas
 
