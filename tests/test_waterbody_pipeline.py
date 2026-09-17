@@ -7,10 +7,10 @@ loader has no waterbody support (or the feature is disabled) the render is
 byte-identical to the river-only build.
 """
 
-import xml.etree.ElementTree as ET
-from pathlib import Path
 import io
+import xml.etree.ElementTree as ET
 import zipfile
+from pathlib import Path
 
 from rich.console import Console
 from shapely.geometry import LineString, Polygon, box

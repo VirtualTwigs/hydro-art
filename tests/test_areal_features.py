@@ -11,8 +11,6 @@ never guessed. FType codes are the real values confirmed against a live 1807 GDB
 
 from shapely.geometry import Polygon
 
-from src.loading import Layer
-from src.waterbodies import FTYPE_CLASS as WATERBODY_FTYPE_CLASS
 from src.areal_features import (
     AREAL_CLASSES,
     AREAL_FTYPE_CLASS,
@@ -21,6 +19,8 @@ from src.areal_features import (
     classify_areal_feature,
     classify_areal_layer,
 )
+from src.loading import Layer
+from src.waterbodies import FTYPE_CLASS as WATERBODY_FTYPE_CLASS
 
 
 def _classify(attributes, **kw):

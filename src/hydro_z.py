@@ -23,20 +23,20 @@ edge orientation, so "downstream" is simply vertex order.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from src.terrain import Coord, TerrainSampler
 
 __all__ = [
-    "ElevatedVertex",
     "ElevatedLine",
+    "ElevatedVertex",
     "ProfileQA",
     "RepairPolicy",
     "attribute_line",
     "profile_qa",
-    "repair_monotonic",
     "render_z",
+    "repair_monotonic",
 ]
 
 

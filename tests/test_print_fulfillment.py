@@ -5,8 +5,6 @@ Offline — uses fake vendor client. No network, no vendor SDK.
 
 from __future__ import annotations
 
-import pytest
-
 
 class FakePrintVendor:
     """Fake print vendor for offline testing."""

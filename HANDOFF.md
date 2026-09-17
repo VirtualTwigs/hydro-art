@@ -1,6 +1,33 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-09-12, Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+_Last updated: 2026-09-17, Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+
+## Current state (2026-09-17)
+
+- **Epochs 28-30 DONE (2026-09-16) — self-serve customer journey (#120-136).** Three epochs
+  landed in commit `803f4ae`; roadmap ticked in `921b136`. The automated no-account customer
+  experience: form → queue → proof → accept/revise → pay → deliver → print fulfillment.
+  - **Epoch 28** (#120-126): order form schema & validation (`src/fulfillment.py`), web UI
+    (`web/order.html`), automated render queue, proof generation with HMAC-signed URLs
+    (`src/proof.py`), proof review page (`web/proof.html`), order event log (`OrderEvent` +
+    `add_event`), email notifications (`src/email_delivery.py`). 35 new tests.
+  - **Epoch 29** (#127-131): Stripe Checkout integration (`src/payment.py`), payment state
+    machine (`payment_pending`/`paid` statuses), signed delivery links (90-day default),
+    delivery page (`web/delivery.html`), custom trip overlay premium feature
+    (`src/trip_overlay.py` — GPX/KML parsing, 50% surcharge). 28 new tests.
+  - **Epoch 30** (#132-136): print vendor integration (`src/print_vendor.py`), shipping address
+    capture & validation (`src/shipping.py`), print proof-to-production handoff, product
+    analytics dashboard (`src/analytics.py` — pure function over order event logs), render
+    performance instrumentation. 27 new tests.
+  - **Deferred across all three:** Playwright e2e (needs running server + Node 18+),
+    automatic vendor submission on paid orders, proof email auto-wiring on `proof_ready`
+    transition, `tools/analytics_report.py` CLI.
+  - **UI wiring landed (2026-09-17):** trip overlay checkbox + GPX/KML file upload, shipping
+    address fields — wired into `web/order.html` (form only; backend integration deferred).
+  - **Suite:** 1102 passed. No regressions; `PIPELINE_STAGES` untouched; 2D default
+    byte-identical; Rights gate enforced.
+  - Retrospectives: `agent-os/retrospectives/2026-09-16-epoch-28-self-serve-order-proof-loop.md`,
+    `epoch-29-payment-and-delivery.md`, `epoch-30-print-fulfillment-analytics.md`.
 
 ## Current state (2026-09-12)
 

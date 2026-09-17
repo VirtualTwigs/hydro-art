@@ -8,10 +8,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
-from src.config import ConfigError
-from src.fulfillment import OrderError
 from src.orders import OrderStore
 from src.proof import sign_proof_url, verify_proof_token
 from src.server import handle_request
@@ -89,7 +85,7 @@ class TestFullOrderToProofCycle:
         runner = FakeRunner()
         secret = b"test-secret"
 
-        data, request_id = _submit_order(runner, store, tmp_path, secret)
+        _data, request_id = _submit_order(runner, store, tmp_path, secret)
         # Simulate render completion
         store.update_status(request_id, "proof_ready")
         req = store.get(request_id)
@@ -136,7 +132,7 @@ class TestEventLogCompleteCycle:
         runner = FakeRunner()
         secret = b"test-secret"
 
-        data, request_id = _submit_order(runner, store, tmp_path, secret)
+        _data, request_id = _submit_order(runner, store, tmp_path, secret)
         # submitted(1) + accepted(2) + rendering(3)
         store.update_status(request_id, "proof_ready")  # 4
         token = sign_proof_url(request_id, secret, expires_in=3600)

@@ -546,6 +546,18 @@
       <textarea id="inp-note" placeholder="Any special requests — framing, color tweaks, rush timeline…" maxlength="500"></textarea>
     </div>
 
+    <div class="field" style="border-top:1px solid var(--line); padding-top:20px; margin-top:8px">
+      <label style="display:flex; align-items:center; gap:10px; cursor:pointer">
+        <input type="checkbox" id="inp-trip" style="width:18px; height:18px; accent-color:var(--cyan)">
+        <span>Trip memorial overlay <span style="color:var(--faint); font-size:10px">(+50% surcharge)</span></span>
+      </label>
+      <p style="font-size:12px; color:var(--muted); margin:6px 0 0">Overlay your hiking, paddling, or cycling route onto the artwork.</p>
+    </div>
+    <div class="field" id="trip-upload-row" style="display:none">
+      <label for="inp-trip-file">Upload GPX or KML file</label>
+      <input type="file" id="inp-trip-file" accept=".gpx,.kml" style="color:var(--ink)">
+    </div>
+
     <div class="btn-row">
       <button class="btn ghost" id="btn-back-3">← Back</button>
       <button class="btn solid" id="btn-next-4">Continue <span class="arw">→</span></button>
@@ -565,6 +577,36 @@
     <div class="field">
       <label for="inp-name">Name <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
       <input type="text" id="inp-name" placeholder="First name or full name" maxlength="80" autocomplete="name">
+    </div>
+
+    <div id="shipping-fields" style="display:none; border-top:1px solid var(--line); padding-top:20px; margin-top:8px">
+      <p style="font-size:13px; color:var(--cyan); letter-spacing:.04em; text-transform:uppercase; margin:0 0 12px">Shipping address</p>
+      <div class="field">
+        <label for="inp-ship-name">Full name</label>
+        <input type="text" id="inp-ship-name" placeholder="Name on the delivery" maxlength="80" autocomplete="shipping name">
+      </div>
+      <div class="field">
+        <label for="inp-ship-line1">Address line 1</label>
+        <input type="text" id="inp-ship-line1" placeholder="Street address" maxlength="120" autocomplete="shipping address-line1">
+      </div>
+      <div class="field">
+        <label for="inp-ship-line2">Address line 2 <span style="color:var(--faint); font-size:10px">(optional)</span></label>
+        <input type="text" id="inp-ship-line2" placeholder="Apt, suite, unit" maxlength="80" autocomplete="shipping address-line2">
+      </div>
+      <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px">
+        <div class="field">
+          <label for="inp-ship-city">City</label>
+          <input type="text" id="inp-ship-city" placeholder="City" maxlength="60" autocomplete="shipping address-level2">
+        </div>
+        <div class="field">
+          <label for="inp-ship-state">State</label>
+          <input type="text" id="inp-ship-state" placeholder="ST" maxlength="2" autocomplete="shipping address-level1">
+        </div>
+        <div class="field">
+          <label for="inp-ship-zip">ZIP</label>
+          <input type="text" id="inp-ship-zip" placeholder="00000" maxlength="10" autocomplete="shipping postal-code">
+        </div>
+      </div>
     </div>
 
     <div class="btn-row">
@@ -655,6 +697,14 @@
     note: "",
     email: "",
     name: "",
+    is_trip_memorial: false,
+    trip_file: null,
+    shipping_name: "",
+    shipping_line1: "",
+    shipping_line2: "",
+    shipping_city: "",
+    shipping_state: "",
+    shipping_zip: "",
   };
 
   var PRODUCT_LABELS = {
@@ -768,11 +818,28 @@
     });
   });
 
+  // Trip overlay toggle
+  var inpTrip     = document.getElementById("inp-trip");
+  var tripUpload  = document.getElementById("trip-upload-row");
+  var inpTripFile = document.getElementById("inp-trip-file");
+
+  inpTrip.addEventListener("change", function () {
+    S.is_trip_memorial = inpTrip.checked;
+    tripUpload.style.display = inpTrip.checked ? "" : "none";
+    if (!inpTrip.checked) { S.trip_file = null; inpTripFile.value = ""; }
+  });
+  inpTripFile.addEventListener("change", function () {
+    S.trip_file = inpTripFile.files[0] || null;
+  });
+
   btnBack3.addEventListener("click", function () { showStep("step-3"); });
   btnNext4.addEventListener("click", function () {
     S.title    = document.getElementById("inp-title").value.trim();
     S.subtitle = document.getElementById("inp-subtitle").value.trim();
     S.note     = document.getElementById("inp-note").value.trim();
+    // Show shipping fields for print orders
+    var shipFields = document.getElementById("shipping-fields");
+    if (shipFields) shipFields.style.display = (S.product === "fine-art-print") ? "" : "none";
     showStep("step-5");
   });
 
@@ -792,6 +859,15 @@
   btnNext5.addEventListener("click", function () {
     S.email = inpEmail.value.trim();
     S.name  = inpName.value.trim();
+    // Capture shipping address for print orders
+    if (S.product === "fine-art-print") {
+      S.shipping_name  = (document.getElementById("inp-ship-name")  || {}).value || "";
+      S.shipping_line1 = (document.getElementById("inp-ship-line1") || {}).value || "";
+      S.shipping_line2 = (document.getElementById("inp-ship-line2") || {}).value || "";
+      S.shipping_city  = (document.getElementById("inp-ship-city")  || {}).value || "";
+      S.shipping_state = (document.getElementById("inp-ship-state") || {}).value || "";
+      S.shipping_zip   = (document.getElementById("inp-ship-zip")   || {}).value || "";
+    }
     populateReview();
     showStep("step-6");
   });
@@ -848,6 +924,17 @@
     if (S.subtitle) payload.subtitle = S.subtitle;
     if (S.note)     payload.note     = S.note;
     if (S.name)     payload.name     = S.name;
+    if (S.is_trip_memorial) payload.is_trip_memorial = true;
+    if (S.shipping_line1) {
+      payload.shipping_address = {
+        name:  S.shipping_name,
+        line1: S.shipping_line1,
+        line2: S.shipping_line2,
+        city:  S.shipping_city,
+        state: S.shipping_state,
+        zip:   S.shipping_zip,
+      };
+    }
 
     fetch("/api/orders", {
       method: "POST",

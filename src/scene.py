@@ -19,23 +19,23 @@ browser dependency, so it is fully offline-testable.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from typing import Sequence
 
 from src.hydro_z import ElevatedLine, render_z
 from src.mesh import TerrainMesh
 
 __all__ = [
-    "Material",
-    "RiverFeature",
-    "CardinalAnnotation",
     "AxisInfo",
     "CameraPreset",
+    "CardinalAnnotation",
     "DisplaySettings",
+    "Material",
+    "RiverFeature",
     "SceneModel",
     "assemble_scene",
-    "render_river_vertices",
     "default_cameras",
+    "render_river_vertices",
 ]
 
 #: Material color used for a river whose segment has no assigned watershed color.

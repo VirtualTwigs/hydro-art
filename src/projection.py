@@ -10,7 +10,7 @@ hand-built geometries and known CRS pairs (no GDAL, no real data).
 from __future__ import annotations
 
 from dataclasses import replace
-from functools import lru_cache
+from functools import cache
 from typing import Any
 
 from pyproj import Transformer
@@ -26,7 +26,7 @@ class ProjectionError(AcquisitionError):
     """Raised when a layer cannot be reprojected (e.g. unknown source CRS)."""
 
 
-@lru_cache(maxsize=None)
+@cache
 def _transformer(src_crs: str, dst_crs: str) -> Transformer:
     """Return a cached always-xy transformer between two CRS identifiers."""
     return Transformer.from_crs(src_crs, dst_crs, always_xy=True)

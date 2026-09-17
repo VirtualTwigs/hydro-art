@@ -20,9 +20,9 @@ import re
 __all__ = [
     "StatusError",
     "format_last_updated",
+    "stamp_epoch_status",
     "stamp_last_updated",
     "tick_roadmap_item",
-    "stamp_epoch_status",
 ]
 
 _LAST_UPDATED_RE = re.compile(r"_Last updated:.*?_", re.DOTALL)

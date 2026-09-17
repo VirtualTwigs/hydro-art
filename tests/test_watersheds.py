@@ -3,7 +3,7 @@
 import networkx as nx
 import pytest
 
-from src.config import ConfigError, DEFAULTS, build_settings
+from src.config import DEFAULTS, ConfigError, build_settings
 from src.watersheds import (
     HUC_LEVEL_DIGITS,
     group_segments_by_huc,

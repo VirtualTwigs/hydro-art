@@ -8,14 +8,16 @@ No GDAL/network; the heavy GDB reads and NWIS/ONI providers live in tools/.
 
 from __future__ import annotations
 
+import itertools
+
 import numpy as np
 import pytest
 
 from src.flow_metrics import (
-    FlowMetricsError,
-    FlowValidationError,
     AnalogYear,
     DecadeFDC,
+    FlowMetricsError,
+    FlowValidationError,
     MeltTimingTrend,
     PhaseComposite,
     ProfileFrame,
@@ -25,16 +27,14 @@ from src.flow_metrics import (
     YearRank,
     align_index,
     analog_years,
-    composite_hydrographs,
-    decade_flow_duration,
     anomaly,
     bias,
     center_of_timing,
     center_of_timing_trend,
     classify_regime,
+    composite_hydrographs,
     correlate,
-    rank_years,
-    record_book,
+    decade_flow_duration,
     flashiness,
     flow_duration,
     longitudinal_frames,
@@ -47,6 +47,8 @@ from src.flow_metrics import (
     peak_flow,
     pearson_r,
     percentile_rank,
+    rank_years,
+    record_book,
     rmse,
     rolling_normals,
     seasonal_ratio,
@@ -57,7 +59,6 @@ from src.flow_metrics import (
     subset_series,
     validate,
 )
-
 
 # --- #48 intrinsic hydrograph shape --------------------------------------
 
@@ -748,7 +749,7 @@ def test_longitudinal_frames_fraction_monotone_to_one() -> None:
     fractions = [f.fraction for f in frames]
     assert fractions[-1] == pytest.approx(1.0)          # full mainstem revealed
     assert fractions[0] == pytest.approx(5.0 / 20.0)
-    assert all(a <= b for a, b in zip(fractions, fractions[1:]))  # non-decreasing
+    assert all(a <= b for a, b in itertools.pairwise(fractions))  # non-decreasing
 
 
 def test_longitudinal_frames_zero_final_fraction_is_zero() -> None:

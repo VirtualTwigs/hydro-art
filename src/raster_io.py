@@ -17,8 +17,10 @@ never triggers the real import; only a live ``tools/`` run does.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
-from typing import Any, Callable, ContextManager
+from typing import Any
 
 import numpy as np
 
@@ -28,9 +30,9 @@ from src.raster import GridTransform, RasterGrid
 
 __all__ = [
     "RasterIOError",
-    "grid_from_arrays",
     "RasterioRasterReader",
     "RasterioReprojector",
+    "grid_from_arrays",
 ]
 
 
@@ -104,7 +106,7 @@ def grid_from_arrays(
     )
 
 
-def _default_opener(path: str) -> ContextManager[Any]:
+def _default_opener(path: str) -> AbstractContextManager[Any]:
     """Open a COG via rasterio (lazy import behind the seam)."""
     try:
         import rasterio
@@ -120,13 +122,13 @@ def _default_opener(path: str) -> ContextManager[Any]:
 class RasterioRasterReader:
     """Reads a cached 3DEP COG (``asset.path``) into a north-up ``RasterGrid``.
 
-    ``opener`` is an injectable ``Callable[[str], ContextManager]`` yielding a
+    ``opener`` is an injectable ``Callable[[str], AbstractContextManager]`` yielding a
     dataset that exposes ``read(1) -> 2-D array``, ``.transform`` (a rasterio
     affine), ``.crs``, and ``.nodata`` — defaulting to a lazy ``rasterio.open``
     wrapper. Tests inject a fake dataset so the read path runs fully offline.
     """
 
-    opener: Callable[[str], ContextManager[Any]] | None = None
+    opener: Callable[[str], AbstractContextManager[Any]] | None = None
 
     def read(self, asset: Any) -> RasterGrid:
         opener = self.opener or _default_opener

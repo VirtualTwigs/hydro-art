@@ -6,10 +6,9 @@ main() against a tmp_path "external drive": dry-run (no writes), a real move +
 symlink, and the unmounted-drive guard.
 """
 
-import os
 
-from tools.migrate_storage import main
 from src.storage import EXTERNAL_ROOT_ENV
+from tools.migrate_storage import main
 
 
 def _populate(root, files):

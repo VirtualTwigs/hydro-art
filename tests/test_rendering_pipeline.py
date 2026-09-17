@@ -5,15 +5,14 @@ on a real (reprojected, clipped, graphed, grouped, colored) in-region network â€
 a layered SVG string lands in artifacts without GDAL, a browser, or real data.
 """
 
-import xml.etree.ElementTree as ET
-from pathlib import Path
 import io
+import xml.etree.ElementTree as ET
 import zipfile
-
-from rich.console import Console
-from shapely.geometry import LineString, Point, box
+from pathlib import Path
 
 import pytest
+from rich.console import Console
+from shapely.geometry import LineString, Point, box
 
 from src.config import ConfigError, build_settings
 from src.loading import Layer

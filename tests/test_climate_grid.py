@@ -19,7 +19,6 @@ from src.climate_grid import (
     fill_nodata,
 )
 
-
 # --- band_for_month: the epoch/off-by-one guard (watch-list risk #2) --------
 
 

@@ -17,21 +17,21 @@ from typing import Any, Protocol, runtime_checkable
 from src.datasets import AcquisitionError
 
 __all__ = [
+    "HYDRO_LAYER_ALLOWLIST",
+    "LINE_ATTRIBUTE_FIELDS",
+    "LINE_LAYER_ALLOWLIST",
+    "POINT_ATTRIBUTE_FIELDS",
+    "POINT_LAYER_ALLOWLIST",
+    "WATERBODY_ATTRIBUTE_FIELDS",
+    "WATERBODY_LAYER_ALLOWLIST",
     "GeometryError",
     "Layer",
     "LayerLoader",
     "PyogrioLayerLoader",
-    "HYDRO_LAYER_ALLOWLIST",
-    "WATERBODY_LAYER_ALLOWLIST",
-    "WATERBODY_ATTRIBUTE_FIELDS",
-    "POINT_LAYER_ALLOWLIST",
-    "POINT_ATTRIBUTE_FIELDS",
-    "LINE_LAYER_ALLOWLIST",
-    "LINE_ATTRIBUTE_FIELDS",
     "discover_layers",
-    "discover_waterbody_layers",
-    "discover_point_layers",
     "discover_line_layers",
+    "discover_point_layers",
+    "discover_waterbody_layers",
 ]
 
 

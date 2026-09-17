@@ -12,7 +12,6 @@ from src.determinism import DeterminismVerdict
 from src.release import (
     RELEASE_SCHEMA,
     FixtureCheck,
-    ReleaseVerdict,
     check_render_independent_goldens,
     evaluate_release,
     format_verdict,

@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import hashlib
 import math
-from dataclasses import dataclass, field, replace
-from typing import Any, Protocol, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any, Protocol
 
 import numpy as np
 
@@ -36,18 +37,18 @@ from src.elevation import ElevationProvenance, ElevationSample
 
 __all__ = [
     "INTERNAL_CRS",
+    "GridSampler",
     "GridTransform",
-    "RasterGrid",
     "NormalizedDem",
+    "RasterGrid",
     "RasterReader",
     "RasterReprojector",
-    "GridSampler",
-    "sample_bilinear",
-    "mosaic",
-    "clip_grid",
     "build_pyramid",
-    "normalize_dem",
+    "clip_grid",
     "grid_checksum",
+    "mosaic",
+    "normalize_dem",
+    "sample_bilinear",
 ]
 
 #: Version tag for the :func:`grid_checksum` scheme; bump if the byte layout changes.
@@ -207,8 +208,8 @@ def sample_bilinear(grid: RasterGrid, x: float, y: float) -> ElevationSample:
     fc = (x - t.origin_x) / t.pixel_width - 0.5
     fr = (t.origin_y - y) / t.pixel_height - 0.5
 
-    c0 = int(math.floor(fc))
-    r0 = int(math.floor(fr))
+    c0 = math.floor(fc)
+    r0 = math.floor(fr)
     c1, r1 = c0 + 1, r0 + 1
     tx = fc - c0
     ty = fr - r0
@@ -291,14 +292,14 @@ def mosaic(grids: Sequence[RasterGrid]) -> RasterGrid:
     max_x = max(g.bounds[2] for g in grids)
     max_y = max(g.bounds[3] for g in grids)
 
-    width = int(round((max_x - min_x) / pw))
-    height = int(round((max_y - min_y) / ph))
+    width = round((max_x - min_x) / pw)
+    height = round((max_y - min_y) / ph)
     nodata = grids[0].nodata if grids[0].nodata is not None else float("nan")
 
     out = np.full((height, width), nodata, dtype=float)
     for g in grids:
-        col = int(round((g.bounds[0] - min_x) / pw))
-        row = int(round((max_y - g.bounds[3]) / ph))
+        col = round((g.bounds[0] - min_x) / pw)
+        row = round((max_y - g.bounds[3]) / ph)
         out[row : row + g.height, col : col + g.width] = g.values
 
     return RasterGrid(
@@ -324,10 +325,10 @@ def clip_grid(
     t = grid.transform
     min_x, min_y, max_x, max_y = bounds
 
-    c_start = int(math.floor((min_x - t.origin_x) / t.pixel_width))
-    c_end = int(math.ceil((max_x - t.origin_x) / t.pixel_width))
-    r_start = int(math.floor((t.origin_y - max_y) / t.pixel_height))
-    r_end = int(math.ceil((t.origin_y - min_y) / t.pixel_height))
+    c_start = math.floor((min_x - t.origin_x) / t.pixel_width)
+    c_end = math.ceil((max_x - t.origin_x) / t.pixel_width)
+    r_start = math.floor((t.origin_y - max_y) / t.pixel_height)
+    r_end = math.ceil((t.origin_y - min_y) / t.pixel_height)
 
     c_start = max(0, c_start)
     r_start = max(0, r_start)

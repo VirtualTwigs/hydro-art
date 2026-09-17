@@ -33,10 +33,11 @@ from __future__ import annotations
 
 import hashlib
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from src.cache import Cache, DownloaderLike
 from src.config import Settings
@@ -49,17 +50,17 @@ from src.elevation import (
 )
 
 __all__ = [
-    "DemProduct",
-    "DemAsset",
+    "REGION_BOUNDS",
     "TIER_PRODUCTS",
-    "geographic_cells",
-    "cell_name",
+    "DemAsset",
+    "DemProduct",
     "ThreeDEPDiscoverer",
-    "dem_descriptor",
-    "count_tiles",
     "acquire_dem",
     "acquire_dem_for_settings",
-    "REGION_BOUNDS",
+    "cell_name",
+    "count_tiles",
+    "dem_descriptor",
+    "geographic_cells",
     "region_bounds",
 ]
 
@@ -347,7 +348,7 @@ def acquire_dem(
     refresh: bool = False,
     max_tiles: int = 0,
     log: Callable[[str], None] = _noop,
-    clock: Callable[[], str] = lambda: date.today().isoformat(),
+    clock: Callable[[], str] = lambda: datetime.now(tz=UTC).date().isoformat(),
 ) -> list[DemAsset]:
     """Discover, cache, and record provenance for the DEM tiles of a region.
 
@@ -370,7 +371,7 @@ def acquire_dem(
             discovered tile count exceeds ``max_tiles``.
     """
     discoverer = discoverer or ThreeDEPDiscoverer()
-    product = TIER_PRODUCTS[tier] if tier in TIER_PRODUCTS else None
+    product = TIER_PRODUCTS.get(tier, None)
     tiles = discoverer.discover_tiles(boundary, tier)
     if max_tiles and len(tiles) > max_tiles:
         raise ElevationError(
@@ -420,7 +421,7 @@ def acquire_dem_for_settings(
     downloader: DownloaderLike,
     discoverer: ThreeDEPDiscoverer | None = None,
     log: Callable[[str], None] = _noop,
-    clock: Callable[[], str] = lambda: date.today().isoformat(),
+    clock: Callable[[], str] = lambda: datetime.now(tz=UTC).date().isoformat(),
 ) -> list[DemAsset]:
     """Acquire a region's DEM tiles driven by a validated ``Settings`` (roadmap #21).
 

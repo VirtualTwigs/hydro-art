@@ -5,8 +5,6 @@ Offline — no GDAL, no network. Pure crypto + string operations.
 
 from __future__ import annotations
 
-import pytest
-
 
 class TestSignAndVerify:
     def test_roundtrip(self):
@@ -40,7 +38,7 @@ class TestSignAndVerify:
         idx = len(chars) // 2
         chars[idx] = "X" if chars[idx] != "X" else "Y"
         tampered = "".join(chars)
-        request_id, valid = verify_proof_token(tampered, secret)
+        _request_id, valid = verify_proof_token(tampered, secret)
         assert valid is False
 
     def test_different_secret_rejected(self):
@@ -48,7 +46,7 @@ class TestSignAndVerify:
         from src.proof import sign_proof_url, verify_proof_token
 
         token = sign_proof_url("REQ-20260916-0001", b"key-a", expires_in=3600)
-        request_id, valid = verify_proof_token(token, b"key-b")
+        _request_id, valid = verify_proof_token(token, b"key-b")
         assert valid is False
 
 

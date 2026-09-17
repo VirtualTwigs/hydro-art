@@ -10,7 +10,6 @@ density cap.
 from shapely.geometry import Point, Polygon
 
 from src.areal_features import ArealFeature
-from src.point_features import PointFeature
 from src.areal_selection import (
     ArealSelection,
     ArealSelectionPolicy,
@@ -19,6 +18,7 @@ from src.areal_selection import (
     process_areal_features,
     process_point_features,
 )
+from src.point_features import PointFeature
 
 
 def _areal(geometry, ar_class="wetland", source_id="ar", **kw):

@@ -14,7 +14,6 @@ import pytest
 from src.datasets import AcquisitionError
 from src.elevation import (
     ElevationError,
-    ElevationProvenance,
     ElevationSample,
     ElevationSampler,
     RasterReader,
@@ -25,17 +24,17 @@ from src.elevation import (
 
 
 def _kwargs(**overrides):
-    base = dict(
-        source_product="USGS 3DEP 1/3 arc-second DEM",
-        source_url="https://example.usgs.gov/3dep/n46w123.tif",
-        acquisition_date="2024-05-01",
-        horizontal_crs="EPSG:4269",
-        vertical_crs="NAVD88",
-        vertical_units="meters",
-        resolution_m=10.0,
-        checksum="sha256:abc123",
-        processing_parameters={"resampling": "bilinear"},
-    )
+    base = {
+        "source_product": "USGS 3DEP 1/3 arc-second DEM",
+        "source_url": "https://example.usgs.gov/3dep/n46w123.tif",
+        "acquisition_date": "2024-05-01",
+        "horizontal_crs": "EPSG:4269",
+        "vertical_crs": "NAVD88",
+        "vertical_units": "meters",
+        "resolution_m": 10.0,
+        "checksum": "sha256:abc123",
+        "processing_parameters": {"resampling": "bilinear"},
+    }
     base.update(overrides)
     return base
 

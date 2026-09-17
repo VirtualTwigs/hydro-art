@@ -83,6 +83,23 @@ def test_ruff_pinned_in_dev_extras() -> None:
                for req in dev), f"ruff missing from dev extras: {dev}"
 
 
+def _all_tool_scripts() -> list[str]:
+    """All Python scripts under tools/."""
+    return [p.name for p in sorted(TOOLS.glob("*.py")) if p.name != "__init__.py"]
+
+
+@pytest.mark.parametrize("script", _all_tool_scripts())
+def test_tool_script_compiles(script: str) -> None:
+    """Every tools/*.py must be syntactically valid (ast.parse)."""
+    import ast
+
+    source = (TOOLS / script).read_text(encoding="utf-8")
+    try:
+        ast.parse(source, filename=script)
+    except SyntaxError as exc:
+        pytest.fail(f"tools/{script} has a syntax error: {exc}")
+
+
 @pytest.mark.parametrize("tool", ["detect_unfinished.py", "update_status.py"])
 def test_pure_tools_run_as_script_from_foreign_cwd(tool: str, tmp_path: Path) -> None:
     """C2.1 e2e — direct-run from a foreign CWD works (the exact reported bug).
@@ -95,6 +112,7 @@ def test_pure_tools_run_as_script_from_foreign_cwd(tool: str, tmp_path: Path) ->
         cwd=tmp_path,
         capture_output=True,
         text=True,
+        check=False,
     )
     assert "ModuleNotFoundError" not in result.stderr, result.stderr
     assert result.returncode == 0, result.stderr

@@ -20,7 +20,7 @@ import warnings
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-__all__ = ["Exporter", "FileExporter", "RASTER_FORMATS", "write_verified"]
+__all__ = ["RASTER_FORMATS", "Exporter", "FileExporter", "write_verified"]
 
 #: Formats rendered as pixels (sized by ``png_size``); the rest are vector.
 RASTER_FORMATS: frozenset[str] = frozenset({"png", "tiff"})

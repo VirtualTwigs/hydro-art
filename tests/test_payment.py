@@ -12,8 +12,6 @@ import time
 
 import pytest
 
-from src.fulfillment import OrderError
-
 
 class FakeStripeClient:
     """Fake Stripe SDK client for offline testing."""
@@ -99,7 +97,7 @@ class TestWebhookVerification:
         assert request_id == "REQ-20260916-0001"
 
     def test_invalid_signature_rejected(self):
-        from src.payment import handle_webhook, WebhookError
+        from src.payment import WebhookError, handle_webhook
 
         payload = json.dumps({
             "type": "checkout.session.completed",
@@ -136,9 +134,9 @@ class TestWebhookVerification:
 class TestPaymentStateTransitions:
     def test_approved_to_payment_pending_to_paid_to_fulfilled(self):
         """Full payment lifecycle via the state machine."""
-        from src.orders import OrderStore
-
         import tempfile
+
+        from src.orders import OrderStore
         with tempfile.TemporaryDirectory() as tmp:
             store = OrderStore(f"{tmp}/orders")
             req = store.create_request({

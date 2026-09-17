@@ -4,7 +4,6 @@ from src.config import build_settings
 from src.datasets import (
     DATASETS,
     REGION_HUC4,
-    Dataset,
     resolve_required_files,
 )
 

@@ -10,7 +10,7 @@ import json
 import pytest
 
 from src.fulfillment import OrderError
-from src.orders import STATUSES, TRANSITIONS, OrderEvent, OrderStore, Request
+from src.orders import STATUSES, TRANSITIONS, OrderStore, Request
 
 
 def _valid_payload(**overrides):

@@ -26,8 +26,9 @@ Design notes:
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import shapely
 
@@ -37,10 +38,10 @@ from src.geometry import repair_geometry
 from src.waterbodies import WATERBODY_POLICY_VERSION, WaterbodyFeature
 
 __all__ = [
-    "INLAND_CLASSES",
     "COASTAL_CLASSES",
-    "WaterbodySelectionPolicy",
+    "INLAND_CLASSES",
     "WaterbodySelection",
+    "WaterbodySelectionPolicy",
     "process_waterbodies",
 ]
 

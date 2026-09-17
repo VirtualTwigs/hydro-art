@@ -9,18 +9,16 @@ pure and numpy-free; numpy appears here only to build the fixture DEM.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import numpy as np
 import pytest
-
-from dataclasses import dataclass
 
 from src.accuracy import (
     AccuracyError,
     AccuracyReport,
     CoverageReport,
     CrsReport,
-    ErrorMetrics,
     QARollup,
     build_accuracy_report,
     coverage_report,
@@ -43,17 +41,17 @@ def _plane_grid(nodata=None):
 
 
 def _prov(**over):
-    base = dict(
-        source_product="USGS 3DEP 1/3 arc-second DEM",
-        source_url="https://example.test/dem.tif",
-        acquisition_date="2026-07-29",
-        horizontal_crs="EPSG:5070",
-        vertical_crs="NAVD88",
-        vertical_units="meters",
-        resolution_m=10.0,
-        checksum="sha256:abc",
-        processing_parameters={},
-    )
+    base = {
+        "source_product": "USGS 3DEP 1/3 arc-second DEM",
+        "source_url": "https://example.test/dem.tif",
+        "acquisition_date": "2026-07-29",
+        "horizontal_crs": "EPSG:5070",
+        "vertical_crs": "NAVD88",
+        "vertical_units": "meters",
+        "resolution_m": 10.0,
+        "checksum": "sha256:abc",
+        "processing_parameters": {},
+    }
     base.update(over)
     return build_provenance(**base)
 
@@ -267,8 +265,8 @@ def test_within_tolerance_false_when_all_skipped() -> None:
 
 def test_validate_is_deterministic() -> None:
     sampler = GridSampler(_plane_grid())
-    args = dict(
-        sampler=sampler, points=[(1.0, 1.0), (2.5, 1.5)], expected=[2.0, 4.0],
-        provenance=_prov(), tolerance_m=0.0,
-    )
+    args = {
+        "sampler": sampler, "points": [(1.0, 1.0), (2.5, 1.5)], "expected": [2.0, 4.0],
+        "provenance": _prov(), "tolerance_m": 0.0,
+    }
     assert validate_against_sampler(**args) == validate_against_sampler(**args)

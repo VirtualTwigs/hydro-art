@@ -12,9 +12,9 @@ from typing import Any, Protocol
 __all__ = [
     "PrintVendorLike",
     "build_print_order_payload",
-    "submit_print_order",
-    "check_shipment",
     "calculate_print_cost",
+    "check_shipment",
+    "submit_print_order",
 ]
 
 

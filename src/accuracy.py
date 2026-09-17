@@ -28,25 +28,26 @@ Design constraints:
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, Protocol, Sequence
+from typing import Any, Protocol
 
 from src.elevation import ElevationError, ElevationProvenance, ElevationSample
 
 __all__ = [
     "AccuracyError",
-    "ErrorMetrics",
+    "AccuracyReport",
     "CoverageReport",
     "CrsReport",
+    "ErrorMetrics",
     "QARollup",
-    "AccuracyReport",
     "SamplerLike",
-    "error_metrics",
+    "build_accuracy_report",
     "coverage_report",
     "crs_report",
+    "error_metrics",
     "qa_rollup",
     "sample_points",
-    "build_accuracy_report",
     "validate_against_sampler",
 ]
 

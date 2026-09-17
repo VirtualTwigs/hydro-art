@@ -25,10 +25,10 @@ from typing import Any
 from src.loading import Layer
 
 __all__ = [
-    "POINT_POLICY_VERSION",
     "POINT_CLASSES",
     "POINT_FTYPE_CLASS",
     "POINT_FTYPE_LABELS",
+    "POINT_POLICY_VERSION",
     "PointFeature",
     "classify_point_feature",
     "classify_point_layer",

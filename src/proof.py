@@ -13,10 +13,10 @@ import re
 import time
 
 __all__ = [
-    "sign_proof_url",
-    "verify_proof_token",
     "sign_delivery_url",
+    "sign_proof_url",
     "verify_delivery_token",
+    "verify_proof_token",
     "watermark_svg",
 ]
 
@@ -58,7 +58,7 @@ def verify_proof_token(
     """
     try:
         raw = base64.urlsafe_b64decode(token.encode()).decode()
-    except Exception:
+    except (ValueError, UnicodeDecodeError):
         return ("", False)
 
     parts = raw.rsplit(".", 2)

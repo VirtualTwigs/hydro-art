@@ -25,7 +25,6 @@ class InlineExecutor:
 
     def submit(self, fn, *args, **kwargs):
         fn(*args, **kwargs)
-        return None
 
 
 class FakePipeline:

@@ -23,16 +23,16 @@ from __future__ import annotations
 import hashlib
 import json
 import struct
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Sequence
 
 from src.scene import SceneModel
 
 __all__ = [
-    "scene_to_glb",
-    "scene_to_obj",
     "build_manifest",
     "export_scene",
+    "scene_to_glb",
+    "scene_to_obj",
 ]
 
 Writer = Callable[[str, bytes], None]
@@ -133,7 +133,7 @@ def scene_to_glb(scene: SceneModel, *, apply_exaggeration: bool = False) -> byte
 
     def add_positions(verts: Sequence[Vec3]) -> int:
         flat: list[float] = [c for v in verts for c in v]
-        view = add_view(struct.pack("<%df" % len(flat), *flat), _ARRAY_BUFFER)
+        view = add_view(struct.pack(f"<{len(flat)}f", *flat), _ARRAY_BUFFER)
         xs = [v[0] for v in verts]
         ys = [v[1] for v in verts]
         zs = [v[2] for v in verts]
@@ -151,7 +151,7 @@ def scene_to_glb(scene: SceneModel, *, apply_exaggeration: bool = False) -> byte
 
     def add_indices(indices: Sequence[int]) -> int:
         view = add_view(
-            struct.pack("<%dI" % len(indices), *indices), _ELEMENT_ARRAY_BUFFER
+            struct.pack(f"<{len(indices)}I", *indices), _ELEMENT_ARRAY_BUFFER
         )
         accessors.append(
             {

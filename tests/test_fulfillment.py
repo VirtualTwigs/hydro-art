@@ -101,7 +101,7 @@ def test_build_order_does_not_mutate_payload_and_order_is_frozen():
     snapshot = copy.deepcopy(payload)
     order = build_order(payload)
     assert payload == snapshot  # no mutation of caller's dict
-    with pytest.raises(Exception):
+    with pytest.raises(AttributeError):
         order.region = "Oregon"  # frozen dataclass
 
 

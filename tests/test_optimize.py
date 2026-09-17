@@ -6,7 +6,7 @@ import types
 import pytest
 
 from src import optimize as optimize_mod
-from src.optimize import SvgOptimizer, SvgoOptimizer
+from src.optimize import SvgoOptimizer, SvgOptimizer
 
 
 def test_missing_svgo_returns_input_unchanged_with_warning():

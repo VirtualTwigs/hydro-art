@@ -26,7 +26,7 @@ from src.dem import (
     geographic_cells,
     region_bounds,
 )
-from src.elevation import ElevationError, TileRef
+from src.elevation import ElevationError
 
 
 class _FakeBoundary:

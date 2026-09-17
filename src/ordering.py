@@ -25,7 +25,8 @@ networks (no GDAL, no real data).
 
 from __future__ import annotations
 
-from typing import Any, Callable, Mapping
+from collections.abc import Callable, Mapping
+from typing import Any
 
 import networkx as nx
 
@@ -34,11 +35,11 @@ from src.graph import HydroGraph
 
 __all__ = [
     "OrderingError",
-    "strahler_order",
-    "shreve_order",
-    "hack_order",
-    "custom_order",
     "assign_stream_order",
+    "custom_order",
+    "hack_order",
+    "shreve_order",
+    "strahler_order",
 ]
 
 WeightFn = Callable[[Mapping[str, Any]], float]

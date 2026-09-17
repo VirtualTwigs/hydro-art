@@ -7,6 +7,8 @@ hand-checkable elevation.
 
 from __future__ import annotations
 
+import itertools
+
 import numpy as np
 import pytest
 
@@ -22,8 +24,8 @@ from src.terrain import (
     SampledLine,
     SampledPoint,
     TerrainSampler,
-    densify_line,
     dem_cell_size,
+    densify_line,
     sampler_for_dem,
 )
 
@@ -53,7 +55,7 @@ def test_densify_line_keeps_interior_vertices() -> None:
     assert (3.0, 0.0) in out  # original interior vertex preserved
     assert out[0] == (0.0, 0.0) and out[-1] == (3.0, 3.0)
     # No consecutive gap exceeds the spacing.
-    for (x0, y0), (x1, y1) in zip(out, out[1:]):
+    for (x0, y0), (x1, y1) in itertools.pairwise(out):
         assert ((x1 - x0) ** 2 + (y1 - y0) ** 2) ** 0.5 <= 1.0 + 1e-9
 
 

@@ -10,8 +10,9 @@ hand-built geometries.
 from __future__ import annotations
 
 import warnings
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 import shapely
@@ -20,12 +21,12 @@ from shapely.ops import unary_union
 from src.loading import Layer
 
 __all__ = [
-    "ClipStats",
     "BOUNDARY_DATASET_ID",
-    "is_boundary_layer",
-    "region_boundary",
+    "ClipStats",
     "clip_geometry",
     "clip_layers",
+    "is_boundary_layer",
+    "region_boundary",
 ]
 
 #: Dataset id whose polygon layers define the region boundary.
@@ -41,7 +42,7 @@ class ClipStats:
     dropped_outside: int = 0
     clipped_partial: int = 0
 
-    def merge(self, other: "ClipStats") -> "ClipStats":
+    def merge(self, other: ClipStats) -> ClipStats:
         """Return the field-wise sum of this and ``other``."""
         return ClipStats(
             total_in=self.total_in + other.total_in,

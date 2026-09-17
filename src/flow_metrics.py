@@ -21,62 +21,63 @@ the watershed report (Epoch 12).
 
 from __future__ import annotations
 
+import itertools
 import math
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Mapping, Sequence
 
 import numpy as np
 
 __all__ = [
-    "FlowMetricsError",
-    "MannKendall",
-    "Normal",
-    "peak_flow",
-    "low_flow",
-    "center_of_timing",
-    "flashiness",
-    "seasonal_ratio",
-    "flow_duration",
-    "mann_kendall",
-    "sens_slope",
-    "percentile_rank",
-    "anomaly",
-    "rolling_normals",
-    "subset_series",
-    "outlet_index",
-    "longitudinal_profile",
-    "ProfileFrame",
-    "longitudinal_frames",
-    "REGIME_SNOW_MIN",
     "REGIME_RAIN_MAX",
+    "REGIME_SNOW_MIN",
+    "AnalogYear",
+    "DecadeFDC",
+    "FlowMetricsError",
+    "FlowValidationError",
+    "MannKendall",
+    "MeltTimingTrend",
+    "Normal",
+    "PhaseComposite",
+    "ProfileFrame",
+    "RecordBook",
     "SnowRegime",
     "TimingTrend",
-    "MeltTimingTrend",
-    "AnalogYear",
+    "ValidationReport",
     "YearRank",
-    "RecordBook",
-    "DecadeFDC",
-    "PhaseComposite",
-    "snow_fraction",
-    "classify_regime",
-    "snow_regime",
-    "melt_timing_trend",
-    "center_of_timing_trend",
+    "align_index",
     "analog_years",
+    "anomaly",
+    "bias",
+    "center_of_timing",
+    "center_of_timing_trend",
+    "classify_regime",
+    "composite_hydrographs",
+    "correlate",
+    "decade_flow_duration",
+    "flashiness",
+    "flow_duration",
+    "longitudinal_frames",
+    "longitudinal_profile",
+    "low_flow",
+    "mann_kendall",
+    "melt_timing_trend",
+    "nash_sutcliffe",
+    "outlet_index",
+    "peak_flow",
+    "pearson_r",
+    "percentile_rank",
     "rank_years",
     "record_book",
-    "decade_flow_duration",
-    "composite_hydrographs",
-    "FlowValidationError",
-    "ValidationReport",
-    "bias",
-    "pearson_r",
-    "nash_sutcliffe",
     "rmse",
+    "rolling_normals",
+    "seasonal_ratio",
     "seasonal_skill",
+    "sens_slope",
+    "snow_fraction",
+    "snow_regime",
+    "subset_series",
     "validate",
-    "align_index",
-    "correlate",
 ]
 
 _MONTHS = np.arange(1, 13)
@@ -360,7 +361,7 @@ def longitudinal_profile(accum_flow, hydroseq, dnhydroseq, path) -> np.ndarray:
     for h in path:
         if h not in index_of:
             raise FlowMetricsError(f"path HydroSeq {h} not found in the network.")
-    for up, down in zip(path[:-1], path[1:]):
+    for up, down in itertools.pairwise(path):
         if dhs[index_of[up]] != down:
             raise FlowMetricsError(
                 f"path is not a downstream chain: {up} → {down} not linked."

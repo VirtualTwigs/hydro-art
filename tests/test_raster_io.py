@@ -16,14 +16,13 @@ import pytest
 
 from src.elevation import build_provenance
 from src.hillshade import hillshade
-from src.raster import GridTransform, NormalizedDem, RasterGrid
+from src.raster import GridTransform, NormalizedDem, RasterGrid, normalize_dem
 from src.raster_io import (
     RasterIOError,
     RasterioRasterReader,
     RasterioReprojector,
     grid_from_arrays,
 )
-from src.raster import normalize_dem
 
 
 def _provenance(url="https://example/tile.tif"):

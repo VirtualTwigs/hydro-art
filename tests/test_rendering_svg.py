@@ -5,7 +5,6 @@ stream-order width-scaling helper, using hand-built geometries + color and
 watershed dicts (no GDAL, no browser, no real data).
 """
 
-import re
 import xml.etree.ElementTree as ET
 
 from shapely.geometry import LineString, Point, Polygon

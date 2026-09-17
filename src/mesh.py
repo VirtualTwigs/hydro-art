@@ -22,8 +22,8 @@ synthetic grids. Rivers get their z-fighting ``river_lift`` at render time
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Sequence
 
 import numpy as np
 

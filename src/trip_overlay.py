@@ -11,9 +11,9 @@ import xml.etree.ElementTree as ET
 
 __all__ = [
     "TripOverlayError",
+    "overlay_path_on_svg",
     "parse_gpx",
     "parse_kml",
-    "overlay_path_on_svg",
     "trip_surcharge",
     "validate_trip_order",
 ]
@@ -37,7 +37,6 @@ def parse_gpx(xml_str: str) -> list[tuple[float, float]]:
     except ET.ParseError as exc:
         raise TripOverlayError(f"Invalid GPX XML: {exc}") from exc
 
-    ns = {"gpx": "http://www.topografix.com/GPX/1/1"}
     coords: list[tuple[float, float]] = []
 
     for trkpt in root.iter("{http://www.topografix.com/GPX/1/1}trkpt"):
@@ -76,7 +75,6 @@ def parse_kml(xml_str: str) -> list[tuple[float, float]]:
     except ET.ParseError as exc:
         raise TripOverlayError(f"Invalid KML XML: {exc}") from exc
 
-    ns = {"kml": "http://www.opengis.net/kml/2.2"}
     coords: list[tuple[float, float]] = []
 
     for elem in root.iter("{http://www.opengis.net/kml/2.2}coordinates"):

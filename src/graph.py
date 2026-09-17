@@ -14,15 +14,16 @@ fully unit-testable with hand-built line networks (no GDAL, no real data).
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Any, Iterable, Iterator
+from typing import Any
 
 import networkx as nx
 
 from src.clipping import is_boundary_layer
 from src.loading import Layer
 
-__all__ = ["NetworkStats", "HydroGraph", "build_graph"]
+__all__ = ["HydroGraph", "NetworkStats", "build_graph"]
 
 Node = tuple[float, float]
 

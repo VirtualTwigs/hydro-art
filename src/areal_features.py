@@ -32,10 +32,10 @@ from typing import Any
 from src.loading import Layer
 
 __all__ = [
-    "AREAL_POLICY_VERSION",
     "AREAL_CLASSES",
     "AREAL_FTYPE_CLASS",
     "AREAL_FTYPE_LABELS",
+    "AREAL_POLICY_VERSION",
     "ArealFeature",
     "classify_areal_feature",
     "classify_areal_layer",

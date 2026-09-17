@@ -9,7 +9,7 @@ import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
-__all__ = ["ShippingError", "ShippingAddress", "validate_address"]
+__all__ = ["ShippingAddress", "ShippingError", "validate_address"]
 
 #: US ZIP code pattern: 5 digits, optional -4 extension.
 _ZIP_RE = re.compile(r"^\d{5}(-\d{4})?$")

@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
 from src.config import ConfigError
 from src.jobs import SUCCEEDED, Job
 from src.server import Response, handle_request
@@ -382,7 +380,7 @@ def test_proof_approve_transitions_order(tmp_path):
 
 def test_proof_adjust_triggers_rerender(tmp_path):
     """POST adjust → order status = rendering."""
-    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    store, _req, token, secret = _setup_proof_ready_order(tmp_path)
     runner = FakeRunner()
     adjust_payload = json.dumps({"style": "neon-basin"}).encode()
     resp = handle_request(
@@ -429,7 +427,7 @@ def _setup_approved_order(tmp_path):
 
 def test_approve_returns_checkout_url(tmp_path):
     """POST /api/proof/<token>/approve returns checkout URL when payment is configured."""
-    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    store, _req, token, secret = _setup_proof_ready_order(tmp_path)
     resp = handle_request(
         runner=FakeRunner(), method="POST", path=f"/api/proof/{token}/approve",
         body=b"", web_root=str(tmp_path), order_store=store,
@@ -445,6 +443,7 @@ def test_webhook_valid_post_transitions_to_paid(tmp_path):
     import hashlib
     import hmac as hmac_mod
     import time as time_mod
+
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")

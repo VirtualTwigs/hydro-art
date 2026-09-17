@@ -14,19 +14,20 @@ import json
 import time
 import warnings
 import zipfile
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Protocol
+from typing import Protocol
 
 from src.datasets import AcquisitionError, FileDescriptor
 
 __all__ = [
     "Cache",
-    "extract_archive",
-    "is_extracted",
+    "DownloaderLike",
+    "acquire",
     "ensure_cached",
     "extract_all",
-    "acquire",
-    "DownloaderLike",
+    "extract_archive",
+    "is_extracted",
 ]
 
 _CHUNK = 1 << 16

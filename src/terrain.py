@@ -24,19 +24,20 @@ already normalized to EPSG:5070 (item 13), so points and raster share a CRS.
 
 from __future__ import annotations
 
+import itertools
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from src.elevation import ElevationSample, ElevationSampler
 from src.raster import GridSampler, NormalizedDem
 
 __all__ = [
-    "SampledPoint",
     "SampledLine",
+    "SampledPoint",
     "TerrainSampler",
-    "densify_line",
     "dem_cell_size",
+    "densify_line",
     "sampler_for_dem",
 ]
 
@@ -60,7 +61,7 @@ def densify_line(coords: Sequence[Coord], spacing: float) -> tuple[Coord, ...]:
         return tuple(pts)
 
     out: list[Coord] = [pts[0]]
-    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+    for (x0, y0), (x1, y1) in itertools.pairwise(pts):
         dist = math.hypot(x1 - x0, y1 - y0)
         steps = max(1, math.ceil(dist / spacing))
         for i in range(1, steps + 1):

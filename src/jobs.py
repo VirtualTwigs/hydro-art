@@ -18,17 +18,18 @@ from __future__ import annotations
 
 import threading
 import uuid
+from collections.abc import Mapping
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Protocol
+from typing import Any, Protocol
 
-from src.config import DEFAULTS, ConfigError, Settings, build_settings
+from src.config import DEFAULTS, Settings, build_settings
 
 __all__ = [
+    "FAILED",
     "PENDING",
     "RUNNING",
     "SUCCEEDED",
-    "FAILED",
     "Job",
     "JobRunner",
     "settings_from_payload",

@@ -14,19 +14,17 @@ dicts (no GDAL, no real data).
 
 from __future__ import annotations
 
-from typing import Any
-
 import networkx as nx
 
 from src.graph import HydroGraph
 
 __all__ = [
-    "ColoringError",
     "PALETTES",
-    "get_palette",
-    "build_adjacency",
-    "greedy_color",
+    "ColoringError",
     "assign_colors",
+    "build_adjacency",
+    "get_palette",
+    "greedy_color",
 ]
 
 

@@ -24,9 +24,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from src.cache import Cache
 from src.config import Settings
@@ -34,21 +34,21 @@ from src.datasets import AcquisitionError, FileDescriptor, resolve_required_file
 
 __all__ = [
     "MANIFEST_VERSION",
-    "ManifestError",
-    "ManifestEntry",
     "CacheManifest",
-    "ManifestVerification",
     "ManifestDiff",
+    "ManifestEntry",
+    "ManifestError",
+    "ManifestVerification",
     "build_manifest",
+    "diff_manifests",
+    "format_diff",
+    "format_verification",
     "manifest_for_settings",
-    "manifest_to_dict",
     "manifest_from_dict",
-    "write_manifest",
+    "manifest_to_dict",
     "read_manifest",
     "verify_manifest",
-    "diff_manifests",
-    "format_verification",
-    "format_diff",
+    "write_manifest",
 ]
 
 MANIFEST_VERSION = "1"

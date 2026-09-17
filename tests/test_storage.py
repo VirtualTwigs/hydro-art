@@ -25,8 +25,8 @@ from src.storage import (
 
 # --- TG1: root resolution ---------------------------------------------------
 
-_ALWAYS = lambda _p: True  # noqa: E731 - terse probe for tests
-_NEVER = lambda _p: False  # noqa: E731
+_ALWAYS = lambda _p: True
+_NEVER = lambda _p: False
 
 
 def test_default_roots_are_local_and_byte_identical():

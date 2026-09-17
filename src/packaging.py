@@ -26,10 +26,10 @@ from src.datasets import AcquisitionError, resolve_required_files
 from src.manifest import build_manifest, verify_manifest
 
 __all__ = [
-    "PackagingError",
     "PackagePlan",
-    "plan_package",
+    "PackagingError",
     "format_plan",
+    "plan_package",
 ]
 
 
@@ -118,8 +118,8 @@ def format_plan(plan: PackagePlan) -> str:
     """Render a human-readable one-block summary of a :class:`PackagePlan`."""
     lines = [
         f"Package readiness: {'READY' if plan.is_ready else 'NOT READY'}",
-        f"  required: {len(plan.required)}  present: {len(plan.present)}  "
-        f"missing: {len(plan.missing)}  corrupt: {len(plan.corrupt)}",
+        (f"  required: {len(plan.required)}  present: {len(plan.present)}  "
+        f"missing: {len(plan.missing)}  corrupt: {len(plan.corrupt)}"),
         f"  cached size: {plan.total_bytes} bytes",
     ]
     if plan.tile_count is None:

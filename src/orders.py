@@ -24,8 +24,8 @@ __all__ = [
     "STATUSES",
     "TRANSITIONS",
     "OrderEvent",
-    "Request",
     "OrderStore",
+    "Request",
 ]
 
 #: Valid request statuses in lifecycle order.

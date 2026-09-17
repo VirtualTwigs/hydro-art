@@ -15,7 +15,6 @@ from src.datasets import FileDescriptor, resolve_required_files
 from src.manifest import (
     CacheManifest,
     ManifestDiff,
-    ManifestEntry,
     ManifestError,
     ManifestVerification,
     build_manifest,

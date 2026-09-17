@@ -18,19 +18,19 @@ suite; the real double-render lives in ``tools/release_gate.py`` / ``tools/verif
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Sequence
 
 from src.determinism import DeterminismVerdict
 from src.endpoints import e2e_contract_digest, flagship_e2e_requests
 from src.gallery import gallery_ledger
 
 __all__ = [
+    "GOLDEN_ROOT",
     "RELEASE_SCHEMA",
     "FixtureCheck",
     "ReleaseVerdict",
-    "GOLDEN_ROOT",
     "check_render_independent_goldens",
     "evaluate_release",
     "format_verdict",
@@ -102,7 +102,7 @@ def check_render_independent_goldens(
         path = root / rel
         try:
             recomputed = recompute()
-        except Exception as exc:  # a code bug in the recompute is itself a gate failure
+        except Exception as exc:  # noqa: BLE001 — any recompute bug is itself a gate failure
             checks.append(FixtureCheck(name, False, f"recompute failed: {exc}"))
             continue
         if not path.exists():

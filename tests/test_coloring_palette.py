@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from src.coloring import ColoringError, PALETTES, get_palette
+from src.coloring import PALETTES, ColoringError, get_palette
 from src.config import (
     DEFAULTS,
     SUPPORTED_PALETTES,

@@ -5,8 +5,6 @@ Offline — tests event recording for render timing.
 
 from __future__ import annotations
 
-import pytest
-
 from src.orders import OrderStore
 
 
@@ -27,7 +25,6 @@ def _order_payload(**overrides):
 class TestRenderTimingEvents:
     def test_render_started_event_includes_detail(self, tmp_path):
         """render_started event can include queue wait time."""
-        from src.orders import OrderEvent
 
         store = OrderStore(tmp_path / "orders")
         req = store.create_request(_order_payload())

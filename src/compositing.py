@@ -17,7 +17,7 @@ canvas is a caller (tool) concern; these functions composite equal-shape arrays.
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 

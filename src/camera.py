@@ -14,17 +14,18 @@ web-delivery pass consumes these poses.
 
 from __future__ import annotations
 
+import itertools
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 from src.scene import CameraPreset
 
 __all__ = [
     "CameraPathError",
     "CameraPose",
-    "interpolate_camera",
     "camera_path",
+    "interpolate_camera",
 ]
 
 Vec3 = tuple[float, float, float]
@@ -92,7 +93,7 @@ def camera_path(
     if steps_per_segment < 1:
         raise CameraPathError("steps_per_segment must be >= 1.")
 
-    segments = list(zip(keyframes[:-1], keyframes[1:]))
+    segments = list(itertools.pairwise(keyframes))
     if loop:
         segments.append((keyframes[-1], keyframes[0]))
 

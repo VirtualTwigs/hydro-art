@@ -31,9 +31,10 @@ here as in the sibling selection modules; no ``pyogrio``/``geopandas``/
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from statistics import median
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 import shapely  # noqa: F401  (kept for the metric-geometry contract / parity)
 
@@ -41,12 +42,12 @@ from src.crs import INTERNAL_CRS
 from src.hydro_structures import HydroStructure
 
 __all__ = [
-    "NetworkPlacement",
     "HydroStructureQAReport",
-    "structure_network_placement",
-    "cross_layer_duplicates",
-    "canal_natural_separation",
+    "NetworkPlacement",
     "build_qa_report",
+    "canal_natural_separation",
+    "cross_layer_duplicates",
+    "structure_network_placement",
 ]
 
 #: Documents the metric-CRS contract these distances/areas assume. Inputs must

@@ -29,8 +29,9 @@ Design notes (mirroring :mod:`src.waterbody_selection`):
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import shapely
 
@@ -41,11 +42,11 @@ from src.geometry import repair_geometry
 from src.point_features import POINT_POLICY_VERSION, PointFeature
 
 __all__ = [
-    "ArealSelectionPolicy",
     "ArealSelection",
-    "process_areal_features",
-    "PointSelectionPolicy",
+    "ArealSelectionPolicy",
     "PointSelection",
+    "PointSelectionPolicy",
+    "process_areal_features",
     "process_point_features",
 ]
 

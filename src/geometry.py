@@ -13,8 +13,9 @@ GDAL dependency, so it is fully unit-testable with hand-built geometries.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any
 
 from shapely import (
     get_num_coordinates,
@@ -23,7 +24,7 @@ from shapely import (
     remove_repeated_points,
 )
 
-__all__ = ["RepairStats", "RepairOutcome", "repair_geometry", "repair_layer"]
+__all__ = ["RepairOutcome", "RepairStats", "repair_geometry", "repair_layer"]
 
 
 @dataclass(frozen=True)
@@ -39,7 +40,7 @@ class RepairStats:
     duplicate_vertices_removed: int = 0
     multipart_normalized: int = 0
 
-    def merge(self, other: "RepairStats") -> "RepairStats":
+    def merge(self, other: RepairStats) -> RepairStats:
         """Return the field-wise sum of this and ``other``."""
         return RepairStats(
             total_in=self.total_in + other.total_in,

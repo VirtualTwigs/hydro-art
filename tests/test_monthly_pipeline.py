@@ -8,8 +8,8 @@ network, no real data.
 """
 
 import io
-import zipfile
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 
 import pytest

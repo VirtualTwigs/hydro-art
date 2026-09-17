@@ -32,37 +32,37 @@ class TestValidateAddress:
         assert addr.zip == "97201"
 
     def test_missing_name_rejected(self):
-        from src.shipping import validate_address, ShippingError
+        from src.shipping import ShippingError, validate_address
 
         with pytest.raises(ShippingError, match="[Nn]ame"):
             validate_address(_valid_address(name=""))
 
     def test_missing_street_rejected(self):
-        from src.shipping import validate_address, ShippingError
+        from src.shipping import ShippingError, validate_address
 
         with pytest.raises(ShippingError, match="[Ss]treet"):
             validate_address(_valid_address(street=""))
 
     def test_missing_city_rejected(self):
-        from src.shipping import validate_address, ShippingError
+        from src.shipping import ShippingError, validate_address
 
         with pytest.raises(ShippingError, match="[Cc]ity"):
             validate_address(_valid_address(city=""))
 
     def test_missing_state_rejected(self):
-        from src.shipping import validate_address, ShippingError
+        from src.shipping import ShippingError, validate_address
 
         with pytest.raises(ShippingError, match="[Ss]tate"):
             validate_address(_valid_address(state=""))
 
     def test_missing_zip_rejected(self):
-        from src.shipping import validate_address, ShippingError
+        from src.shipping import ShippingError, validate_address
 
         with pytest.raises(ShippingError, match="[Zz]ip"):
             validate_address(_valid_address(zip=""))
 
     def test_invalid_zip_format_rejected(self):
-        from src.shipping import validate_address, ShippingError
+        from src.shipping import ShippingError, validate_address
 
         with pytest.raises(ShippingError, match="[Zz]ip"):
             validate_address(_valid_address(zip="ABCDE"))

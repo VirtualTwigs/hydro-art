@@ -17,11 +17,11 @@ from dataclasses import dataclass
 from src.config import Settings
 
 __all__ = [
+    "DATASETS",
+    "REGION_HUC4",
     "AcquisitionError",
     "Dataset",
     "FileDescriptor",
-    "DATASETS",
-    "REGION_HUC4",
     "resolve_required_files",
 ]
 

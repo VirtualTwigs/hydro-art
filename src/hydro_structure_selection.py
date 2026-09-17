@@ -33,8 +33,9 @@ selectors so a re-run of the same source is byte-stable.
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
-from typing import Any, Callable, Iterable
+from typing import Any
 
 import shapely
 
@@ -44,8 +45,8 @@ from src.geometry import repair_geometry
 from src.hydro_structures import HYDRO_STRUCTURE_POLICY_VERSION, HydroStructure
 
 __all__ = [
-    "HydroStructureSelectionPolicy",
     "HydroStructureSelection",
+    "HydroStructureSelectionPolicy",
     "process_hydro_structures",
 ]
 

@@ -18,11 +18,11 @@ from rich.console import Console
 
 from src.config import build_settings
 from src.pipeline import (
+    _STAGE_FUNCS,
     PIPELINE_STAGES,
     Pipeline,
     RunContext,
     Stage,
-    _STAGE_FUNCS,
     _resolve_stroke_widths,
     _stub,
 )
@@ -143,7 +143,7 @@ def test_stub_labels_itself_as_stub():
 
 def test_stage_is_frozen():
     stage = Stage(name="x", run=lambda ctx: None)
-    with pytest.raises(Exception):  # FrozenInstanceError
+    with pytest.raises(AttributeError):  # FrozenInstanceError
         stage.name = "y"  # type: ignore[misc]
 
 

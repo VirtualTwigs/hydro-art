@@ -50,10 +50,10 @@ from typing import Any
 from src.loading import Layer
 
 __all__ = [
-    "HYDRO_STRUCTURE_POLICY_VERSION",
     "HYDRO_STRUCTURE_CLASSES",
     "HYDRO_STRUCTURE_FTYPE_CLASS",
     "HYDRO_STRUCTURE_FTYPE_LABELS",
+    "HYDRO_STRUCTURE_POLICY_VERSION",
     "HydroStructure",
     "classify_hydro_structure",
     "classify_hydro_structure_layer",

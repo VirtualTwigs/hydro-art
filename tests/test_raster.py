@@ -16,10 +16,10 @@ import pytest
 from src.dem import DemAsset
 from src.elevation import ElevationSample, TileRef, build_provenance
 from src.raster import (
+    GridSampler,
     GridTransform,
     NormalizedDem,
     RasterGrid,
-    GridSampler,
     build_pyramid,
     clip_grid,
     grid_checksum,

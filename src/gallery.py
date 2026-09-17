@@ -26,11 +26,11 @@ from src.endpoints import (
 from src.fulfillment import DEFAULT_SOURCES, attribution_line
 
 __all__ = [
-    "GallerySelection",
     "GALLERY_MATRIX",
     "GALLERY_SCHEMA",
-    "selection_request",
+    "GallerySelection",
     "gallery_ledger",
+    "selection_request",
 ]
 
 GALLERY_SCHEMA = "hydro-art/gallery-ledger@1"

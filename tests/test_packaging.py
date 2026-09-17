@@ -8,8 +8,6 @@ injected, never computed here, so the suite stays fully offline.
 
 from __future__ import annotations
 
-import pytest
-
 from src.cache import Cache
 from src.config import build_settings
 from src.datasets import resolve_required_files

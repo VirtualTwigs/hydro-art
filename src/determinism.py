@@ -34,23 +34,23 @@ SVG-only golden (a #39-era flat entry still loads).
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, Sequence
 
 from src.config import SUPPORTED_REGIONS
 
 __all__ = [
     "DeterminismError",
-    "Golden",
     "DeterminismVerdict",
-    "registry_key",
-    "load_registry",
+    "Golden",
     "dump_registry",
-    "lookup_golden",
     "evaluate",
-    "record_golden",
     "format_verdict",
+    "load_registry",
+    "lookup_golden",
+    "record_golden",
+    "registry_key",
 ]
 
 _HEX = set("0123456789abcdef")

@@ -27,10 +27,14 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from src.config import ConfigError
-from src.email_delivery import send_confirmation_email, send_delivery_email
+from src.email_delivery import (
+    send_confirmation_email,
+    send_delivery_email,
+    send_proof_email,
+)
 from src.fulfillment import OrderError
 
-__all__ = ["Response", "handle_request", "serve", "make_handler"]
+__all__ = ["Response", "handle_request", "make_handler", "serve"]
 
 #: A rendered HTTP response: numeric status, MIME type, and raw body bytes.
 Response = namedtuple("Response", "status content_type body")
@@ -258,8 +262,23 @@ def _update_order(
     except OrderError as exc:
         return _json(400, {"error": str(exc)})
 
-    # Send delivery email when order is fulfilled.
+    # Send proof email when proof is ready.
     email_sent = False
+    if status == "proof_ready" and req.email:
+        from src.proof import sign_proof_url
+
+        proof_secret = b"proof-secret"  # TODO: pass from handler config
+        token = sign_proof_url(request_id, proof_secret)
+        proof_url = f"http://localhost:8765/proof.html?token={token}"
+        email_sent = send_proof_email(
+            req.email,
+            request_id,
+            proof_url,
+            title=req.product,
+            sender=email_sender,
+        )
+
+    # Send delivery email when order is fulfilled.
     if status == "fulfilled" and req.email:
         order = req.order or {}
         county = order.get("county", "")
@@ -354,6 +373,23 @@ def _handle_stripe_webhook(
             store.update_status(request_id, "paid")
     except OrderError as exc:
         return _json(400, {"error": str(exc)})
+
+    # Auto-submit print orders to vendor on payment.
+    req = store.get(request_id)
+    if req.status == "paid" and req.product and "print" in req.product.lower():
+        from src.print_vendor import submit_print_order
+
+        order = req.order or {}
+        try:
+            submit_print_order(
+                file_url=order.get("file_url", ""),
+                product_spec=order.get("product_spec", {}),
+                address=order.get("shipping_address", {}),
+                client=None,  # TODO: wire real vendor client
+            )
+            store.add_event(request_id, "print_submitted", {"auto": True})
+        except Exception:  # noqa: BLE001 — best-effort; payment already captured
+            store.add_event(request_id, "print_submit_failed", {"auto": True})
 
     req = store.get(request_id)
     return _json(200, req.to_dict())
@@ -465,13 +501,13 @@ def make_handler(
             self.end_headers()
             self.wfile.write(resp.body)
 
-        def do_GET(self) -> None:  # noqa: N802 — stdlib naming
+        def do_GET(self) -> None:
             self._dispatch("GET")
 
-        def do_POST(self) -> None:  # noqa: N802 — stdlib naming
+        def do_POST(self) -> None:
             self._dispatch("POST")
 
-        def do_PATCH(self) -> None:  # noqa: N802 — stdlib naming
+        def do_PATCH(self) -> None:
             self._dispatch("PATCH")
 
         def log_message(self, *args: Any) -> None:  # keep the console quiet

@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass
-from typing import Any
 
 import networkx as nx
 

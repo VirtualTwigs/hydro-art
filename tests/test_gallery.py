@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from src.endpoints import ENDPOINTS, EndpointError, EndpointRequest
+from src.fulfillment import ORDER_STYLES
 from src.gallery import (
     GALLERY_MATRIX,
     GALLERY_SCHEMA,
@@ -20,7 +21,6 @@ from src.gallery import (
     gallery_ledger,
     selection_request,
 )
-from src.fulfillment import ORDER_STYLES
 
 
 def test_matrix_spans_regions_styles_endpoints():

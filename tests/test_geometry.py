@@ -7,7 +7,7 @@ from shapely.geometry import (
     Polygon,
 )
 
-from src.geometry import RepairStats, repair_geometry, repair_layer
+from src.geometry import repair_geometry, repair_layer
 
 
 def test_bowtie_polygon_is_made_valid():

@@ -6,10 +6,8 @@ print order → pay → auto-submit to vendor → tracking recorded → customer
 
 from __future__ import annotations
 
-import pytest
-
 from src.orders import OrderStore
-from src.print_vendor import submit_print_order, check_shipment
+from src.print_vendor import check_shipment, submit_print_order
 
 
 class FakePrintVendor:

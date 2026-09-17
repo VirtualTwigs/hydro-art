@@ -20,7 +20,7 @@ def test_internal_crs_is_conus_albers():
 
 
 def test_raster_reexports_the_same_constant():
-    import src.raster as raster
+    from src import raster
 
     assert raster.INTERNAL_CRS is INTERNAL_CRS
     assert "INTERNAL_CRS" in raster.__all__

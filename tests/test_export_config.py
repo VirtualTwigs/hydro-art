@@ -2,10 +2,10 @@
 
 import pytest
 
-from src.cli import cli_overrides, build_parser
+from src.cli import build_parser, cli_overrides
 from src.config import (
-    ConfigError,
     SUPPORTED_PNG_SIZES,
+    ConfigError,
     build_settings,
 )
 

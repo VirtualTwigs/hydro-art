@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import pytest
 
-
 SAMPLE_GPX = """\
 <?xml version="1.0" encoding="UTF-8"?>
 <gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1">
@@ -47,7 +46,7 @@ class TestParseGpx:
         assert coords[2] == pytest.approx((45.7, -122.8), abs=0.01)
 
     def test_invalid_xml_rejected(self):
-        from src.trip_overlay import parse_gpx, TripOverlayError
+        from src.trip_overlay import TripOverlayError, parse_gpx
 
         with pytest.raises(TripOverlayError):
             parse_gpx("not xml at all {{{{")
@@ -63,7 +62,7 @@ class TestParseKml:
         assert coords[0] == pytest.approx((45.5, -122.6), abs=0.01)
 
     def test_invalid_xml_rejected(self):
-        from src.trip_overlay import parse_kml, TripOverlayError
+        from src.trip_overlay import TripOverlayError, parse_kml
 
         with pytest.raises(TripOverlayError):
             parse_kml("not xml {{{{")
@@ -93,7 +92,7 @@ class TestSurcharge:
         assert trip_surcharge(10000) == 15000  # $100 → $150
 
     def test_trip_order_requires_file(self):
-        from src.trip_overlay import validate_trip_order, TripOverlayError
+        from src.trip_overlay import TripOverlayError, validate_trip_order
 
         with pytest.raises(TripOverlayError, match="[Ff]ile"):
             validate_trip_order(is_trip=True, file_content=None)

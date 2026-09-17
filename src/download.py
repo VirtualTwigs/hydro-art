@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import time
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
@@ -19,10 +20,10 @@ from src.datasets import AcquisitionError, FileDescriptor
 
 __all__ = [
     "ChecksumError",
+    "Downloader",
     "FetchResponse",
     "Fetcher",
     "UrllibFetcher",
-    "Downloader",
 ]
 
 _CHUNK = 1 << 16  # 64 KiB
@@ -135,8 +136,7 @@ class Downloader:
                 response = self._fetcher.open(descriptor.url, start_byte=offset)
                 mode = "ab" if offset else "wb"
                 with open(part, mode) as fh:
-                    for chunk in response.chunks:
-                        fh.write(chunk)
+                    fh.writelines(response.chunks)
 
                 if descriptor.expected_sha256:
                     actual = _sha256(part)

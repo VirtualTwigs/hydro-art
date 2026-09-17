@@ -11,8 +11,8 @@ from src.cli import build_parser
 from src.pipeline import PIPELINE_STAGES, Pipeline
 from src.storage import EXTERNAL_ROOT_ENV
 
-_ALWAYS = lambda _p: True  # noqa: E731
-_NEVER = lambda _p: False  # noqa: E731
+_ALWAYS = lambda _p: True
+_NEVER = lambda _p: False
 
 
 def _args(argv):

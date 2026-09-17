@@ -21,13 +21,13 @@ from typing import Any
 from src.loading import Layer
 
 __all__ = [
-    "WATERBODY_POLICY_VERSION",
-    "WATERBODY_CLASSES",
     "FTYPE_CLASS",
     "FTYPE_LABELS",
+    "WATERBODY_CLASSES",
+    "WATERBODY_POLICY_VERSION",
     "WaterbodyFeature",
-    "classify_waterbody",
     "classify_layer",
+    "classify_waterbody",
 ]
 
 #: Bumped whenever the classification policy table changes, so selection

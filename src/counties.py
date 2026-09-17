@@ -20,12 +20,12 @@ from src.config import ConfigError
 from src.datasets import AcquisitionError
 
 __all__ = [
-    "STATE_FIPS",
     "DEFAULT_COUNTY_SHAPEFILE",
-    "CountyBoundaryProvider",
+    "STATE_FIPS",
     "CensusCountyProvider",
-    "state_fips_for_region",
+    "CountyBoundaryProvider",
     "county_boundary",
+    "state_fips_for_region",
 ]
 
 #: Census STATEFP code for each supported region. Kept in sync with

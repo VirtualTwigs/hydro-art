@@ -29,14 +29,14 @@ from src.monthly_flow import disaggregate_monthly
 
 __all__ = [
     "PRISM_FIRST_YEAR",
+    "ClimateProvider",
     "HistoricalFlowError",
     "YearlyClimate",
-    "ClimateProvider",
+    "annual_mean_series",
     "normalize_years",
+    "peak_month_series",
     "year_span",
     "yearly_flow_series",
-    "annual_mean_series",
-    "peak_month_series",
 ]
 
 # PRISM's monthly precipitation/temperature record begins January 1895; no

@@ -28,8 +28,9 @@ Design constraints carried from the requirements:
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Mapping, Protocol, Sequence
+from typing import Any, Protocol
 
 from src.datasets import AcquisitionError
 
@@ -37,10 +38,10 @@ __all__ = [
     "ElevationError",
     "ElevationProvenance",
     "ElevationSample",
-    "TileRef",
-    "TileDiscoverer",
-    "RasterReader",
     "ElevationSampler",
+    "RasterReader",
+    "TileDiscoverer",
+    "TileRef",
     "build_provenance",
 ]
 
