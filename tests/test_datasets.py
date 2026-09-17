@@ -35,21 +35,20 @@ def test_region_resolves_expected_huc4s():
     assert hucs == set(REGION_HUC4["Oregon"])
 
 
-def test_idaho_resolves_region17_basins():
+def test_idaho_resolves_basins():
     files = resolve_required_files(_settings("Idaho"))
     nhd = {f.huc4 for f in files if f.dataset_id == "nhdplus_hr"}
-    assert nhd == {"1701", "1704", "1705", "1706"}
     assert nhd == set(REGION_HUC4["Idaho"])
-    # Every Idaho basin is in HU2 region 17, so WBD collapses to one archive.
-    assert {f.huc4 for f in files if f.dataset_id == "wbd"} == {"17"}
+    # Idaho spans HU2 regions 16 and 17.
+    assert {f.huc4 for f in files if f.dataset_id == "wbd"} == {"16", "17"}
 
 
 def test_wbd_resolves_to_deduplicated_hu2():
     files = resolve_required_files(_settings("Oregon"))
     wbd = [f for f in files if f.dataset_id == "wbd"]
-    # Oregon's HUC4s span HU2 regions 17 and 18; WBD is distributed per HU2,
-    # so the six HUC4 codes collapse to two archives.
-    assert {f.huc4 for f in wbd} == {"17", "18"}
+    # Oregon's HUC4s span HU2 regions 16, 17 and 18; WBD is distributed per
+    # HU2, so the HUC4 codes collapse to three archives.
+    assert {f.huc4 for f in wbd} == {"16", "17", "18"}
     for f in wbd:
         assert "/WBD/HU2/GDB/" in f.url
         assert f.url.endswith(f"WBD_{f.huc4}_HU2_GDB.zip")

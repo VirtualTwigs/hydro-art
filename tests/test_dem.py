@@ -289,8 +289,8 @@ def test_region_bounds_returns_epsg4326_extent() -> None:
 
 
 def test_region_bounds_unknown_region_raises() -> None:
-    with pytest.raises(ElevationError, match="Nevada"):
-        region_bounds("Nevada")
+    with pytest.raises(ElevationError, match="Atlantis"):
+        region_bounds("Atlantis")
 
 
 def test_region_bounds_covers_every_supported_region() -> None:

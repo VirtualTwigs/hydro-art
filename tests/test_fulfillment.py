@@ -62,7 +62,7 @@ def test_build_order_accepts_supported_regions(region):
 
 def test_build_order_rejects_unsupported_region():
     with pytest.raises(OrderError):
-        build_order(_payload(region="Nevada"))
+        build_order(_payload(region="Atlantis"))
 
 
 @pytest.mark.parametrize(

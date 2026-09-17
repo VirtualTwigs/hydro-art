@@ -48,7 +48,7 @@ def test_every_supported_region_has_a_fips():
 
 def test_state_fips_for_unknown_region_raises():
     with pytest.raises(ConfigError, match="no Census FIPS"):
-        state_fips_for_region("Nevada")
+        state_fips_for_region("Atlantis")
 
 
 def test_county_boundary_delegates_with_resolved_fips_and_crs():

@@ -37,7 +37,7 @@ def test_idaho_is_a_supported_region():
 
 def test_unsupported_region_raises():
     with pytest.raises(ConfigError, match="Unsupported region"):
-        build_settings({**DEFAULTS, "region": ["Nevada"]})
+        build_settings({**DEFAULTS, "region": ["Atlantis"]})
 
 
 def test_invalid_background_hex_raises():

@@ -74,7 +74,7 @@ def test_build_accepts_valid_request_per_endpoint(endpoint, extra):
     "over,frag",
     [
         ({"request_id": ""}, "request_id"),
-        ({"region": "Texas"}, "region"),
+        ({"region": "Atlantis"}, "region"),
         ({"county": "  "}, "county"),
         ({"endpoint": "hologram"}, "endpoint"),
         ({"style": "made-up"}, "style"),
