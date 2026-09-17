@@ -7,9 +7,11 @@ import pytest
 from src.config import (
     CONUS_STATES,
     DEFAULTS,
+    FLOWLINE_CHANNEL_PRESETS,
     SUPPORTED_WIDTH_PRESETS,
     WIDTH_PRESETS,
     ConfigError,
+    FlowlineChannelSettings,
     build_settings,
 )
 
@@ -396,3 +398,53 @@ def test_non_conus_still_defaults_to_huc4():
     """Single-state builds still default to HUC4."""
     settings = build_settings({**DEFAULTS, "region": ["Oregon"]})
     assert settings.huc_level == "HUC4"
+
+
+# -- Flowline channel settings (Item #66) ------------------------------------
+
+
+def test_flowline_channels_default_disabled():
+    """Default settings have flowline channels disabled."""
+    s = build_settings(DEFAULTS)
+    assert s.flowline_channels.enabled is False
+    assert s.flowline_channels.dashes == {}
+    assert isinstance(s.flowline_channels, FlowlineChannelSettings)
+
+
+def test_flowline_channels_enable():
+    """Enabling flowline_channels via config produces the right settings."""
+    s = build_settings(
+        {**DEFAULTS, "flowline_channels": {"enabled": True}}
+    )
+    assert s.flowline_channels.enabled is True
+    assert s.flowline_channels.dashes == {}
+
+
+def test_flowline_channels_preset_screen():
+    """The screen preset enables channels with default (empty) dashes."""
+    s = build_settings(
+        {**DEFAULTS, "flowline_channels": {"preset": "screen"}}
+    )
+    assert s.flowline_channels.enabled is True
+    assert s.flowline_channels.dashes == {}
+    # preset is not stored on the settings
+    assert not hasattr(s.flowline_channels, "preset")
+
+
+def test_flowline_channels_preset_print_state_dashes():
+    """The print-state preset provides wider dashes for legibility."""
+    s = build_settings(
+        {**DEFAULTS, "flowline_channels": {"preset": "print-state"}}
+    )
+    assert s.flowline_channels.enabled is True
+    expected = FLOWLINE_CHANNEL_PRESETS["print-state"]["dashes"]
+    assert s.flowline_channels.dashes == expected
+    assert "canal_ditch" in s.flowline_channels.dashes
+
+
+def test_flowline_channels_unknown_preset_raises():
+    """An unknown preset raises ConfigError."""
+    with pytest.raises(ConfigError, match="flowline_channels"):
+        build_settings(
+            {**DEFAULTS, "flowline_channels": {"preset": "fantasy"}}
+        )

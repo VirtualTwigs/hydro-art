@@ -26,6 +26,7 @@ __all__ = [
     "AREAL_FEATURE_PRESETS",
     "CONUS_STATES",
     "DEFAULTS",
+    "FLOWLINE_CHANNEL_PRESETS",
     "HYDRO_STRUCTURE_PRESETS",
     "POINT_FEATURE_PRESETS",
     "SUPPORTED_AREAL_FEATURE_PRESETS",
@@ -34,6 +35,7 @@ __all__ = [
     "SUPPORTED_COLOR_MODES",
     "SUPPORTED_ELEVATION_SOURCES",
     "SUPPORTED_ELEVATION_TIERS",
+    "SUPPORTED_FLOWLINE_CHANNEL_PRESETS",
     "SUPPORTED_GLOW_MODES",
     "SUPPORTED_HUC_LEVELS",
     "SUPPORTED_HYDRO_STRUCTURE_PRESETS",
@@ -53,6 +55,7 @@ __all__ = [
     "ArealFeatureSettings",
     "ConfigError",
     "ElevationSettings",
+    "FlowlineChannelSettings",
     "HydroStructureSettings",
     "PointFeatureSettings",
     "Settings",
@@ -278,6 +281,32 @@ HYDRO_STRUCTURE_PRESETS: dict[str, dict[str, Any]] = {
     },
 }
 
+#: Flowline-channel styling presets (Item #66). A preset is a convenience
+#: directive expanding to a bundle of :class:`FlowlineChannelSettings` fields
+#: (precedence ``defaults < preset < explicit``). ``screen`` uses the module
+#: defaults (empty ``dashes`` defers to
+#: :data:`~src.flowline_channels.DEFAULT_CHANNEL_DASHES`); ``print-state`` uses
+#: wider dashes for legibility at wall scale; ``print-county`` uses module
+#: defaults. Disabled by default so a default build stays byte-identical.
+FLOWLINE_CHANNEL_PRESETS: dict[str, dict[str, Any]] = {
+    "screen": {
+        "enabled": True,
+        "dashes": {},  # uses DEFAULT_CHANNEL_DASHES from flowline_channels module
+    },
+    "print-state": {
+        "enabled": True,
+        "dashes": {
+            "canal_ditch": "12,6",
+            "pipeline": "3,6",
+            "artificial_path": "9,4,3,4",
+        },
+    },
+    "print-county": {
+        "enabled": True,
+        "dashes": {},  # uses DEFAULT_CHANNEL_DASHES
+    },
+}
+
 #: Named scale-aware flow→width presets (Epoch 18). A preset is a convenience
 #: directive: naming one (top-level ``width_preset`` / ``--width-preset``) expands
 #: to this bundle of existing ``width_*`` fields, inventing no new render behavior.
@@ -318,6 +347,9 @@ WIDTH_PRESETS: dict[str, dict[str, Any]] = {
 SUPPORTED_POINT_FEATURE_PRESETS: tuple[str, ...] = tuple(POINT_FEATURE_PRESETS)
 SUPPORTED_AREAL_FEATURE_PRESETS: tuple[str, ...] = tuple(AREAL_FEATURE_PRESETS)
 SUPPORTED_HYDRO_STRUCTURE_PRESETS: tuple[str, ...] = tuple(HYDRO_STRUCTURE_PRESETS)
+SUPPORTED_FLOWLINE_CHANNEL_PRESETS: tuple[str, ...] = tuple(
+    FLOWLINE_CHANNEL_PRESETS
+)
 SUPPORTED_WIDTH_PRESETS: tuple[str, ...] = tuple(WIDTH_PRESETS)
 
 #: Validation pattern for an SVG ``stroke-dasharray`` value (comma/space
@@ -398,6 +430,10 @@ DEFAULTS: dict[str, Any] = {
         "min_area_m2": 0.0,
         "min_spacing_m": 0.0,
         "render_order": "above",
+    },
+    "flowline_channels": {
+        "enabled": False,
+        "dashes": {},
     },
     "elevation": {
         "enabled": False,
@@ -538,6 +574,27 @@ class HydroStructureSettings:
 
 
 @dataclass(frozen=True)
+class FlowlineChannelSettings:
+    """Validated settings for flowline channel styling (Item #66).
+
+    Engineered flowline channels (canals, pipelines, artificial paths) are
+    styled with per-class SVG dash patterns while keeping their watershed color
+    and z-order unchanged. Disabled by default so a default build stays
+    byte-identical.
+
+    Attributes:
+        enabled: Whether engineered flowline channels get distinct dash styling
+            (off by default).
+        dashes: Per-class dash-pattern overrides (channel class name to SVG
+            ``stroke-dasharray`` string). An empty dict defers to
+            :data:`~src.flowline_channels.DEFAULT_CHANNEL_DASHES`.
+    """
+
+    enabled: bool
+    dashes: dict[str, str]
+
+
+@dataclass(frozen=True)
 class ElevationSettings:
     """Validated settings for the optional elevation stage (Item 11).
 
@@ -614,6 +671,8 @@ class Settings:
             disabled by default.
         hydro_structures: Validated engineered-structure settings (Item
             #67); disabled by default.
+        flowline_channels: Validated flowline channel styling settings (Item
+            #66); disabled by default.
         elevation: Validated elevation settings (Item 11); disabled by default.
     """
 
@@ -644,6 +703,7 @@ class Settings:
     point_features: PointFeatureSettings
     areal_features: ArealFeatureSettings
     hydro_structures: HydroStructureSettings
+    flowline_channels: FlowlineChannelSettings
     elevation: ElevationSettings
 
 
@@ -1123,6 +1183,50 @@ def _coerce_hydro_structures(value: Any) -> HydroStructureSettings:
     )
 
 
+def _coerce_flowline_channels(value: Any) -> FlowlineChannelSettings:
+    """Validate the ``flowline_channels`` block into :class:`FlowlineChannelSettings`.
+
+    A partial mapping is tolerated (omitted sub-keys fall back to
+    :data:`DEFAULTS`); a ``preset`` directive expands a named
+    :data:`FLOWLINE_CHANNEL_PRESETS` bundle with precedence
+    ``defaults < preset < explicit``. Mirrors :func:`_coerce_hydro_structures`.
+
+    Raises:
+        ConfigError: If any provided sub-value (or the preset name) is invalid.
+    """
+    defaults = DEFAULTS["flowline_channels"]
+    if value is None:
+        provided: dict[str, Any] = {}
+    elif isinstance(value, Mapping):
+        provided = dict(value)
+    else:
+        raise ConfigError(
+            f"Invalid 'flowline_channels' value: {value!r}. Expected a mapping."
+        )
+
+    preset_values = _coerce_preset(
+        provided, FLOWLINE_CHANNEL_PRESETS, "flowline_channels"
+    )
+    merged = {**defaults, **preset_values, **provided}
+
+    enabled = bool(merged.get("enabled", defaults["enabled"]))
+    dashes = dict(merged.get("dashes", defaults["dashes"]))
+
+    # Validate each dash value is a valid stroke-dasharray.
+    for cls_name, dash_val in dashes.items():
+        dash_str = str(dash_val)
+        if not _DASHARRAY.match(dash_str):
+            raise ConfigError(
+                f"Invalid flowline_channels.dashes[{cls_name!r}]: {dash_str!r}. "
+                "Expected a stroke-dasharray like '8,4'."
+            )
+
+    return FlowlineChannelSettings(
+        enabled=enabled,
+        dashes=dashes,
+    )
+
+
 def _coerce_elevation(value: Any) -> ElevationSettings:
     """Validate the ``elevation`` block into an :class:`ElevationSettings`.
 
@@ -1439,6 +1543,9 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
     hydro_structures = _coerce_hydro_structures(
         values.get("hydro_structures", DEFAULTS["hydro_structures"])
     )
+    flowline_channels = _coerce_flowline_channels(
+        values.get("flowline_channels", DEFAULTS["flowline_channels"])
+    )
     elevation = _coerce_elevation(values.get("elevation", DEFAULTS["elevation"]))
 
     return Settings(
@@ -1469,6 +1576,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         point_features=point_features,
         areal_features=areal_features,
         hydro_structures=hydro_structures,
+        flowline_channels=flowline_channels,
         elevation=elevation,
     )
 

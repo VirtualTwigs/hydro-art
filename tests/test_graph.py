@@ -55,3 +55,70 @@ def test_boundary_layers_are_skipped():
 
     graph = build_graph([_wbd(box(0, 0, 10, 10)), _flow(LineString([(0, 0), (1, 1)]))])
     assert graph.digraph.number_of_edges() == 1
+
+
+# --- Task Group 2 (Item #66): FType propagation to graph edges ---
+
+
+def _flow_with_attrs(geoms, attributes):
+    """Helper: create a flowline Layer with parallel attributes."""
+    return Layer(
+        "NHDFlowline", "nhdplus_hr", "1707", tuple(geoms),
+        crs="EPSG:5070", attributes=tuple(attributes),
+    )
+
+
+def test_build_graph_preserves_ftype():
+    """Edge data includes ftype when layer has attributes."""
+    line_a = LineString([(0, 0), (1, 1)])
+    line_b = LineString([(2, 2), (3, 3)])
+    layer = _flow_with_attrs(
+        [line_a, line_b],
+        [{"FType": 336, "FCode": 33600}, {"FType": 460, "FCode": 46006}],
+    )
+    graph = build_graph([layer])
+    edges = list(graph.digraph.edges(data=True))
+    assert len(edges) == 2
+    ftypes = {data["ftype"] for _, _, data in edges}
+    assert ftypes == {336, 460}
+
+
+def test_build_graph_no_ftype_without_attributes():
+    """ftype absent from edge data when layer has no attributes."""
+    line = LineString([(0, 0), (1, 1)])
+    layer = _flow(line)
+    graph = build_graph([layer])
+    edges = list(graph.digraph.edges(data=True))
+    assert len(edges) == 1
+    _, _, data = edges[0]
+    assert "ftype" not in data
+
+
+def test_build_graph_ftype_propagated_to_multi_segments():
+    """MultiLineString explosion: all child segments get the parent's FType."""
+    multi = MultiLineString([[(0, 0), (1, 0)], [(1, 0), (2, 0)]])
+    layer = _flow_with_attrs(
+        [multi],
+        [{"FType": 428}],
+    )
+    graph = build_graph([layer])
+    edges = list(graph.digraph.edges(data=True))
+    assert len(edges) == 2
+    for _, _, data in edges:
+        assert data["ftype"] == 428
+
+
+def test_build_graph_mixed_layers_with_and_without_attrs():
+    """Layers with attributes and layers without can coexist."""
+    line_a = LineString([(0, 0), (1, 1)])
+    line_b = LineString([(5, 5), (6, 6)])
+    layer_with = _flow_with_attrs([line_a], [{"FType": 336}])
+    layer_without = _flow(line_b)
+    graph = build_graph([layer_with, layer_without])
+    edges = list(graph.digraph.edges(data=True))
+    assert len(edges) == 2
+    ftype_present = [data.get("ftype") for _, _, data in edges]
+    assert 336 in ftype_present
+    assert None in ftype_present or any(
+        "ftype" not in data for _, _, data in edges
+    )

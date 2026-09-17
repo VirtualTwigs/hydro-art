@@ -117,6 +117,11 @@ def build_graph(layers: Iterable[Layer], snap_tolerance: float = 0.0) -> HydroGr
     Boundary (WBD) layers are skipped; MultiLineStrings are exploded into
     component segments; segments whose endpoints snap to the same junction are
     dropped-and-counted.
+
+    When a layer carries ``attributes`` (parallel to ``geometries``), each
+    edge inherits the ``ftype`` value from the parent geometry's attribute
+    dict. Layers without attributes produce edges with no ``ftype`` key,
+    preserving the existing edge data shape.
     """
     graph = nx.MultiDiGraph()
     dropped = 0
@@ -125,7 +130,9 @@ def build_graph(layers: Iterable[Layer], snap_tolerance: float = 0.0) -> HydroGr
     for layer in layers:
         if is_boundary_layer(layer):
             continue
-        for geom in layer.geometries:
+        has_attrs = layer.attributes is not None
+        for geom_idx, geom in enumerate(layer.geometries):
+            attrs = layer.attributes[geom_idx] if has_attrs else None
             for segment in _iter_segments(geom):
                 coords = list(segment.coords)
                 if len(coords) < 2:
@@ -136,14 +143,17 @@ def build_graph(layers: Iterable[Layer], snap_tolerance: float = 0.0) -> HydroGr
                 if start == end:
                     dropped += 1
                     continue
-                graph.add_edge(
-                    start,
-                    end,
+                edge_data: dict[str, Any] = dict(
                     segment_id=segment_id,
                     geometry=segment,
                     length=segment.length,
                     huc4=layer.huc4,
                 )
+                if attrs is not None:
+                    ftype = attrs.get("FType")
+                    if ftype is not None:
+                        edge_data["ftype"] = ftype
+                graph.add_edge(start, end, **edge_data)
                 segment_id += 1
 
     return HydroGraph(graph, dropped_degenerate=dropped)

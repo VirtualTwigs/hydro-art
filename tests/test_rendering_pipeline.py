@@ -5,6 +5,9 @@ on a real (reprojected, clipped, graphed, grouped, colored) in-region network â€
 a layered SVG string lands in artifacts without GDAL, a browser, or real data.
 """
 
+from __future__ import annotations
+
+import hashlib
 import io
 import xml.etree.ElementTree as ET
 import zipfile
@@ -46,7 +49,7 @@ class FakeZipDownloader:
 
 
 class NetworkLoader:
-    def load_layers(self, dataset_dir, dataset_id, huc4):
+    def load_layers(self, dataset_dir, dataset_id, huc4, **kwargs):
         if dataset_id == "wbd":
             return [Layer("WBDHU4", "wbd", huc4, (BOUNDARY,), crs="EPSG:4326")]
         geoms = NETWORK if huc4 == "1707" else ()
@@ -416,3 +419,117 @@ def test_shared_loads_are_complementary_no_double_draw(tmp_path):
     struct_ids = {f.source_id for f in context.artifacts["hydro_structure_selection"].selected}
     assert "spring1" not in struct_ids and "wetland1" not in struct_ids
     assert {"gage1", "spill1", "dam1"} <= struct_ids
+
+
+# --- Item #66, TG5: flowline-channel pipeline integration --------------------
+
+
+class ChannelLoader(NetworkLoader):
+    """A NetworkLoader that returns flowline layers WITH FType attributes.
+
+    When ``include_attributes=True``, flowlines carry per-geometry FType
+    attributes so the graph propagates them and the generate_svg stage can
+    build per-segment dash patterns.
+    """
+
+    def load_layers(self, dataset_dir, dataset_id, huc4, **kwargs):
+        if dataset_id == "wbd":
+            return [Layer("WBDHU4", "wbd", huc4, (BOUNDARY,), crs="EPSG:4326")]
+        if huc4 != "1707":
+            return []
+        include_attributes = kwargs.get("include_attributes", False)
+        attrs = None
+        if include_attributes:
+            # Three segments: a natural stream (460), a canal (336),
+            # and a pipeline (428).
+            attrs = (
+                {"FType": 460, "FCode": 46006},
+                {"FType": 336, "FCode": 33600},
+                {"FType": 428, "FCode": 42800},
+            )
+        return [
+            Layer(
+                "NHDFlowline",
+                dataset_id,
+                huc4,
+                NETWORK,
+                crs="EPSG:4326",
+                attributes=attrs,
+            )
+        ]
+
+
+def test_pipeline_default_no_channel_dashes(tmp_path):
+    """Default settings (flowline_channels disabled) produce no dasharray."""
+    settings = build_settings({"region": ["Oregon"]})
+    assert not settings.flowline_channels.enabled
+
+    svg = _pipeline(tmp_path, loader=ChannelLoader()).run(settings).artifacts["svg"]
+    assert "stroke-dasharray" not in svg
+
+
+def test_pipeline_with_flowline_channels(tmp_path):
+    """Enabled flowline_channels with FType attrs produce dasharrays on
+    engineered segments (canal/pipeline) but not natural streams."""
+    settings = build_settings(
+        {"region": ["Oregon"], "flowline_channels": {"enabled": True}}
+    )
+    assert settings.flowline_channels.enabled
+
+    context = _pipeline(tmp_path, loader=ChannelLoader()).run(settings)
+    svg = context.artifacts["svg"]
+
+    # Engineered segments get stroke-dasharray attributes.
+    assert "stroke-dasharray" in svg
+
+    # Parse and verify: canal gets "8,4", pipeline gets "2,4".
+    root = ET.fromstring(svg)
+    paths = []
+    for elem in root.iter():
+        if elem.tag.endswith("path") and elem.get("stroke-dasharray"):
+            paths.append(elem)
+
+    dash_values = {p.get("stroke-dasharray") for p in paths}
+    # Canal "8,4" and pipeline "2,4" should both be present.
+    assert "8,4" in dash_values, f"expected canal dash '8,4' in {dash_values}"
+    assert "2,4" in dash_values, f"expected pipeline dash '2,4' in {dash_values}"
+
+    # The natural stream (FType 460) should have NO dasharray.
+    all_paths = list(root.iter())
+    dashed_count = sum(
+        1 for p in all_paths
+        if p.tag.endswith("path") and p.get("stroke-dasharray")
+    )
+    total_river_paths = sum(
+        1 for p in all_paths
+        if p.tag.endswith("path") and p.get("d")
+    )
+    assert dashed_count < total_river_paths, (
+        "not all paths should be dashed â€” natural streams must be plain"
+    )
+
+
+def test_pipeline_flowline_channels_byte_identical_when_disabled(tmp_path):
+    """Disabled flowline_channels output is byte-identical to no-config baseline."""
+    baseline_settings = build_settings({"region": ["Oregon"]})
+    baseline_svg = (
+        _pipeline(tmp_path, loader=ChannelLoader())
+        .run(baseline_settings)
+        .artifacts["svg"]
+    )
+
+    disabled_settings = build_settings(
+        {"region": ["Oregon"], "flowline_channels": {"enabled": False}}
+    )
+    disabled_svg = (
+        _pipeline(tmp_path, loader=ChannelLoader())
+        .run(disabled_settings)
+        .artifacts["svg"]
+    )
+
+    baseline_hash = hashlib.sha256(baseline_svg.encode()).hexdigest()
+    disabled_hash = hashlib.sha256(disabled_svg.encode()).hexdigest()
+    assert baseline_hash == disabled_hash, (
+        f"disabled flowline_channels must be byte-identical to baseline: "
+        f"{baseline_hash} != {disabled_hash}"
+    )

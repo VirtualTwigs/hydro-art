@@ -17,6 +17,7 @@ from typing import Any, Protocol, runtime_checkable
 from src.datasets import AcquisitionError
 
 __all__ = [
+    "FLOWLINE_ATTRIBUTE_FIELDS",
     "HYDRO_LAYER_ALLOWLIST",
     "LINE_ATTRIBUTE_FIELDS",
     "LINE_LAYER_ALLOWLIST",
@@ -100,6 +101,14 @@ LINE_ATTRIBUTE_FIELDS: tuple[str, ...] = (
     "ReachCode",
 )
 
+#: NHDFlowline attribute columns needed for channel-type classification
+#: (Item #66). Minimal set — only ``FType`` and ``FCode`` — because flowline
+#: attributes are used solely for classification, not provenance.
+FLOWLINE_ATTRIBUTE_FIELDS: tuple[str, ...] = (
+    "FType",
+    "FCode",
+)
+
 
 @dataclass(frozen=True)
 class Layer:
@@ -178,7 +187,26 @@ class PyogrioLayerLoader:
 
     allowlist: tuple[str, ...] = HYDRO_LAYER_ALLOWLIST
 
-    def load_layers(self, dataset_dir: Path, dataset_id: str, huc4: str) -> list[Layer]:
+    def load_layers(
+        self,
+        dataset_dir: Path,
+        dataset_id: str,
+        huc4: str,
+        *,
+        include_attributes: bool = False,
+    ) -> list[Layer]:
+        """Load flowline/WBD vector layers.
+
+        Parameters:
+            dataset_dir: Extracted dataset directory containing a ``.gdb``.
+            dataset_id: Dataset identifier (e.g. ``"nhdplus_hr"``).
+            huc4: HUC4 region code.
+            include_attributes: When ``True``, read
+                :data:`FLOWLINE_ATTRIBUTE_FIELDS` from each flowline frame and
+                populate :attr:`Layer.attributes` as a parallel tuple of dicts.
+                Default ``False`` preserves the existing behavior (no
+                attributes).
+        """
         try:
             import geopandas as gpd
             from pyogrio import list_layers
@@ -210,13 +238,34 @@ class PyogrioLayerLoader:
         layers: list[Layer] = []
         for name in selected:
             frame = gpd.read_file(source, layer=name)
+            attrs: tuple[dict, ...] | None = None
+            if include_attributes:
+                wanted = {
+                    field.lower(): field
+                    for field in FLOWLINE_ATTRIBUTE_FIELDS
+                }
+                present = {
+                    col: wanted[col.lower()]
+                    for col in frame.columns
+                    if col.lower() in wanted
+                }
+                attrs = tuple(
+                    {
+                        canonical: row[col]
+                        for col, canonical in present.items()
+                    }
+                    for _, row in frame.iterrows()
+                )
             layers.append(
                 Layer(
                     name=name,
                     dataset_id=dataset_id,
                     huc4=huc4,
                     geometries=tuple(frame.geometry.values),
-                    crs=str(frame.crs) if frame.crs is not None else None,
+                    crs=(
+                        str(frame.crs) if frame.crs is not None else None
+                    ),
+                    attributes=attrs,
                 )
             )
         return layers

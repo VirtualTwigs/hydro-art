@@ -5,6 +5,7 @@ import warnings
 from shapely.geometry import LineString, Point
 
 from src.loading import (
+    FLOWLINE_ATTRIBUTE_FIELDS,
     HYDRO_LAYER_ALLOWLIST,
     POINT_ATTRIBUTE_FIELDS,
     POINT_LAYER_ALLOWLIST,
@@ -182,3 +183,47 @@ def test_fake_line_loader_seam_preserves_geometry_and_attributes():
     # The line seam does not overload the point/waterbody loaders.
     assert not hasattr(loader, "load_point_features")
     assert not hasattr(loader, "load_waterbody_layers")
+
+
+# --- Task Group 2 (Item #66): flowline attribute loading ---
+
+
+def test_load_layers_without_attributes():
+    """Default load_layers call produces Layer.attributes=None."""
+    layer = Layer(
+        name="NHDFlowline",
+        dataset_id="nhdplus_hr",
+        huc4="1707",
+        geometries=(LineString([(0, 0), (1, 1)]),),
+    )
+    assert layer.attributes is None
+
+
+def test_load_layers_with_attributes():
+    """include_attributes=True populates parallel attribute dicts."""
+    layer = Layer(
+        name="NHDFlowline",
+        dataset_id="nhdplus_hr",
+        huc4="1707",
+        geometries=(
+            LineString([(0, 0), (1, 1)]),
+            LineString([(2, 2), (3, 3)]),
+        ),
+        attributes=(
+            {"FType": 460, "FCode": 46006},
+            {"FType": 336, "FCode": 33600},
+        ),
+    )
+    assert layer.attributes is not None
+    assert len(layer.attributes) == len(layer.geometries)
+    assert layer.attributes[0]["FType"] == 460
+    assert layer.attributes[1]["FType"] == 336
+
+
+def test_flowline_attribute_fields_contain_ftype_and_fcode():
+    """FLOWLINE_ATTRIBUTE_FIELDS carries the minimal set for channel classification."""
+    assert "FType" in FLOWLINE_ATTRIBUTE_FIELDS
+    assert "FCode" in FLOWLINE_ATTRIBUTE_FIELDS
+    # Flowline attributes are minimal — no provenance fields like waterbodies.
+    assert "GNIS_Name" not in FLOWLINE_ATTRIBUTE_FIELDS
+    assert "AreaSqKm" not in FLOWLINE_ATTRIBUTE_FIELDS

@@ -7,7 +7,7 @@ from pathlib import Path
 from rich.console import Console
 
 from build import NAS_CACHE_DIR, _storage_roots, main
-from src.cli import build_parser
+from src.cli import build_parser, cli_overrides
 from src.pipeline import PIPELINE_STAGES, Pipeline
 from src.storage import EXTERNAL_ROOT_ENV
 
@@ -109,3 +109,27 @@ def test_storage_explicit_dir_overrides_external(monkeypatch):
     )
     assert roots.output == Path("/tmp/o")
     assert roots.datasets == Path("/Volumes/Pro/datasets")
+
+
+# --- Flowline channel CLI flags (Item #66) ----------------------------------
+
+
+def test_flowline_channels_cli_flag():
+    """--flowline-channels sets enabled=True in overrides."""
+    args = _args(["--flowline-channels"])
+    ov = cli_overrides(args)
+    assert ov["flowline_channels"]["enabled"] is True
+
+
+def test_flowline_channels_cli_preset():
+    """--flowline-channel-preset screen applies the preset."""
+    args = _args(["--flowline-channel-preset", "screen"])
+    ov = cli_overrides(args)
+    assert ov["flowline_channels"]["preset"] == "screen"
+
+
+def test_flowline_channels_cli_no_flag_no_override():
+    """Without --flowline-channels, no flowline_channels key in overrides."""
+    args = _args([])
+    ov = cli_overrides(args)
+    assert "flowline_channels" not in ov

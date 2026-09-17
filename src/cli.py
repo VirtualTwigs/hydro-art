@@ -18,6 +18,7 @@ from typing import Any
 from src.config import (
     DEFAULTS,
     SUPPORTED_AREAL_FEATURE_PRESETS,
+    SUPPORTED_FLOWLINE_CHANNEL_PRESETS,
     SUPPORTED_POINT_FEATURE_PRESETS,
     SUPPORTED_WATERBODY_PRESETS,
     SUPPORTED_WIDTH_PRESETS,
@@ -223,6 +224,20 @@ def build_parser() -> argparse.ArgumentParser:
         "bundle; explicit areal-feature settings still win).",
     )
     parser.add_argument(
+        "--flowline-channels",
+        action="store_true",
+        default=None,
+        help="Enable engineered flowline channel styling "
+        "(canal/ditch/pipeline).",
+    )
+    parser.add_argument(
+        "--flowline-channel-preset",
+        choices=SUPPORTED_FLOWLINE_CHANNEL_PRESETS,
+        default=None,
+        help="Flowline channel style preset (expands to a dash-pattern bundle; "
+        "explicit flowline-channel settings still win).",
+    )
+    parser.add_argument(
         "--elevation",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -365,6 +380,16 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
     if areal_features:
         overrides["areal_features"] = areal_features
 
+    # Flowline-channel sub-keys are collected under a nested mapping so
+    # precedence can deep-merge them onto YAML/defaults.
+    flowline_channels: dict[str, Any] = {}
+    if args.flowline_channels:
+        flowline_channels["enabled"] = True
+    if args.flowline_channel_preset is not None:
+        flowline_channels["preset"] = args.flowline_channel_preset
+    if flowline_channels:
+        overrides["flowline_channels"] = flowline_channels
+
     # Elevation sub-keys are collected under a nested mapping so precedence can
     # deep-merge them onto YAML/defaults (see :func:`resolve_settings`).
     elevation: dict[str, Any] = {}
@@ -433,7 +458,7 @@ def settings_from_args(args: argparse.Namespace) -> Settings:
     # `point_features` / `areal_features` are nested blocks like `waterbodies`;
     # deep-merge their sub-keys from `{}` (not seeded defaults) so a `preset`
     # bundle isn't shadowed by pre-seeded explicit values (mirrors Item W4).
-    for block_key in ("point_features", "areal_features"):
+    for block_key in ("point_features", "areal_features", "flowline_channels"):
         block_merged: dict[str, Any] = {}
         for layer in (yaml_values, overrides):
             block = layer.get(block_key)

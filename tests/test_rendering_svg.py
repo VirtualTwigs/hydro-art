@@ -5,6 +5,7 @@ stream-order width-scaling helper, using hand-built geometries + color and
 watershed dicts (no GDAL, no browser, no real data).
 """
 
+import io
 import xml.etree.ElementTree as ET
 
 from shapely.geometry import LineString, Point, Polygon
@@ -13,6 +14,7 @@ from src.rendering import (
     flow_widths,
     hypsometric_colors,
     render_svg,
+    render_svg_stream,
     scaled_widths,
     stream_order_widths,
 )
@@ -233,3 +235,59 @@ def test_hydro_structures_line_bar_is_open_path_distinct_from_polygon():
     # The polygon in the same render still closes (distinct treatment).
     sp_block = svg.split('id="hydro_spillway"')[1].split("</g>")[0]
     assert "Z" in sp_block
+
+
+# --- Channel dash patterns (Item #66, Task Group 3) --------------------------
+
+
+def test_render_svg_no_dashes_default():
+    """No channel_dashes arg -> no stroke-dasharray in output."""
+    svg = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS)
+    assert "stroke-dasharray" not in svg
+
+
+def test_render_svg_with_channel_dashes():
+    """Segment with dash entry gets stroke-dasharray on its <path>."""
+    dashes = {0: "8,4"}
+    svg = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, channel_dashes=dashes)
+    root = _svg_root(svg)
+    group_a = root.find(".//*[@id='watershed_A']")
+    paths = [c for c in group_a if c.tag.endswith("path")]
+    # Segment 0 should have the dasharray; segment 1 should not.
+    dash_paths = [p for p in paths if p.get("stroke-dasharray") == "8,4"]
+    assert len(dash_paths) == 1
+    no_dash_paths = [p for p in paths if p.get("stroke-dasharray") is None]
+    assert len(no_dash_paths) == 1
+
+
+def test_render_svg_mixed_dashes():
+    """Only engineered segments get dashes; natural segments do not."""
+    # Segment 0 = canal (dashed), segment 1 = stream (no dash),
+    # segment 2 = pipeline (dotted).
+    dashes = {0: "8,4", 2: "2,4"}
+    svg = render_svg(GEOMS, SEGMENT_COLORS, WATERSHEDS, channel_dashes=dashes)
+    root = _svg_root(svg)
+    # Watershed A: segment 0 dashed, segment 1 not.
+    group_a = root.find(".//*[@id='watershed_A']")
+    paths_a = [c for c in group_a if c.tag.endswith("path")]
+    dashed_a = [p for p in paths_a if p.get("stroke-dasharray") is not None]
+    assert len(dashed_a) == 1
+    assert dashed_a[0].get("stroke-dasharray") == "8,4"
+    # Watershed B: segment 2 dashed.
+    group_b = root.find(".//*[@id='watershed_B']")
+    paths_b = [c for c in group_b if c.tag.endswith("path")]
+    assert len(paths_b) == 1
+    assert paths_b[0].get("stroke-dasharray") == "2,4"
+
+
+def test_render_svg_stream_with_dashes():
+    """Streaming path produces identical output to render_svg."""
+    dashes = {0: "8,4", 2: "2,4"}
+    svg_string = render_svg(
+        GEOMS, SEGMENT_COLORS, WATERSHEDS, channel_dashes=dashes
+    )
+    buf = io.StringIO()
+    render_svg_stream(
+        buf, GEOMS, SEGMENT_COLORS, WATERSHEDS, channel_dashes=dashes
+    )
+    assert buf.getvalue() == svg_string

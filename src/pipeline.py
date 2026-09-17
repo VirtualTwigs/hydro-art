@@ -155,9 +155,24 @@ def _validate_stage(ctx: RunContext) -> None:
     descriptors = ctx.artifacts["descriptors"]
     dataset_dirs = ctx.artifacts["dataset_dirs"]
     layers = []
+
+    # Flowline-channel classification (Item #66): when enabled, request FType
+    # attributes from the loader so graph edges carry the channel type and
+    # the generate_svg stage can apply per-segment dash patterns.
+    include_attrs = ctx.settings.flowline_channels.enabled
+
+    loader_kwargs: dict[str, bool] = {}
+    if include_attrs:
+        loader_kwargs["include_attributes"] = True
+
     for descriptor, dataset_dir in zip(descriptors, dataset_dirs):
         layers.extend(
-            ctx.loader.load_layers(dataset_dir, descriptor.dataset_id, descriptor.huc4)
+            ctx.loader.load_layers(
+                dataset_dir,
+                descriptor.dataset_id,
+                descriptor.huc4,
+                **loader_kwargs,
+            )
         )
     ctx.artifacts["layers"] = layers
     total = sum(len(layer.geometries) for layer in layers)
@@ -431,6 +446,29 @@ def _resolve_stroke_widths(ctx: RunContext) -> dict[int, float] | None:
     )
 
 
+def _resolve_channel_dashes(ctx: RunContext) -> dict[int, str] | None:
+    """Build per-segment dash patterns for engineered flowline channels (#66).
+
+    When ``settings.flowline_channels.enabled``, iterates graph edges to
+    collect ``edge_ftypes``, then calls :func:`build_channel_dashes` to map
+    segment_id -> SVG dasharray for every engineered segment. Returns ``None``
+    when the feature is disabled, keeping the render byte-identical.
+    """
+    if not ctx.settings.flowline_channels.enabled:
+        return None
+    from src.flowline_channels import build_channel_dashes
+
+    hydro_graph = ctx.artifacts["hydro_graph"]
+    edge_ftypes: dict[int, int | None] = {}
+    for _u, _v, data in hydro_graph.digraph.edges(data=True):
+        sid = data["segment_id"]
+        if "ftype" in data:
+            edge_ftypes[sid] = data["ftype"]
+
+    dashes_override = ctx.settings.flowline_channels.dashes or None
+    return build_channel_dashes(edge_ftypes, dashes_override)
+
+
 def _generate_svg_stage(ctx: RunContext) -> None:
     """Render the colored network into a layered SVG document (in memory)."""
     if ctx.settings.months:
@@ -455,6 +493,7 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     hydro_items = _select_hydro_structures(ctx)
 
     stroke_widths = _resolve_stroke_widths(ctx)
+    channel_dashes = _resolve_channel_dashes(ctx)
 
     # Settings line_width / glow_radius / waterbody stroke are authored in
     # pixel-like units, but the SVG viewBox is in projected meters (EPSG:5070).
@@ -500,6 +539,7 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         hydro_structures=hydro_items or None,
         hydro_structure_styles=_hydro_structure_styles(hs) if hydro_items else None,
         hydro_structure_order=hs.render_order,
+        channel_dashes=channel_dashes,
     )
     buf = io.StringIO()
     render_svg_stream(buf, geometries, segment_colors, watersheds, **render_kwargs)

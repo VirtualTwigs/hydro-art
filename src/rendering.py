@@ -654,6 +654,7 @@ def _path_element(
     precision: int,
     stroke: str | None,
     stroke_widths: Mapping[int, float] | None,
+    channel_dashes: Mapping[int, str] | None = None,
 ) -> str:
     """Serialize one ``<path>`` element (stroke color/width optional)."""
     attrs = [f'd="{path_d(geom, min_x, max_y, precision)}"']
@@ -662,6 +663,8 @@ def _path_element(
     if stroke_widths is not None and segment_id in stroke_widths:
         width = format_number(stroke_widths[segment_id], _WIDTH_PRECISION)
         attrs.append(f'stroke-width="{width}"')
+    if channel_dashes is not None and segment_id in channel_dashes:
+        attrs.append(f'stroke-dasharray="{channel_dashes[segment_id]}"')
     return "    <path " + " ".join(attrs) + "/>"
 
 
@@ -691,6 +694,7 @@ def _group_lines(
     precision: int,
     stroke_widths: Mapping[int, float] | None,
     filter_ref: str | None,
+    channel_dashes: Mapping[int, str] | None = None,
 ) -> list[str]:
     """Serialize a river ``<g>`` layer. ``color=None`` → per-path stroke."""
     attrs = [f'id="{group_id}"']
@@ -703,7 +707,8 @@ def _group_lines(
         stroke = None if color is not None else segment_colors.get(sid, fallback_color)
         lines.append(
             _path_element(
-                sid, geometries[sid], min_x, max_y, precision, stroke, stroke_widths
+                sid, geometries[sid], min_x, max_y, precision, stroke,
+                stroke_widths, channel_dashes,
             )
         )
     lines.append("  </g>")
@@ -721,6 +726,7 @@ def _halo_lines(
     max_y: float,
     precision: int,
     halo_width: str,
+    channel_dashes: Mapping[int, str] | None = None,
 ) -> list[str]:
     """Serialize a wider, translucent halo ``<g>`` (PRD section 20, Mode A)."""
     opacity = format_number(_HALO_OPACITY, 2)
@@ -735,6 +741,8 @@ def _halo_lines(
         path_attrs = [f'd="{path_d(geometries[sid], min_x, max_y, precision)}"']
         if stroke is not None:
             path_attrs.append(f'stroke="{stroke}"')
+        if channel_dashes is not None and sid in channel_dashes:
+            path_attrs.append(f'stroke-dasharray="{channel_dashes[sid]}"')
         lines.append("    <path " + " ".join(path_attrs) + "/>")
     lines.append("  </g>")
     return lines
@@ -765,6 +773,7 @@ def render_svg(
     hydro_structures: Iterable[tuple] | None = None,
     hydro_structure_styles: Mapping[str, Mapping] | None = None,
     hydro_structure_order: str = "above",
+    channel_dashes: Mapping[int, str] | None = None,
 ) -> str:
     """Render the colored river network as a single layered SVG document.
 
@@ -851,6 +860,7 @@ def render_svg(
         hydro_structures=hydro_structures,
         hydro_structure_styles=hydro_structure_styles,
         hydro_structure_order=hydro_structure_order,
+        channel_dashes=channel_dashes,
     )) + "\n"
 
 
@@ -880,6 +890,7 @@ def render_svg_stream(
     hydro_structures: Iterable[tuple] | None = None,
     hydro_structure_styles: Mapping[str, Mapping] | None = None,
     hydro_structure_order: str = "above",
+    channel_dashes: Mapping[int, str] | None = None,
 ) -> None:
     """Write the SVG document line-by-line to a file object.
 
@@ -912,6 +923,7 @@ def render_svg_stream(
         hydro_structures=hydro_structures,
         hydro_structure_styles=hydro_structure_styles,
         hydro_structure_order=hydro_structure_order,
+        channel_dashes=channel_dashes,
     ):
         f.write(line)
         f.write("\n")
@@ -942,6 +954,7 @@ def _render_lines(
     hydro_structures: Iterable[tuple] | None = None,
     hydro_structure_styles: Mapping[str, Mapping] | None = None,
     hydro_structure_order: str = "above",
+    channel_dashes: Mapping[int, str] | None = None,
 ) -> Iterator[str]:
     """Yield each SVG line (without trailing newlines).
 
@@ -1052,10 +1065,12 @@ def _render_lines(
             yield from _halo_lines(
                 group_id, color, segment_ids, geometries, segment_colors,
                 fallback_color, min_x, max_y, precision, halo_width,
+                channel_dashes,
             )
         yield from _group_lines(
             group_id, color, segment_ids, geometries, segment_colors,
             fallback_color, min_x, max_y, precision, stroke_widths, filter_ref,
+            channel_dashes,
         )
 
     if waterbody_items and waterbody_order == "above":
