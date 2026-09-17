@@ -1,255 +1,712 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hydro-Art / Place an Order</title>
-<link rel="stylesheet" href="shared/editorial.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hydro-Art — Place an Order</title>
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
-  a { color: inherit; }
+  @font-face { font-family:"Fraunces"; src:url("/web/shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Fraunces Display"; src:url("/web/shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
 
-  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
-  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
-  .brand b { color: var(--accent); }
-  .top nav { margin-left: auto; display: flex; gap: 14px; font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
-  .top nav a { text-decoration: none; }
-  .top nav a:hover, .top nav a.active { color: var(--accent); text-decoration: underline; }
+  :root {
+    --bg:#07080c; --bg-2:#0a0c13; --panel:#10121b; --panel-2:#171a26; --line:#232838;
+    --ink:#e6ebf5; --muted:#8891a8; --faint:#5b6480;
+    --cyan:#00ffff; --violet:#9d00ff; --azure:#0a5cff; --spring:#00ffab; --amber:#ffb300;
+    --serif:"Fraunces", Georgia, "Times New Roman", serif;
+    --display:"Fraunces Display", "Fraunces", Georgia, serif;
+    --mono:"DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --edge:1px solid var(--line);
+    --shadow:0 24px 60px rgba(0,0,0,.55);
+    --maxw:860px;
+  }
 
-  .wrap { max-width: 860px; margin: auto; padding: 55px 5vw 85px; }
-  .eyebrow { margin: 0 0 12px; color: var(--accent); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
-  h1 { font: 700 clamp(32px,4vw,52px)/.94 var(--ui-serif); letter-spacing: -.04em; margin: 0 0 20px; }
-  .lede { max-width: 680px; color: var(--muted); font-size: 18px; line-height: 1.55; margin: 0 0 32px; }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: var(--serif); font-weight: 380; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+  ::selection { background: var(--cyan); color: #04121a; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
 
-  /* Steps */
+  /* ---- Atmosphere ---- */
+  .atmos { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .atmos .wash {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 90% at 78% -10%, rgba(0,255,255,.07), transparent 55%),
+      radial-gradient(90% 80% at 8% 8%, rgba(157,0,255,.09), transparent 60%),
+      radial-gradient(120% 120% at 50% 120%, rgba(10,92,255,.07), transparent 55%);
+  }
+  .atmos .grid {
+    position: absolute; inset: 0; opacity: .25;
+    background-image:
+      linear-gradient(to right, rgba(140,160,190,.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(140,160,190,.05) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
+            mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
+  }
+
+  /* ---- Nav ---- */
+  header.nav {
+    position: relative; z-index: 3;
+    border-bottom: var(--edge);
+    background: rgba(7,8,12,.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .nav-inner {
+    max-width: var(--maxw); margin: 0 auto; padding: 0 28px;
+    display: flex; align-items: center; gap: 20px; height: 64px;
+  }
+  .brand {
+    font-family: var(--display); font-weight: 600; font-size: 20px;
+    letter-spacing: .01em; white-space: nowrap;
+  }
+  .brand b { color: var(--cyan); font-weight: 600; }
+  .nav-spacer { flex: 1; }
+  .nav-links {
+    display: flex; gap: 26px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .nav-links a { position: relative; padding-bottom: 3px; transition: color .2s; }
+  .nav-links a::after {
+    content: ""; position: absolute; left: 0; right: 100%; bottom: 0;
+    height: 1px; background: var(--cyan); transition: right .25s ease;
+  }
+  .nav-links a:hover { color: var(--ink); }
+  .nav-links a:hover::after, .nav-links a.active::after { right: 0; }
+  .nav-links a.active { color: var(--cyan); }
+
+  /* ---- Main wrap ---- */
+  .wrap {
+    position: relative; z-index: 2;
+    max-width: var(--maxw); margin: 0 auto;
+    padding: 56px 28px 96px;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* ---- Progress indicator ---- */
+  .progress {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 48px; font-family: var(--mono);
+    font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .progress-step {
+    display: flex; align-items: center; gap: 8px; color: var(--faint);
+    transition: color .3s;
+  }
+  .progress-step.done { color: var(--spring); }
+  .progress-step.active { color: var(--cyan); }
+  .progress-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 1px solid var(--faint);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; flex-shrink: 0; transition: border-color .3s, background .3s;
+  }
+  .progress-step.done .progress-dot { border-color: var(--spring); background: rgba(0,255,171,.12); }
+  .progress-step.active .progress-dot { border-color: var(--cyan); background: rgba(0,255,255,.12); }
+  .progress-label { display: none; }
+  .progress-step.active .progress-label { display: inline; }
+  .progress-connector {
+    flex: 1; height: 1px; background: var(--line); margin: 0 6px;
+    max-width: 40px;
+  }
+
+  /* ---- Step panels ---- */
   .step { display: none; }
   .step.active { display: block; }
-  .step-label { font: 10px var(--ui-mono); color: var(--accent); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; }
 
-  /* Choice grid */
-  .choice-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 20px 0 28px; }
-  .choice { border: 1px solid var(--line); background: var(--paper-bright); padding: 20px; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
-  .choice:hover { background: #e0eee8; }
-  .choice.selected { border: 2px solid var(--accent); padding: 19px; background: #e0eee8; }
-  .choice b { display: block; font: 700 20px var(--ui-serif); margin-bottom: 4px; }
-  .choice small { display: block; color: var(--muted); font-size: 13px; }
+  .step-eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--cyan);
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  .step-eyebrow::before {
+    content: ""; width: 28px; height: 1px;
+    background: linear-gradient(90deg, var(--cyan), transparent);
+  }
+  .step h1 {
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(30px, 4vw, 46px); line-height: .97;
+    letter-spacing: -.015em; margin: 0 0 14px;
+  }
+  .step-lede {
+    font-size: 16px; color: var(--muted); max-width: 38em;
+    margin: 0 0 32px; line-height: 1.6;
+  }
 
-  /* Form fields */
-  .field { margin-bottom: 20px; }
-  .field label { display: block; font: 700 14px var(--ui-sans); margin-bottom: 6px; }
-  .field select, .field input { width: 100%; padding: 10px 12px; border: 1px solid var(--line); background: var(--paper-bright); font: 15px var(--ui-sans); color: var(--ink); }
-  .field select:focus, .field input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  /* ---- Choice grid (product / style) ---- */
+  .choice-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 14px; margin-bottom: 32px;
+  }
+  .choice {
+    border: var(--edge); border-radius: 4px;
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    padding: 22px 20px; text-align: left;
+    transition: border-color .2s, box-shadow .2s, transform .2s;
+    position: relative; overflow: hidden;
+  }
+  .choice::after {
+    content: ""; position: absolute; inset: 0; border-radius: 4px;
+    box-shadow: inset 0 0 0 0 var(--cyan); transition: box-shadow .2s;
+    pointer-events: none;
+  }
+  .choice:hover {
+    border-color: rgba(0,255,255,.35);
+    box-shadow: 0 8px 28px rgba(0,0,0,.4);
+    transform: translateY(-2px);
+  }
+  .choice.selected {
+    border-color: var(--cyan);
+    background: linear-gradient(180deg, rgba(0,255,255,.06), rgba(0,255,255,.02));
+    box-shadow: 0 0 0 1px var(--cyan), 0 12px 34px rgba(0,255,255,.12);
+    transform: translateY(-2px);
+  }
+  .choice.selected::after { box-shadow: inset 0 0 20px rgba(0,255,255,.06); }
+  .choice-check {
+    position: absolute; top: 14px; right: 14px;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; transition: border-color .2s, background .2s;
+  }
+  .choice.selected .choice-check {
+    border-color: var(--cyan); background: var(--cyan); color: #031318;
+  }
+  .choice-icon {
+    font-size: 26px; margin-bottom: 10px; display: block; line-height: 1;
+  }
+  .choice b {
+    display: block; font-family: var(--display); font-weight: 600;
+    font-size: 19px; margin-bottom: 5px;
+  }
+  .choice small {
+    display: block; color: var(--muted); font-size: 13.5px; line-height: 1.5;
+  }
+  .choice .price-hint {
+    display: block; margin-top: 10px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
+    color: var(--spring);
+  }
 
-  /* Buttons */
-  .btn { display: inline-block; border: 1px solid var(--accent); padding: 12px 20px; background: var(--accent); color: white; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
-  .btn:hover { opacity: .9; }
-  .btn.ghost { background: transparent; color: var(--accent); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
-  .btn-row { display: flex; gap: 12px; margin-top: 28px; }
+  /* ---- Form fields ---- */
+  .field { margin-bottom: 22px; }
+  .field label {
+    display: block; font-family: var(--mono); font-size: 11px;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .field select,
+  .field input[type="text"],
+  .field input[type="email"],
+  .field textarea {
+    width: 100%; padding: 12px 14px;
+    border: var(--edge); border-radius: 3px;
+    background: var(--panel); color: var(--ink);
+    font-family: var(--serif); font-size: 16px; font-weight: 380;
+    line-height: 1.4; transition: border-color .2s, box-shadow .2s;
+    appearance: none; -webkit-appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><polyline points='0,0 6,8 12,0' fill='none' stroke='%238891a8' stroke-width='1.5'/></svg>");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px; cursor: pointer;
+  }
+  .field textarea { min-height: 90px; resize: vertical; }
+  .field select:focus,
+  .field input:focus,
+  .field textarea:focus {
+    outline: none;
+    border-color: var(--cyan);
+    box-shadow: 0 0 0 2px rgba(0,255,255,.12);
+  }
+  .field select:disabled { opacity: .45; cursor: not-allowed; }
+  .field-hint {
+    margin-top: 6px; font-family: var(--mono); font-size: 11px;
+    letter-spacing: .04em; color: var(--faint);
+  }
 
-  /* Summary / proposal */
-  .summary { background: #102321; color: #edf4ee; padding: 28px; margin-top: 24px; }
-  .summary h2 { font: 700 36px var(--ui-serif); margin: 0 0 16px; }
-  .summary dl { margin: 0; }
-  .summary dl div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #54776e; padding: 11px 0; font-size: 14px; }
-  .summary dt { color: #c7dad3; }
-  .summary dd { margin: 0; text-align: right; }
+  /* ---- Size selector ---- */
+  .size-grid {
+    display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px;
+  }
+  .size-btn {
+    border: var(--edge); border-radius: 3px;
+    background: var(--panel); padding: 14px 20px;
+    font-family: var(--mono); font-size: 13px; letter-spacing: .06em;
+    color: var(--muted); transition: border-color .2s, color .2s, background .2s;
+    min-width: 100px; text-align: center;
+  }
+  .size-btn:hover { border-color: rgba(0,255,255,.35); color: var(--ink); }
+  .size-btn.selected {
+    border-color: var(--cyan); color: var(--cyan);
+    background: rgba(0,255,255,.06);
+    box-shadow: 0 0 0 1px var(--cyan);
+  }
+  .size-btn span { display: block; font-size: 10px; color: var(--faint); margin-top: 3px; }
 
-  /* Confirmation */
-  .confirmation { text-align: center; padding: 60px 20px; }
-  .confirmation h1 { font-size: clamp(28px,3.5vw,42px); }
-  .confirmation .order-id { font: 700 28px var(--ui-mono); color: var(--accent); margin: 16px 0; }
-  .confirmation p { color: var(--muted); max-width: 500px; margin: 0 auto 12px; }
+  /* ---- Buttons ---- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
+    text-transform: uppercase; padding: 14px 22px; border-radius: 2px;
+    border: var(--edge); background: transparent; color: var(--ink);
+    cursor: pointer; transition: transform .15s, border-color .2s, background .2s, box-shadow .2s;
+  }
+  .btn .arw { transition: transform .2s; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:hover .arw { transform: translateX(4px); }
+  .btn.solid {
+    background: var(--cyan); color: #031318; border-color: var(--cyan); font-weight: 500;
+  }
+  .btn.solid:hover { box-shadow: 0 10px 28px rgba(0,255,255,.26); }
+  .btn.ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-row { display: flex; gap: 12px; margin-top: 32px; align-items: center; }
 
-  .error-msg { color: var(--danger); font-size: 14px; margin-top: 8px; display: none; }
+  /* ---- Review summary ---- */
+  .summary {
+    border: var(--edge); border-radius: 4px;
+    background: linear-gradient(180deg, var(--panel), var(--bg-2));
+    overflow: hidden; margin-bottom: 28px;
+  }
+  .summary-head {
+    padding: 20px 24px 16px;
+    border-bottom: var(--edge);
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
+  }
+  .summary dl { margin: 0; padding: 6px 0; }
+  .summary dl > div {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 16px; padding: 10px 24px;
+    border-bottom: var(--edge);
+  }
+  .summary dl > div:last-child { border-bottom: none; }
+  .summary dt {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+  }
+  .summary dd { margin: 0; text-align: right; font-size: 15px; color: var(--ink); }
+  .summary-product-title {
+    padding: 22px 24px 18px;
+    font-family: var(--display); font-weight: 600;
+    font-size: 26px; color: var(--ink);
+    border-bottom: var(--edge);
+  }
 
-  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+  /* ---- Confirmation ---- */
+  .confirmation {
+    text-align: center; padding: 64px 20px 40px;
+  }
+  .confirmation .conf-eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--spring); margin-bottom: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .confirmation .conf-eyebrow::before {
+    content: ""; width: 24px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--spring));
+  }
+  .confirmation .conf-eyebrow::after {
+    content: ""; width: 24px; height: 1px;
+    background: linear-gradient(90deg, var(--spring), transparent);
+  }
+  .confirmation h1 {
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(32px, 4vw, 52px); letter-spacing: -.015em; margin: 0 0 8px;
+  }
+  .confirmation .req-id {
+    font-family: var(--mono); font-size: 22px; letter-spacing: .1em;
+    color: var(--cyan); margin: 20px 0;
+    padding: 14px 24px; border: 1px solid rgba(0,255,255,.3);
+    border-radius: 3px; display: inline-block;
+    background: rgba(0,255,255,.04);
+  }
+  .confirmation .conf-lede {
+    color: var(--muted); max-width: 480px; margin: 0 auto 28px;
+    font-size: 16px; line-height: 1.6;
+  }
+  .next-steps {
+    border: var(--edge); border-radius: 4px;
+    background: var(--panel); padding: 24px 28px;
+    max-width: 480px; margin: 0 auto 28px; text-align: left;
+  }
+  .next-steps-label {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 14px;
+  }
+  .next-steps ol {
+    margin: 0; padding-left: 20px;
+    color: var(--muted); font-size: 14px; line-height: 1.9;
+  }
 
-  @media (max-width: 600px) {
+  /* ---- Error ---- */
+  .error-msg {
+    display: none; color: #ff4d6a; font-family: var(--mono);
+    font-size: 12px; letter-spacing: .04em; margin-top: 10px;
+    padding: 10px 14px; border: 1px solid rgba(255,77,106,.3);
+    border-radius: 3px; background: rgba(255,77,106,.06);
+  }
+
+  /* ---- Footer ---- */
+  footer {
+    position: relative; z-index: 2;
+    border-top: var(--edge); padding: 32px 28px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
+    color: var(--faint);
+  }
+
+  /* ---- Responsive ---- */
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
     .choice-grid { grid-template-columns: 1fr; }
     .btn-row { flex-direction: column; }
+    .size-grid { flex-direction: column; }
+    .size-btn { min-width: 0; text-align: left; }
+    .wrap { padding: 40px 20px 72px; }
+    .progress-connector { max-width: 20px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
   }
 </style>
 </head>
 <body>
 
-<header class="top">
-  <a class="brand" href="order.html">Hydro<b>&#9671;</b>Art</a>
-  <nav>
-    <a href="order.html" class="active">Order</a>
-    <a href="ops.html">Operations</a>
-    <a href="studio.html">Studio</a>
-  </nav>
+<div class="atmos"><div class="wash"></div><div class="grid"></div></div>
+
+<header class="nav">
+  <div class="nav-inner">
+    <a class="brand" href="start.html">Hydro<b>&#9671;</b>Art</a>
+    <span class="nav-spacer"></span>
+    <nav class="nav-links">
+      <a href="order.html" class="active">Order</a>
+      <a href="gallery.html">Gallery</a>
+      <a href="studio.html">Studio</a>
+    </nav>
+  </div>
 </header>
 
 <main class="wrap">
 
-  <!-- Step 1: Choose product -->
-  <div class="step active" id="step-product">
-    <p class="eyebrow">Step 1 of 4</p>
-    <h1>What would you like?</h1>
-    <p class="lede">Choose the type of artifact. We will guide the remaining choices and send a clear proposal.</p>
-    <div class="choice-grid" id="product-grid">
-      <button class="choice" data-product="Digital image">
-        <b>Digital image</b>
-        <small>High-resolution image for screens or personal use</small>
-      </button>
-      <button class="choice" data-product="Fine-art print">
-        <b>Fine-art print</b>
-        <small>Archival pigment print, museum-grade paper</small>
-      </button>
-      <button class="choice" data-product="Moving water study">
-        <b>Moving water study</b>
-        <small>Animated GIF / MP4 showing seasonal flow</small>
-      </button>
-      <button class="choice" data-product="Water story report">
-        <b>Water story report</b>
-        <small>Historical analysis of a watershed's water patterns</small>
-      </button>
+  <!-- Progress bar (steps 1–6, hidden on confirm) -->
+  <div class="progress" id="progress-bar" aria-label="Order steps">
+    <div class="progress-step" id="prog-1">
+      <div class="progress-dot">1</div>
+      <span class="progress-label">Product</span>
     </div>
-    <div class="btn-row">
-      <button class="btn" id="btn-to-place" disabled>Continue</button>
+    <div class="progress-connector"></div>
+    <div class="progress-step" id="prog-2">
+      <div class="progress-dot">2</div>
+      <span class="progress-label">Location</span>
+    </div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" id="prog-3">
+      <div class="progress-dot">3</div>
+      <span class="progress-label">Style</span>
+    </div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" id="prog-4">
+      <div class="progress-dot">4</div>
+      <span class="progress-label">Details</span>
+    </div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" id="prog-5">
+      <div class="progress-dot">5</div>
+      <span class="progress-label">Contact</span>
+    </div>
+    <div class="progress-connector"></div>
+    <div class="progress-step" id="prog-6">
+      <div class="progress-dot">6</div>
+      <span class="progress-label">Review</span>
     </div>
   </div>
 
-  <!-- Step 2: Choose place -->
-  <div class="step" id="step-place">
-    <p class="eyebrow">Step 2 of 4</p>
+  <!-- ── Step 1: Product ─────────────────────────────────────────────── -->
+  <div class="step active" id="step-1">
+    <p class="step-eyebrow">Step 1 of 6 &nbsp;·&nbsp; Product</p>
+    <h1>What would you like?</h1>
+    <p class="step-lede">Choose the type of artifact. We will guide you through the remaining choices.</p>
+
+    <div class="choice-grid" id="product-grid">
+      <button class="choice" data-product="digital-image">
+        <div class="choice-check">✓</div>
+        <span class="choice-icon">🖥</span>
+        <b>Digital Image</b>
+        <small>High-resolution SVG or PNG for screens, social, or your own printing.</small>
+        <span class="price-hint">from $38</span>
+      </button>
+      <button class="choice" data-product="fine-art-print">
+        <div class="choice-check">✓</div>
+        <span class="choice-icon">🖼</span>
+        <b>Fine-art Print</b>
+        <small>Museum-grade archival pigment print — sizes up to 24×36.</small>
+        <span class="price-hint">from $110</span>
+      </button>
+      <button class="choice" data-product="watershed-report">
+        <div class="choice-check">✓</div>
+        <span class="choice-icon">📊</span>
+        <b>Watershed Report</b>
+        <small>Plain-language visual study of how your watershed's water moves through the year.</small>
+        <span class="price-hint">from $95</span>
+      </button>
+      <button class="choice" data-product="year-in-motion">
+        <div class="choice-check">✓</div>
+        <span class="choice-icon">🌊</span>
+        <b>Year in Motion</b>
+        <small>A short loop of your rivers swelling and receding through the seasons. GIF / MP4.</small>
+        <span class="price-hint">from $64</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Location ───────────────────────────────────────────── -->
+  <div class="step" id="step-2">
+    <p class="step-eyebrow">Step 2 of 6 &nbsp;·&nbsp; Location</p>
     <h1>Where?</h1>
-    <p class="lede">Choose a state and county. The artwork will show the full watershed network for that county.</p>
+    <p class="step-lede">Choose a state and county. The artwork will show the full watershed network for that county.</p>
+
     <div class="field">
       <label for="sel-state">State</label>
-      <select id="sel-state"><option value="">Select a state...</option></select>
+      <select id="sel-state"><option value="">Select a state…</option></select>
     </div>
     <div class="field">
       <label for="sel-county">County</label>
-      <select id="sel-county" disabled><option value="">Select a county...</option></select>
+      <select id="sel-county" disabled><option value="">Select a county…</option></select>
+      <p class="field-hint">Counties are populated after you choose a state.</p>
     </div>
+
     <div class="btn-row">
-      <button class="btn ghost" id="btn-back-product">Back</button>
-      <button class="btn" id="btn-to-options" disabled>Continue</button>
+      <button class="btn ghost" id="btn-back-1">← Back</button>
+      <button class="btn solid" id="btn-next-2" disabled>Continue <span class="arw">→</span></button>
     </div>
   </div>
 
-  <!-- Step 3: Style & size -->
-  <div class="step" id="step-options">
-    <p class="eyebrow">Step 3 of 4</p>
-    <h1>Style and size</h1>
-    <p class="lede">Choose an art direction and print size.</p>
-    <div class="field">
-      <label for="sel-style">Art direction</label>
-      <select id="sel-style">
-        <option value="neon-basin">Neon basin (colorful watershed map)</option>
-        <option value="elevation-tint">Elevation tint (terrain-shaded)</option>
-      </select>
+  <!-- ── Step 3: Style ──────────────────────────────────────────────── -->
+  <div class="step" id="step-3">
+    <p class="step-eyebrow">Step 3 of 6 &nbsp;·&nbsp; Style</p>
+    <h1>Art direction</h1>
+    <p class="step-lede">Choose how the river network is colored. Both styles use the same underlying USGS data.</p>
+
+    <div class="choice-grid" id="style-grid">
+      <button class="choice" data-style="neon-basin">
+        <div class="choice-check">✓</div>
+        <b>Neon Basin</b>
+        <small>Watersheds colored in luminous neons — tributaries share their basin hue. The signature look.</small>
+      </button>
+      <button class="choice" data-style="elevation-tint">
+        <div class="choice-check">✓</div>
+        <b>Elevation Tint</b>
+        <small>Rivers shaded by terrain height — summit white to valley blue. A quieter, topographic read.</small>
+      </button>
     </div>
-    <div class="field">
-      <label for="sel-size">Size</label>
-      <select id="sel-size">
-        <option value="12x16">12 x 16 in</option>
-        <option value="18x24" selected>18 x 24 in</option>
-        <option value="24x36">24 x 36 in</option>
-      </select>
-    </div>
+
     <div class="btn-row">
-      <button class="btn ghost" id="btn-back-place">Back</button>
-      <button class="btn" id="btn-to-review">Continue</button>
+      <button class="btn ghost" id="btn-back-2">← Back</button>
+      <button class="btn solid" id="btn-next-3" disabled>Continue <span class="arw">→</span></button>
     </div>
   </div>
 
-  <!-- Step 4: Review & submit -->
-  <div class="step" id="step-review">
-    <p class="eyebrow">Step 4 of 4</p>
-    <h1>Review your proposal</h1>
-    <p class="lede">Confirm the details and enter your email. We will send a proposal for your review.</p>
+  <!-- ── Step 4: Details ────────────────────────────────────────────── -->
+  <div class="step" id="step-4">
+    <p class="step-eyebrow">Step 4 of 6 &nbsp;·&nbsp; Details</p>
+    <h1>Size and details</h1>
+    <p class="step-lede">Choose a print size and optionally add a title to appear on the piece.</p>
 
-    <div class="summary" id="proposal-summary">
-      <h2 id="review-product">—</h2>
+    <div class="field">
+      <label>Size</label>
+      <div class="size-grid">
+        <button class="size-btn" data-size="12x16">12 × 16 in<span>Small</span></button>
+        <button class="size-btn selected" data-size="18x24">18 × 24 in<span>Standard</span></button>
+        <button class="size-btn" data-size="24x36">24 × 36 in<span>Large</span></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="inp-title">Title <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <input type="text" id="inp-title" placeholder="e.g. Clark County Rivers" maxlength="80" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="inp-subtitle">Subtitle <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <input type="text" id="inp-subtitle" placeholder="e.g. Washington State · NHDPlus HR" maxlength="80" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="inp-note">Note to us <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <textarea id="inp-note" placeholder="Any special requests — framing, color tweaks, rush timeline…" maxlength="500"></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn ghost" id="btn-back-3">← Back</button>
+      <button class="btn solid" id="btn-next-4">Continue <span class="arw">→</span></button>
+    </div>
+  </div>
+
+  <!-- ── Step 5: Contact ────────────────────────────────────────────── -->
+  <div class="step" id="step-5">
+    <p class="step-eyebrow">Step 5 of 6 &nbsp;·&nbsp; Contact</p>
+    <h1>How to reach you</h1>
+    <p class="step-lede">Your email is your only identifier — no account, no password. We will send a proof and a proposal for your review.</p>
+
+    <div class="field">
+      <label for="inp-email">Email address <span style="color:var(--cyan); font-size:10px">required</span></label>
+      <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="inp-name">Name <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <input type="text" id="inp-name" placeholder="First name or full name" maxlength="80" autocomplete="name">
+    </div>
+
+    <div class="btn-row">
+      <button class="btn ghost" id="btn-back-4">← Back</button>
+      <button class="btn solid" id="btn-next-5" disabled>Continue <span class="arw">→</span></button>
+    </div>
+  </div>
+
+  <!-- ── Step 6: Review ─────────────────────────────────────────────── -->
+  <div class="step" id="step-6">
+    <p class="step-eyebrow">Step 6 of 6 &nbsp;·&nbsp; Review</p>
+    <h1>Review your order</h1>
+    <p class="step-lede">Everything look right? Submitting sends your request to our team — we will follow up with a proof and a price confirmation.</p>
+
+    <div class="summary" id="order-summary">
+      <div class="summary-product-title" id="rev-product">—</div>
       <dl>
-        <div><dt>Location</dt><dd id="review-location">—</dd></div>
-        <div><dt>Style</dt><dd id="review-style">—</dd></div>
-        <div><dt>Size</dt><dd id="review-size">—</dd></div>
+        <div><dt>Location</dt><dd id="rev-location">—</dd></div>
+        <div><dt>Style</dt><dd id="rev-style">—</dd></div>
+        <div><dt>Size</dt><dd id="rev-size">—</dd></div>
+        <div id="rev-title-row" style="display:none"><dt>Title</dt><dd id="rev-title">—</dd></div>
+        <div id="rev-subtitle-row" style="display:none"><dt>Subtitle</dt><dd id="rev-subtitle">—</dd></div>
+        <div id="rev-note-row" style="display:none"><dt>Note</dt><dd id="rev-note">—</dd></div>
+        <div><dt>Email</dt><dd id="rev-email">—</dd></div>
+        <div id="rev-name-row" style="display:none"><dt>Name</dt><dd id="rev-name">—</dd></div>
       </dl>
     </div>
 
-    <div class="field" style="margin-top: 24px;">
-      <label for="inp-email">Your email address</label>
-      <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email">
-    </div>
-
     <div class="error-msg" id="submit-error"></div>
+
     <div class="btn-row">
-      <button class="btn ghost" id="btn-back-options">Back</button>
-      <button class="btn" id="btn-submit">Send proposal</button>
+      <button class="btn ghost" id="btn-back-5">← Back</button>
+      <button class="btn solid" id="btn-submit">Submit Order <span class="arw">→</span></button>
     </div>
   </div>
 
-  <!-- Confirmation -->
+  <!-- ── Confirmation ───────────────────────────────────────────────── -->
   <div class="step" id="step-confirm">
     <div class="confirmation">
-      <p class="eyebrow">Proposal submitted</p>
+      <p class="conf-eyebrow">Order received</p>
       <h1>Thank you!</h1>
-      <div class="order-id" id="confirm-id">—</div>
-      <p>Your proposal has been received. An operations coordinator will review it and follow up at <strong id="confirm-email"></strong>.</p>
-      <div style="background: var(--paper-bright); border: 1px solid var(--line); padding: 20px; max-width: 480px; margin: 24px auto; text-align: left;">
-        <p class="eyebrow" style="margin-bottom: 12px;">What happens next</p>
-        <ol style="margin:0; padding-left: 20px; color: var(--muted); font-size: 14px; line-height: 1.8;">
-          <li>A coordinator reviews your proposal</li>
+      <div class="req-id" id="confirm-id">—</div>
+      <p class="conf-lede">
+        Your order is in. We will review it and send a proof to
+        <strong id="confirm-email"></strong> — usually within one business day.
+      </p>
+      <div class="next-steps">
+        <div class="next-steps-label">What happens next</div>
+        <ol>
+          <li>A coordinator reviews your order</li>
           <li>Your artwork is rendered at full resolution</li>
-          <li>You receive a proof to review and approve</li>
+          <li>You receive a proof link to review and approve</li>
           <li>Final files are delivered for download</li>
         </ol>
       </div>
-      <p style="font-size:13px; color: var(--muted); margin-top:16px;">Track your order: <a id="confirm-delivery-link" href="#" style="color:var(--accent)">delivery page</a></p>
-      <div class="btn-row" style="justify-content: center; margin-top: 24px;">
-        <a class="btn ghost" href="ops.html">View in operations</a>
-        <a class="btn" href="order.html">New order</a>
+      <p style="font-family:var(--mono); font-size:12px; color:var(--faint)">
+        Track at: <a id="confirm-delivery-link" href="#" style="color:var(--cyan)">—</a>
+      </p>
+      <div class="btn-row" style="justify-content:center; margin-top:28px">
+        <a class="btn ghost" href="order.html">New order</a>
+        <a class="btn solid" href="start.html">Back to home <span class="arw">→</span></a>
       </div>
     </div>
   </div>
 
 </main>
 
-<footer class="footer">
-  <span>HYDRO-ART / INTERNAL TESTING</span>
-  <span>&copy; 2026 RUNDE STRATEGIES</span>
+<footer>
+  <span>Hydro&#9671;Art / Order</span>
+  <span>© 2026 Runde Strategies · USGS public-domain data</span>
 </footer>
 
-<script src="shared/hydro-ux.js"></script>
+<script src="/web/shared/hydro-ux.js"></script>
 <script>
 "use strict";
 (function () {
   var H = window.HydroUX;
 
-  // --- State ----
-  var state = { product: "", region: "", county: "", style: "neon-basin", size: "18x24" };
+  // ── State ────────────────────────────────────────────────────────────────
+  var S = {
+    product: "",
+    region: "",
+    county: "",
+    style: "",
+    size: "18x24",
+    title: "",
+    subtitle: "",
+    note: "",
+    email: "",
+    name: "",
+  };
 
-  // --- Step navigation ---
-  var steps = ["step-product", "step-place", "step-options", "step-review", "step-confirm"];
+  var PRODUCT_LABELS = {
+    "digital-image":    "Digital Image",
+    "fine-art-print":   "Fine-art Print",
+    "watershed-report": "Watershed Report",
+    "year-in-motion":   "Year in Motion",
+  };
+  var STYLE_LABELS = {
+    "neon-basin":      "Neon Basin",
+    "elevation-tint":  "Elevation Tint",
+  };
+
+  // ── Step navigation ───────────────────────────────────────────────────────
+  var STEP_IDS = ["step-1","step-2","step-3","step-4","step-5","step-6","step-confirm"];
+  var PROG_IDS = ["prog-1","prog-2","prog-3","prog-4","prog-5","prog-6"];
+
   function showStep(id) {
-    steps.forEach(function (s) {
+    STEP_IDS.forEach(function (s) {
       document.getElementById(s).classList.toggle("active", s === id);
     });
+    var num = parseInt(id.replace("step-", ""), 10);
+    var isConfirm = id === "step-confirm";
+    document.getElementById("progress-bar").style.display = isConfirm ? "none" : "";
+    if (!isConfirm) {
+      PROG_IDS.forEach(function (p, i) {
+        var el = document.getElementById(p);
+        el.classList.remove("done", "active");
+        if (i + 1 < num) el.classList.add("done");
+        if (i + 1 === num) el.classList.add("active");
+      });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // --- Step 1: Product ---
+  // ── Step 1: Product ───────────────────────────────────────────────────────
   var productBtns = document.querySelectorAll("#product-grid .choice");
-  var btnToPlace = document.getElementById("btn-to-place");
   productBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {
       productBtns.forEach(function (b) { b.classList.remove("selected"); });
       btn.classList.add("selected");
-      state.product = btn.getAttribute("data-product");
-      btnToPlace.disabled = false;
+      S.product = btn.getAttribute("data-product");
+      // Auto-advance after a brief moment so the selection is visible
+      setTimeout(function () { showStep("step-2"); }, 180);
     });
   });
-  btnToPlace.addEventListener("click", function () { showStep("step-place"); });
 
-  // --- Step 2: Place ---
-  var selState = document.getElementById("sel-state");
+  // ── Step 2: Location ──────────────────────────────────────────────────────
+  var selState  = document.getElementById("sel-state");
   var selCounty = document.getElementById("sel-county");
-  var btnToOptions = document.getElementById("btn-to-options");
+  var btnBack1  = document.getElementById("btn-back-1");
+  var btnNext2  = document.getElementById("btn-next-2");
 
   H.STATES.forEach(function (s) {
     var opt = document.createElement("option");
@@ -259,102 +716,173 @@
   });
 
   selState.addEventListener("change", function () {
-    state.region = selState.value;
-    selCounty.innerHTML = '<option value="">Select a county...</option>';
-    selCounty.disabled = !state.region;
-    btnToOptions.disabled = true;
-    if (state.region && H.COUNTIES[state.region]) {
-      H.COUNTIES[state.region].forEach(function (c) {
+    S.region = selState.value;
+    selCounty.innerHTML = '<option value="">Select a county…</option>';
+    selCounty.disabled = !S.region;
+    S.county = "";
+    btnNext2.disabled = true;
+    if (S.region && H.COUNTIES[S.region]) {
+      H.COUNTIES[S.region].forEach(function (c) {
         var opt = document.createElement("option");
-        opt.value = c;
-        opt.textContent = c;
+        opt.value = c; opt.textContent = c;
         selCounty.appendChild(opt);
       });
     }
   });
 
   selCounty.addEventListener("change", function () {
-    state.county = selCounty.value;
-    btnToOptions.disabled = !state.county;
+    S.county = selCounty.value;
+    btnNext2.disabled = !S.county;
   });
 
-  btnToOptions.addEventListener("click", function () { showStep("step-options"); });
-  document.getElementById("btn-back-product").addEventListener("click", function () { showStep("step-product"); });
+  btnBack1.addEventListener("click", function () { showStep("step-1"); });
+  btnNext2.addEventListener("click", function () { showStep("step-3"); });
 
-  // --- Step 3: Options ---
-  var selStyle = document.getElementById("sel-style");
-  var selSize = document.getElementById("sel-size");
+  // ── Step 3: Style ─────────────────────────────────────────────────────────
+  var styleBtns = document.querySelectorAll("#style-grid .choice");
+  var btnBack2  = document.getElementById("btn-back-2");
+  var btnNext3  = document.getElementById("btn-next-3");
 
-  selStyle.addEventListener("change", function () { state.style = selStyle.value; });
-  selSize.addEventListener("change", function () { state.size = selSize.value; });
-
-  document.getElementById("btn-to-review").addEventListener("click", function () {
-    state.style = selStyle.value;
-    state.size = selSize.value;
-    // Populate review
-    document.getElementById("review-product").textContent = state.product;
-    document.getElementById("review-location").textContent = state.county + " County, " + state.region;
-    document.getElementById("review-style").textContent = selStyle.options[selStyle.selectedIndex].text;
-    document.getElementById("review-size").textContent = selSize.options[selSize.selectedIndex].text;
-    showStep("step-review");
+  styleBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      styleBtns.forEach(function (b) { b.classList.remove("selected"); });
+      btn.classList.add("selected");
+      S.style = btn.getAttribute("data-style");
+      btnNext3.disabled = false;
+    });
   });
-  document.getElementById("btn-back-place").addEventListener("click", function () { showStep("step-place"); });
 
-  // --- Step 4: Review & submit ---
-  document.getElementById("btn-back-options").addEventListener("click", function () { showStep("step-options"); });
+  btnBack2.addEventListener("click", function () { showStep("step-2"); });
+  btnNext3.addEventListener("click", function () { showStep("step-4"); });
 
+  // ── Step 4: Details ───────────────────────────────────────────────────────
+  var sizeBtns  = document.querySelectorAll(".size-btn");
+  var btnBack3  = document.getElementById("btn-back-3");
+  var btnNext4  = document.getElementById("btn-next-4");
+
+  sizeBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      sizeBtns.forEach(function (b) { b.classList.remove("selected"); });
+      btn.classList.add("selected");
+      S.size = btn.getAttribute("data-size");
+    });
+  });
+
+  btnBack3.addEventListener("click", function () { showStep("step-3"); });
+  btnNext4.addEventListener("click", function () {
+    S.title    = document.getElementById("inp-title").value.trim();
+    S.subtitle = document.getElementById("inp-subtitle").value.trim();
+    S.note     = document.getElementById("inp-note").value.trim();
+    showStep("step-5");
+  });
+
+  // ── Step 5: Contact ───────────────────────────────────────────────────────
+  var inpEmail  = document.getElementById("inp-email");
+  var inpName   = document.getElementById("inp-name");
+  var btnBack4  = document.getElementById("btn-back-4");
+  var btnNext5  = document.getElementById("btn-next-5");
+
+  function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  inpEmail.addEventListener("input", function () {
+    btnNext5.disabled = !validateEmail(inpEmail.value.trim());
+  });
+
+  btnBack4.addEventListener("click", function () { showStep("step-4"); });
+  btnNext5.addEventListener("click", function () {
+    S.email = inpEmail.value.trim();
+    S.name  = inpName.value.trim();
+    populateReview();
+    showStep("step-6");
+  });
+
+  // ── Step 6: Review ────────────────────────────────────────────────────────
+  function populateReview() {
+    setText("rev-product",  PRODUCT_LABELS[S.product] || S.product);
+    setText("rev-location", S.county + " County, " + S.region);
+    setText("rev-style",    STYLE_LABELS[S.style] || S.style);
+    setText("rev-size",     S.size + " in");
+    setText("rev-email",    S.email);
+    showOptRow("rev-title-row",    "rev-title",    S.title);
+    showOptRow("rev-subtitle-row", "rev-subtitle", S.subtitle);
+    showOptRow("rev-note-row",     "rev-note",     S.note);
+    showOptRow("rev-name-row",     "rev-name",     S.name);
+  }
+
+  function setText(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  function showOptRow(rowId, cellId, val) {
+    var row  = document.getElementById(rowId);
+    var cell = document.getElementById(cellId);
+    if (!row || !cell) return;
+    if (val) { row.style.display = ""; cell.textContent = val; }
+    else     { row.style.display = "none"; }
+  }
+
+  document.getElementById("btn-back-5").addEventListener("click", function () {
+    showStep("step-5");
+  });
+
+  // ── Submit ────────────────────────────────────────────────────────────────
   var btnSubmit = document.getElementById("btn-submit");
-  var errorEl = document.getElementById("submit-error");
+  var errorEl   = document.getElementById("submit-error");
 
   btnSubmit.addEventListener("click", function () {
-    var email = document.getElementById("inp-email").value.trim();
-    if (!email) {
-      errorEl.textContent = "Please enter your email address.";
-      errorEl.style.display = "block";
-      return;
-    }
     errorEl.style.display = "none";
     btnSubmit.disabled = true;
-    btnSubmit.textContent = "Submitting...";
+    btnSubmit.textContent = "Submitting…";
 
     var payload = {
-      email: email,
-      product: state.product,
-      region: state.region,
-      county: state.county,
-      style: state.style,
-      size: state.size,
+      email:   S.email,
+      product: S.product,
+      region:  S.region,
+      county:  S.county,
+      style:   S.style,
+      size:    S.size,
       formats: ["png"],
     };
+    if (S.title)    payload.title    = S.title;
+    if (S.subtitle) payload.subtitle = S.subtitle;
+    if (S.note)     payload.note     = S.note;
+    if (S.name)     payload.name     = S.name;
 
     fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-      .then(function (resp) { return resp.json().then(function (d) { return { ok: resp.ok, data: d }; }); })
+      .then(function (resp) {
+        return resp.json().then(function (d) { return { ok: resp.ok, status: resp.status, data: d }; });
+      })
       .then(function (r) {
         if (!r.ok) {
-          errorEl.textContent = r.data.error || "Something went wrong.";
+          errorEl.textContent = (r.data && r.data.error) ? r.data.error : ("Error " + r.status + ". Please try again.");
           errorEl.style.display = "block";
           btnSubmit.disabled = false;
-          btnSubmit.textContent = "Send proposal";
+          btnSubmit.innerHTML = "Submit Order <span class='arw'>→</span>";
           return;
         }
-        document.getElementById("confirm-id").textContent = r.data.request_id;
-        document.getElementById("confirm-email").textContent = email;
+        var reqId = r.data.request_id || "—";
+        document.getElementById("confirm-id").textContent = reqId;
+        document.getElementById("confirm-email").textContent = S.email;
         var dlLink = document.getElementById("confirm-delivery-link");
-        dlLink.href = "delivery.html?order=" + r.data.request_id;
-        dlLink.textContent = r.data.request_id;
+        dlLink.href = "delivery.html?order=" + encodeURIComponent(reqId);
+        dlLink.textContent = reqId;
         showStep("step-confirm");
       })
       .catch(function (err) {
-        errorEl.textContent = "Network error: " + err.message;
+        errorEl.textContent = "Network error: " + (err.message || "unknown");
         errorEl.style.display = "block";
         btnSubmit.disabled = false;
-        btnSubmit.textContent = "Send proposal";
+        btnSubmit.innerHTML = "Submit Order <span class='arw'>→</span>";
       });
   });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  showStep("step-1");
 })();
 </script>
 </body>

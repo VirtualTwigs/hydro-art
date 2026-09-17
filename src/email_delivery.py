@@ -19,7 +19,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Protocol
 
-__all__ = ["SmtpSender", "send_confirmation_email", "send_delivery_email"]
+__all__ = ["SmtpSender", "send_confirmation_email", "send_delivery_email", "send_proof_email"]
 
 log = logging.getLogger(__name__)
 
@@ -181,6 +181,81 @@ def send_confirmation_email(
         return True
     except Exception:
         log.exception("Failed to send confirmation email to %s for request %s", to, request_id)
+        return False
+
+
+def _build_proof_message(
+    to: str,
+    request_id: str,
+    proof_url: str,
+    *,
+    title: str = "",
+) -> MIMEMultipart:
+    """Build the proof-ready notification email."""
+    subject = f"Your proof is ready for review — {request_id}"
+
+    text = f"""Your Hydro-Art proof is ready for review.
+
+Order:  {request_id}
+Title:  {title or "(untitled)"}
+
+Review your proof and approve or request changes:
+{proof_url}
+
+This link will expire in 7 days.
+
+---
+Hydrographic artwork produced by Runde Strategies.
+"""
+
+    html = f"""\
+<div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#182622">
+  <div style="border-bottom:2px solid #236c6a;padding:16px 0;margin-bottom:24px">
+    <strong style="font-size:20px;letter-spacing:-.02em">Hydro&#9671;Art</strong>
+  </div>
+  <h2 style="margin:0 0 8px;font-size:22px">Your proof is ready</h2>
+  <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
+    <tr><td style="padding:8px 0;color:#53625b;width:90px">Order</td><td style="padding:8px 0;font-weight:600">{request_id}</td></tr>
+    <tr><td style="padding:8px 0;color:#53625b">Title</td><td style="padding:8px 0">{title or "(untitled)"}</td></tr>
+  </table>
+  <div style="margin:24px 0">
+    <a href="{proof_url}" style="display:inline-block;background:#236c6a;color:white;padding:14px 28px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:.05em;text-transform:uppercase">Review your proof</a>
+  </div>
+  <p style="font-size:12px;color:#53625b;margin-top:32px;border-top:1px solid #b5bdb3;padding-top:12px">
+    This link will expire in 7 days.<br>
+    Hydrographic artwork produced by Runde Strategies.
+  </p>
+</div>
+"""
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = FROM_ADDRESS
+    msg["To"] = to
+    msg.attach(MIMEText(text, "plain"))
+    msg.attach(MIMEText(html, "html"))
+    return msg
+
+
+def send_proof_email(
+    to: str,
+    request_id: str,
+    proof_url: str,
+    *,
+    title: str = "",
+    sender: Any = None,
+) -> bool:
+    """Send the proof-ready notification. Returns True on success."""
+    if sender is None:
+        sender = SmtpSender()
+    msg = _build_proof_message(to, request_id, proof_url, title=title)
+    try:
+        if sender.send(msg) is False:
+            return False
+        log.info("Proof email sent to %s for request %s", to, request_id)
+        return True
+    except Exception:
+        log.exception("Failed to send proof email to %s for request %s", to, request_id)
         return False
 
 

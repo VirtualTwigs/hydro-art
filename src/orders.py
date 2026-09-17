@@ -23,6 +23,7 @@ from src.fulfillment import OrderError, build_order
 __all__ = [
     "STATUSES",
     "TRANSITIONS",
+    "OrderEvent",
     "Request",
     "OrderStore",
 ]
@@ -35,16 +36,24 @@ STATUSES = (
     "proof_ready",
     "approved",
     "fulfilled",
+    "revision_requested",
+    "render_failed",
+    "payment_pending",
+    "paid",
 )
 
 #: Allowed status transitions: current -> set of allowed next statuses.
 TRANSITIONS: dict[str, frozenset[str]] = {
     "submitted": frozenset({"accepted"}),
     "accepted": frozenset({"rendering"}),
-    "rendering": frozenset({"proof_ready"}),
-    "proof_ready": frozenset({"approved", "submitted"}),
-    "approved": frozenset({"fulfilled"}),
+    "rendering": frozenset({"proof_ready", "render_failed"}),
+    "proof_ready": frozenset({"approved", "revision_requested"}),
+    "revision_requested": frozenset({"rendering"}),
+    "approved": frozenset({"payment_pending", "fulfilled"}),
+    "render_failed": frozenset({"rendering"}),
     "fulfilled": frozenset(),
+    "payment_pending": frozenset({"paid"}),
+    "paid": frozenset({"fulfilled"}),
 }
 
 
@@ -69,6 +78,26 @@ def _next_seq(store_dir: Path, date_str: str) -> int:
 
 
 @dataclass
+class OrderEvent:
+    """A single event in the order's audit trail."""
+
+    timestamp: str
+    event: str
+    detail: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"timestamp": self.timestamp, "event": self.event, "detail": self.detail}
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> OrderEvent:
+        return cls(
+            timestamp=data["timestamp"],
+            event=data["event"],
+            detail=data.get("detail", {}),
+        )
+
+
+@dataclass
 class Request:
     """A customer request wrapping a validated Order + lifecycle metadata."""
 
@@ -82,6 +111,11 @@ class Request:
     job_id: str | None = None
     delivery_url: str | None = None
     notes: list[str] = field(default_factory=list)
+    events: list[dict[str, Any]] = field(default_factory=list)
+    stripe_session_id: str | None = None
+    stripe_payment_intent: str | None = None
+    amount_cents: int | None = None
+    paid_at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -135,6 +169,11 @@ class OrderStore:
         order = build_order(order_payload)
 
         now = _now_iso()
+        initial_event = OrderEvent(
+            timestamp=now,
+            event="submitted",
+            detail={"product": product, "email": email},
+        ).to_dict()
         req = Request(
             request_id=request_id,
             status="submitted",
@@ -143,6 +182,7 @@ class OrderStore:
             created_at=now,
             updated_at=now,
             order=asdict(order),
+            events=[initial_event],
         )
         self._write(req)
         return req
@@ -184,7 +224,11 @@ class OrderStore:
                     f"Allowed: {sorted(allowed)}."
                 )
             req.status = new_status
-            req.updated_at = _now_iso()
+            now = _now_iso()
+            req.updated_at = now
+            req.events.append(
+                OrderEvent(timestamp=now, event=new_status, detail={}).to_dict()
+            )
             self._write(req)
         return req
 
@@ -194,6 +238,20 @@ class OrderStore:
             req = self.get(request_id)
             req.job_id = job_id
             req.updated_at = _now_iso()
+            self._write(req)
+        return req
+
+    def add_event(
+        self, request_id: str, event: str, detail: dict[str, Any] | None = None,
+    ) -> Request:
+        """Append a custom event to a request's event log."""
+        with self._lock:
+            req = self.get(request_id)
+            now = _now_iso()
+            req.events.append(
+                OrderEvent(timestamp=now, event=event, detail=detail or {}).to_dict()
+            )
+            req.updated_at = now
             self._write(req)
         return req
 

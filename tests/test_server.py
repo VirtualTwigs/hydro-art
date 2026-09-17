@@ -151,10 +151,10 @@ def test_post_order_creates_request(tmp_path):
     payload = json.dumps(_order_payload()).encode()
     resp = _order_req(runner, "POST", "/api/orders", payload,
                       web_root=tmp_path, order_store=store)
-    assert resp.status == 201
+    assert resp.status == 202
     data = json.loads(resp.body)
     assert data["request_id"].startswith("REQ-")
-    assert data["status"] == "submitted"
+    assert data["status"] == "rendering"
     assert data["email"] == "buyer@example.com"
 
 
@@ -248,3 +248,303 @@ def test_order_routes_inactive_without_store(tmp_path):
     """When no order_store is passed, /api/orders falls through to static."""
     resp = _req(FakeRunner(), "GET", "/api/orders", web_root=tmp_path)
     assert resp.status == 404
+
+
+# --- Epoch 28: auto-dispatch & proof routes --------------------------------
+
+def test_order_submit_auto_dispatches_render(tmp_path):
+    """POST /api/orders auto-transitions to rendering and dispatches a job."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    runner = FakeRunner()
+    payload = json.dumps(_order_payload()).encode()
+    resp = _order_req(runner, "POST", "/api/orders", payload,
+                      web_root=tmp_path, order_store=store)
+    assert resp.status == 202
+    data = json.loads(resp.body)
+    assert data["status"] == "rendering"
+    assert data["job_id"] == "job123"
+    assert runner.submitted is not None
+
+
+def test_order_submit_bad_region_returns_400(tmp_path):
+    """Invalid region → 400."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps(_order_payload(region="Atlantis")).encode()
+    resp = _order_req(FakeRunner(), "POST", "/api/orders", payload,
+                      web_root=tmp_path, order_store=store)
+    assert resp.status == 400
+    assert "region" in json.loads(resp.body)["error"].lower()
+
+
+def test_order_submit_missing_email_returns_400(tmp_path):
+    """No email → 400."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps(_order_payload(email="")).encode()
+    resp = _order_req(FakeRunner(), "POST", "/api/orders", payload,
+                      web_root=tmp_path, order_store=store)
+    assert resp.status == 400
+    assert "email" in json.loads(resp.body)["error"].lower()
+
+
+def test_order_submit_prism_style_returns_400(tmp_path):
+    """PRISM art direction → 400 (rights gate)."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps(_order_payload(style="prism-topo")).encode()
+    resp = _order_req(FakeRunner(), "POST", "/api/orders", payload,
+                      web_root=tmp_path, order_store=store)
+    assert resp.status == 400
+    assert "style" in json.loads(resp.body)["error"].lower()
+
+
+# --- Epoch 28: proof review routes -----------------------------------------
+
+def _setup_proof_ready_order(tmp_path):
+    """Helper: create an order and advance it to proof_ready."""
+    from src.orders import OrderStore
+    from src.proof import sign_proof_url
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+    store.update_status(req.request_id, "proof_ready")
+    secret = b"test-secret"
+    token = sign_proof_url(req.request_id, secret, expires_in=3600)
+    return store, req, token, secret
+
+
+def test_proof_page_valid_token_200(tmp_path):
+    """Signed token → 200 with proof data."""
+    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    runner = FakeRunner()
+    resp = handle_request(
+        runner, "GET", f"/api/proof/{token}", b"",
+        web_root=str(tmp_path), order_store=store, proof_secret=secret,
+    )
+    assert resp.status == 200
+    data = json.loads(resp.body)
+    assert data["request_id"] == req.request_id
+
+
+def test_proof_page_expired_token_410(tmp_path):
+    """Expired token → 410 Gone."""
+    from src.orders import OrderStore
+    from src.proof import sign_proof_url
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+    store.update_status(req.request_id, "proof_ready")
+    secret = b"test-secret"
+    token = sign_proof_url(req.request_id, secret, expires_in=0)
+    resp = handle_request(
+        runner=FakeRunner(), method="GET", path=f"/api/proof/{token}", body=b"",
+        web_root=str(tmp_path), order_store=store, proof_secret=secret,
+    )
+    assert resp.status == 410
+
+
+def test_proof_page_invalid_token_403(tmp_path):
+    """Bad signature → 403 Forbidden."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    resp = handle_request(
+        runner=FakeRunner(), method="GET", path="/api/proof/bogus-token", body=b"",
+        web_root=str(tmp_path), order_store=store, proof_secret=b"test-secret",
+    )
+    assert resp.status == 403
+
+
+def test_proof_approve_transitions_order(tmp_path):
+    """POST approve → order status = approved."""
+    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    resp = handle_request(
+        runner=FakeRunner(), method="POST", path=f"/api/proof/{token}/approve",
+        body=b"", web_root=str(tmp_path), order_store=store, proof_secret=secret,
+    )
+    assert resp.status == 200
+    data = json.loads(resp.body)
+    assert data["status"] == "approved"
+    # Verify persisted
+    fetched = store.get(req.request_id)
+    assert fetched.status == "approved"
+
+
+def test_proof_adjust_triggers_rerender(tmp_path):
+    """POST adjust → order status = rendering."""
+    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    runner = FakeRunner()
+    adjust_payload = json.dumps({"style": "neon-basin"}).encode()
+    resp = handle_request(
+        runner=runner, method="POST", path=f"/api/proof/{token}/adjust",
+        body=adjust_payload, web_root=str(tmp_path), order_store=store,
+        proof_secret=secret,
+    )
+    assert resp.status == 202
+    data = json.loads(resp.body)
+    assert data["status"] == "rendering"
+
+
+def test_proof_adjust_preserves_email(tmp_path):
+    """Re-render keeps original email."""
+    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    runner = FakeRunner()
+    resp = handle_request(
+        runner=runner, method="POST", path=f"/api/proof/{token}/adjust",
+        body=b"{}", web_root=str(tmp_path), order_store=store,
+        proof_secret=secret,
+    )
+    assert resp.status == 202
+    fetched = store.get(req.request_id)
+    assert fetched.email == "buyer@example.com"
+
+
+# --- Epoch 29: payment routes ---------------------------------------------
+
+def _setup_approved_order(tmp_path):
+    """Helper: create an order and advance it to approved."""
+    from src.orders import OrderStore
+    from src.proof import sign_proof_url
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+    store.update_status(req.request_id, "proof_ready")
+    store.update_status(req.request_id, "approved")
+    secret = b"test-secret"
+    token = sign_proof_url(req.request_id, secret, expires_in=3600)
+    return store, req, token, secret
+
+
+def test_approve_returns_checkout_url(tmp_path):
+    """POST /api/proof/<token>/approve returns checkout URL when payment is configured."""
+    store, req, token, secret = _setup_proof_ready_order(tmp_path)
+    resp = handle_request(
+        runner=FakeRunner(), method="POST", path=f"/api/proof/{token}/approve",
+        body=b"", web_root=str(tmp_path), order_store=store,
+        proof_secret=secret,
+    )
+    assert resp.status == 200
+    data = json.loads(resp.body)
+    assert data["status"] == "approved"
+
+
+def test_webhook_valid_post_transitions_to_paid(tmp_path):
+    """Webhook endpoint accepts valid POST and transitions order."""
+    import hashlib
+    import hmac as hmac_mod
+    import time as time_mod
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+    store.update_status(req.request_id, "proof_ready")
+    store.update_status(req.request_id, "approved")
+    store.update_status(req.request_id, "payment_pending")
+
+    webhook_secret = "whsec_test"
+    payload = json.dumps({
+        "type": "checkout.session.completed",
+        "data": {
+            "object": {
+                "id": "cs_test_1",
+                "payment_intent": "pi_test_1",
+                "metadata": {"request_id": req.request_id},
+            }
+        }
+    })
+    timestamp = str(int(time_mod.time()))
+    sig = hmac_mod.new(webhook_secret.encode(),
+                       f"{timestamp}.{payload}".encode(),
+                       hashlib.sha256).hexdigest()
+    signature = f"t={timestamp},v1={sig}"
+
+    resp = handle_request(
+        runner=FakeRunner(), method="POST",
+        path="/api/webhook/stripe",
+        body=payload.encode(),
+        web_root=str(tmp_path), order_store=store,
+        webhook_secret=webhook_secret,
+        headers={"Stripe-Signature": signature},
+    )
+    assert resp.status == 200
+    fetched = store.get(req.request_id)
+    assert fetched.status == "paid"
+
+
+def test_webhook_bad_signature_rejected(tmp_path):
+    """Webhook rejects bad signature."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps({"type": "checkout.session.completed", "data": {"object": {"metadata": {"request_id": "REQ-001"}}}})
+    resp = handle_request(
+        runner=FakeRunner(), method="POST",
+        path="/api/webhook/stripe",
+        body=payload.encode(),
+        web_root=str(tmp_path), order_store=store,
+        webhook_secret="whsec_test",
+        headers={"Stripe-Signature": "t=123,v1=bad_sig"},
+    )
+    assert resp.status == 400
+
+
+# --- Epoch 29: delivery routes --------------------------------------------
+
+def test_delivery_valid_token_200(tmp_path):
+    """Signed delivery token → 200 with order data."""
+    from src.orders import OrderStore
+    from src.proof import sign_delivery_url
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+    store.update_status(req.request_id, "proof_ready")
+    store.update_status(req.request_id, "approved")
+    store.update_status(req.request_id, "payment_pending")
+    store.update_status(req.request_id, "paid")
+    store.update_status(req.request_id, "fulfilled")
+
+    secret = b"delivery-secret"
+    token = sign_delivery_url(req.request_id, secret)
+    resp = handle_request(
+        runner=FakeRunner(), method="GET",
+        path=f"/api/delivery/{token}", body=b"",
+        web_root=str(tmp_path), order_store=store,
+        delivery_secret=secret,
+    )
+    assert resp.status == 200
+    data = json.loads(resp.body)
+    assert data["request_id"] == req.request_id
+
+
+def test_delivery_expired_token_410(tmp_path):
+    """Expired delivery token → 410."""
+    from src.orders import OrderStore
+    from src.proof import sign_delivery_url
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    secret = b"delivery-secret"
+    token = sign_delivery_url(req.request_id, secret, expires_in=0)
+    resp = handle_request(
+        runner=FakeRunner(), method="GET",
+        path=f"/api/delivery/{token}", body=b"",
+        web_root=str(tmp_path), order_store=store,
+        delivery_secret=secret,
+    )
+    assert resp.status == 410

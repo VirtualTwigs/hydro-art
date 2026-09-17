@@ -77,6 +77,41 @@ class TestSendDeliveryEmail:
         assert "Skamania County, Washington" in plain
 
 
+class TestSendProofEmail:
+    def test_sends_proof_email_with_signed_url(self):
+        from src.email_delivery import send_proof_email
+
+        sender = FakeSender()
+        result = send_proof_email(
+            "buyer@example.com",
+            "REQ-001",
+            "http://localhost:8765/proof.html?token=abc123",
+            title="Clark County Watersheds",
+            sender=sender,
+        )
+        assert result is True
+        assert len(sender.sent) == 1
+        msg = sender.sent[0]
+        assert msg["To"] == "buyer@example.com"
+        assert "REQ-001" in msg["Subject"]
+
+    def test_proof_email_contains_proof_url(self):
+        from src.email_delivery import send_proof_email
+
+        sender = FakeSender()
+        proof_url = "http://localhost:8765/proof.html?token=xyz"
+        send_proof_email("a@b.com", "REQ-001", proof_url, sender=sender)
+        plain = sender.sent[0].get_payload()[0].get_payload(decode=True).decode()
+        assert proof_url in plain
+
+    def test_proof_email_degrades_gracefully(self):
+        from src.email_delivery import send_proof_email
+
+        sender = FakeSender(fail=True)
+        result = send_proof_email("a@b.com", "REQ-001", "http://x", sender=sender)
+        assert result is False
+
+
 class TestSendConfirmationEmail:
     def test_sends_via_fake_sender(self):
         sender = FakeSender()

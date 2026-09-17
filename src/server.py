@@ -65,6 +65,10 @@ def _content_type(path: Path) -> str:
 def handle_request(
     runner: Any, method: str, path: str, body: bytes, *, web_root: str,
     order_store: Any = None, email_sender: Any = None,
+    proof_secret: bytes | None = None,
+    webhook_secret: str | None = None,
+    headers: dict[str, str] | None = None,
+    delivery_secret: bytes | None = None,
 ) -> Response:
     """Route one request to the job runner or the static file tree.
 
@@ -94,6 +98,23 @@ def handle_request(
             fmt = (parse_qs(parts.query).get("fmt", ["svg"]) or ["svg"])[0]
             return _artifact(runner, job_id, fmt)
         return _job_status(runner, rest)
+
+    # --- Stripe webhook route -----------------------------------------------
+    if (method == "POST" and route == "/api/webhook/stripe"
+            and order_store is not None and webhook_secret):
+        sig = (headers or {}).get("Stripe-Signature", "")
+        return _handle_stripe_webhook(order_store, body, webhook_secret, sig, email_sender)
+
+    # --- Delivery routes ----------------------------------------------------
+    if (method == "GET" and route.startswith("/api/delivery/")
+            and order_store is not None and delivery_secret):
+        return _handle_delivery(order_store, route, delivery_secret)
+
+    # --- Proof review routes -----------------------------------------------
+    if order_store is not None and proof_secret and route.startswith("/api/proof/"):
+        return _proof_dispatch(
+            order_store, runner, method, route, body, proof_secret,
+        )
 
     # --- Order routes (concierge flow) ------------------------------------
     if order_store is not None and route.startswith("/api/orders"):
@@ -131,7 +152,7 @@ def _order_dispatch(
 ) -> Response:
     """Handle /api/orders routes for the concierge ordering flow."""
     if method == "POST" and route == "/api/orders":
-        return _create_order(store, body, email_sender)
+        return _create_order(store, body, email_sender, runner)
 
     if method == "GET" and route == "/api/orders":
         return _list_orders(store)
@@ -158,7 +179,9 @@ def _order_dispatch(
     return _json(404, {"error": "Not found."})
 
 
-def _create_order(store: Any, body: bytes, email_sender: Any = None) -> Response:
+def _create_order(
+    store: Any, body: bytes, email_sender: Any = None, runner: Any = None,
+) -> Response:
     try:
         payload = json.loads(body or b"{}")
     except (ValueError, TypeError):
@@ -180,9 +203,29 @@ def _create_order(store: Any, body: bytes, email_sender: Any = None) -> Response
         location=location,
         sender=email_sender,
     )
+
+    # Auto-accept and dispatch render job.
+    if runner is not None:
+        try:
+            store.update_status(req.request_id, "accepted")
+            render_payload = {
+                "region": [order["region"]],
+                "county": order["county"],
+                "color_by": "watershed",
+                "width_by": "flow",
+                "glow": True,
+            }
+            job_id = runner.submit(render_payload)
+            store.set_job_id(req.request_id, job_id)
+            store.update_status(req.request_id, "rendering")
+            req = store.get(req.request_id)
+        except (OrderError, ConfigError):
+            # Fall through — request is created but not dispatched.
+            req = store.get(req.request_id)
+
     result = req.to_dict()
     result["confirmation_email_sent"] = email_sent
-    return _json(201, result)
+    return _json(202 if req.status == "rendering" else 201, result)
 
 
 def _list_orders(store: Any) -> Response:
@@ -267,6 +310,119 @@ def _start_render(store: Any, runner: Any, request_id: str) -> Response:
     return _json(202, {"job": job_id, "request": req.to_dict()})
 
 
+def _handle_delivery(store: Any, route: str, secret: bytes) -> Response:
+    """Handle GET /api/delivery/<token> — signed delivery link."""
+    from src.proof import verify_delivery_token
+
+    token = route[len("/api/delivery/"):]
+    request_id, valid = verify_delivery_token(token, secret)
+    if not request_id:
+        return _json(403, {"error": "Invalid delivery link."})
+    if not valid:
+        return _json(410, {"error": "This delivery link has expired. Contact support for a new link."})
+
+    try:
+        req = store.get(request_id)
+    except KeyError:
+        return _json(404, {"error": f"Unknown request: {request_id}"})
+
+    return _json(200, req.to_dict())
+
+
+def _handle_stripe_webhook(
+    store: Any, body: bytes, secret: str, signature: str,
+    email_sender: Any = None,
+) -> Response:
+    """Process a Stripe webhook event (checkout.session.completed)."""
+    from src.payment import WebhookError, handle_webhook
+
+    payload = body.decode("utf-8", errors="replace")
+
+    try:
+        request_id = handle_webhook(payload, signature, secret)
+    except WebhookError as exc:
+        return _json(400, {"error": str(exc)})
+
+    try:
+        req = store.get(request_id)
+    except KeyError:
+        return _json(404, {"error": f"Unknown request: {request_id}"})
+
+    # Transition to paid
+    try:
+        if req.status == "payment_pending":
+            store.update_status(request_id, "paid")
+    except OrderError as exc:
+        return _json(400, {"error": str(exc)})
+
+    req = store.get(request_id)
+    return _json(200, req.to_dict())
+
+
+def _proof_dispatch(
+    store: Any, runner: Any, method: str, route: str, body: bytes,
+    secret: bytes,
+) -> Response:
+    """Handle /api/proof/<token> routes for proof review."""
+    from src.proof import verify_proof_token
+
+    rest = route[len("/api/proof/"):]
+
+    # Determine if this is an action (approve/adjust) or a GET.
+    action = None
+    token = rest
+    if rest.endswith("/approve"):
+        token = rest[: -len("/approve")]
+        action = "approve"
+    elif rest.endswith("/adjust"):
+        token = rest[: -len("/adjust")]
+        action = "adjust"
+
+    request_id, valid = verify_proof_token(token, secret)
+    if not request_id:
+        return _json(403, {"error": "Invalid proof token."})
+    if not valid:
+        return _json(410, {"error": "Proof link has expired."})
+
+    try:
+        req = store.get(request_id)
+    except KeyError:
+        return _json(404, {"error": f"Unknown request: {request_id}"})
+
+    if method == "GET" and action is None:
+        return _json(200, req.to_dict())
+
+    if method == "POST" and action == "approve":
+        try:
+            store.update_status(request_id, "approved")
+        except OrderError as exc:
+            return _json(400, {"error": str(exc)})
+        req = store.get(request_id)
+        return _json(200, req.to_dict())
+
+    if method == "POST" and action == "adjust":
+        try:
+            store.update_status(request_id, "revision_requested")
+            # Re-dispatch render
+            order = req.order
+            render_payload = {
+                "region": [order["region"]],
+                "county": order["county"],
+                "color_by": "watershed",
+                "width_by": "flow",
+                "glow": True,
+            }
+            job_id = runner.submit(render_payload)
+            store.set_job_id(request_id, job_id)
+            store.update_status(request_id, "rendering")
+        except (OrderError, ConfigError) as exc:
+            return _json(400, {"error": str(exc)})
+        req = store.get(request_id)
+        return _json(202, req.to_dict())
+
+    return _json(404, {"error": "Not found."})
+
+
 def _static(route: str, web_root: str) -> Response:
     root = Path(web_root).resolve()
     rel = route.lstrip("/") or "studio.html"
@@ -281,7 +437,8 @@ def _static(route: str, web_root: str) -> Response:
 
 def make_handler(
     runner: Any, web_root: str, *, order_store: Any = None,
-    email_sender: Any = None,
+    email_sender: Any = None, proof_secret: bytes | None = None,
+    webhook_secret: str | None = None, delivery_secret: bytes | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     """Build a request handler class bound to ``runner`` and ``web_root``."""
 
@@ -289,10 +446,18 @@ def make_handler(
         def _dispatch(self, method: str) -> None:
             length = int(self.headers.get("Content-Length", 0) or 0)
             body = self.rfile.read(length) if length else b""
+            hdrs = {}
+            stripe_sig = self.headers.get("Stripe-Signature")
+            if stripe_sig:
+                hdrs["Stripe-Signature"] = stripe_sig
             resp = handle_request(
                 runner, method, self.path, body,
                 web_root=web_root, order_store=order_store,
                 email_sender=email_sender,
+                proof_secret=proof_secret,
+                webhook_secret=webhook_secret,
+                headers=hdrs or None,
+                delivery_secret=delivery_secret,
             )
             self.send_response(resp.status)
             self.send_header("Content-Type", resp.content_type)
@@ -323,6 +488,9 @@ def serve(
     web_root: str | os.PathLike[str] = "web",
     order_store: Any = None,
     email_sender: Any = None,
+    proof_secret: bytes | None = None,
+    webhook_secret: str | None = None,
+    delivery_secret: bytes | None = None,
 ) -> ThreadingHTTPServer:
     """Start a localhost server delegating to :func:`handle_request` (blocking).
 
@@ -331,6 +499,8 @@ def serve(
     """
     handler = make_handler(
         runner, str(web_root), order_store=order_store, email_sender=email_sender,
+        proof_secret=proof_secret, webhook_secret=webhook_secret,
+        delivery_secret=delivery_secret,
     )
     httpd = ThreadingHTTPServer((host, port), handler)
     httpd.serve_forever()

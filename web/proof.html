@@ -3,191 +3,562 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hydro-Art / Proof Review</title>
-<link rel="stylesheet" href="shared/editorial.css">
+<title>Hydro·Art — Review Your Proof</title>
+<meta name="robots" content="noindex,nofollow">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
-  a { color: inherit; }
+  @font-face { font-family:"Fraunces"; src:url("/web/shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Fraunces Display"; src:url("/web/shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
 
-  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
-  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
-  .brand b { color: var(--accent); }
-  .top nav { margin-left: auto; display: flex; gap: 14px; font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
-  .top nav a { text-decoration: none; }
-  .top nav a:hover { color: var(--accent); }
+  :root {
+    --bg:#07080c; --bg2:#0a0c13; --panel:#10121b; --panel2:#171a26; --line:#232838;
+    --ink:#e6ebf5; --muted:#8891a8; --faint:#5b6480;
+    --cyan:#00ffff; --spring:#00ffab; --violet:#9d00ff; --amber:#ffb300;
+    --serif:"Fraunces", Georgia, serif;
+    --display:"Fraunces Display","Fraunces", Georgia, serif;
+    --mono:"DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --edge:1px solid var(--line);
+  }
 
-  .wrap { max-width: 1100px; margin: auto; padding: 40px 4vw 85px; }
-  .eyebrow { margin: 0 0 8px; color: var(--accent); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
-  h1 { font: 700 32px var(--ui-serif); letter-spacing: -.03em; margin: 0 0 24px; }
+  *, *::before, *::after { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--serif); font-weight:380; line-height:1.5;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  a { color:inherit; text-decoration:none; }
+  ::selection { background:var(--cyan); color:#04121a; }
 
-  .proof-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start; }
-  .proof-canvas { background: #0a1a18; border: 1px solid var(--line); min-height: 400px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-  .proof-canvas svg, .proof-canvas img { max-width: 100%; max-height: 600px; }
-  .proof-canvas .loading { color: #7eaaa1; font: 14px var(--ui-mono); }
+  /* Atmosphere */
+  .atmos { position:fixed; inset:0; z-index:0; pointer-events:none; }
+  .atmos .wash {
+    position:absolute; inset:0;
+    background:
+      radial-gradient(120% 90% at 78% -10%, rgba(0,255,255,.08), transparent 55%),
+      radial-gradient(90% 80% at 8% 8%, rgba(157,0,255,.10), transparent 60%),
+      radial-gradient(120% 120% at 50% 120%, rgba(10,92,255,.08), transparent 55%);
+  }
+  .atmos .grid {
+    position:absolute; inset:0; opacity:.28;
+    background-image:
+      linear-gradient(to right, rgba(140,160,190,.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(140,160,190,.05) 1px, transparent 1px);
+    background-size:64px 64px;
+    -webkit-mask-image:radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
+            mask-image:radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
+  }
+  .grain {
+    position:fixed; inset:-50%; z-index:1; pointer-events:none; opacity:.045;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    animation:grain 8s steps(6) infinite;
+  }
+  @keyframes grain {
+    0%{transform:translate(0,0)} 20%{transform:translate(-6%,3%)} 40%{transform:translate(4%,-5%)}
+    60%{transform:translate(-3%,6%)} 80%{transform:translate(6%,2%)} 100%{transform:translate(0,0)}
+  }
 
-  .proof-details { background: var(--paper-bright); border: 1px solid var(--line); padding: 24px; }
-  .proof-details h3 { font: 700 20px var(--ui-serif); margin: 0 0 16px; }
-  .detail-row { display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding: 10px 0; font-size: 14px; }
-  .detail-row dt { color: var(--muted); }
-  .detail-row dd { margin: 0; font-weight: 600; text-align: right; }
+  /* Layout */
+  .wrap { position:relative; z-index:2; max-width:1140px; margin:0 auto; padding:0 28px; }
 
-  .status { display: inline-block; padding: 3px 7px; font: 9px var(--ui-mono); text-transform: uppercase; border: 1px solid; border-radius: 2px; }
-  .status-proof_ready { color: #21655f; background: #d0f0e8; border-color: #6cb89e; }
-  .status-approved { color: #236c6a; background: #c8ede6; border-color: #4daa9e; }
+  /* Nav */
+  header { position:relative; z-index:3; border-bottom:var(--edge); background:rgba(7,8,12,.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
+  .nav-inner { display:flex; align-items:center; gap:16px; padding:18px 0; }
+  .brand { font-family:var(--display); font-weight:600; font-size:21px; letter-spacing:.01em; }
+  .brand b { color:var(--cyan); font-weight:600; }
+  .nav-inner .spacer { flex:1; }
+  .nav-tag { font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); }
 
-  .action-bar { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .btn { display: inline-block; border: 1px solid var(--accent); padding: 10px 16px; background: var(--accent); color: white; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
-  .btn:hover { opacity: .9; }
-  .btn.ghost { background: transparent; color: var(--accent); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  /* Main */
+  main { position:relative; z-index:2; padding:52px 0 80px; }
 
-  .feedback { margin-top: 16px; padding: 12px; font-size: 14px; display: none; border-radius: 2px; }
-  .feedback.ok { display: block; background: #d0f0e8; color: #21655f; }
-  .feedback.err { display: block; background: #f8e1dc; color: #944138; }
+  .eyebrow {
+    font-family:var(--mono); font-size:11px; letter-spacing:.26em; text-transform:uppercase;
+    color:var(--cyan); display:flex; align-items:center; gap:12px; margin-bottom:14px;
+  }
+  .eyebrow::before { content:""; width:28px; height:1px; background:linear-gradient(90deg,var(--cyan),transparent); }
 
-  .empty-state { text-align: center; padding: 80px 20px; color: var(--muted); }
+  h1 {
+    font-family:var(--display); font-weight:600; font-size:clamp(28px,3.5vw,42px);
+    letter-spacing:-.02em; margin:0 0 8px; line-height:1.05;
+  }
 
-  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+  /* Proof layout */
+  .proof-grid {
+    display:grid;
+    grid-template-columns:1fr 360px;
+    gap:32px;
+    align-items:start;
+    margin-top:36px;
+  }
 
-  @media (max-width: 800px) { .proof-layout { grid-template-columns: 1fr; } }
+  /* Proof frame */
+  .proof-frame {
+    position:relative; border-radius:4px; background:linear-gradient(180deg,#0d0f18,#090b12);
+    border:var(--edge); overflow:hidden;
+  }
+  .proof-frame::before {
+    content:""; position:absolute; inset:0; border-radius:4px; padding:1px; pointer-events:none;
+    background:linear-gradient(140deg, rgba(0,255,255,.28), transparent 40%, rgba(157,0,255,.22));
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+  }
+  .proof-canvas {
+    position:relative; min-height:460px; display:flex; align-items:center; justify-content:center;
+    background:#05060a; overflow:hidden;
+  }
+  .proof-canvas svg, .proof-canvas img { max-width:100%; max-height:640px; display:block; }
+  .proof-placeholder {
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; padding:60px 40px; text-align:center; width:100%;
+  }
+  .proof-placeholder .proof-watermark {
+    font-family:var(--display); font-weight:600; font-size:clamp(38px,7vw,72px);
+    letter-spacing:.18em; text-transform:uppercase; color:transparent;
+    -webkit-text-stroke:1px rgba(0,255,255,.22);
+    user-select:none; pointer-events:none;
+  }
+  .proof-placeholder .proof-region {
+    font-family:var(--display); font-weight:600; font-size:clamp(22px,3vw,34px);
+    letter-spacing:-.01em; color:var(--ink); margin:0;
+  }
+  .proof-placeholder .proof-sub {
+    font-family:var(--mono); font-size:12px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted);
+  }
+  .proof-placeholder .proof-id {
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--faint);
+    border:var(--edge); padding:5px 10px; border-radius:2px;
+  }
+  /* corner glow */
+  .proof-corner {
+    position:absolute; border-radius:50%; pointer-events:none;
+  }
+  .proof-corner.tl { top:-40px; left:-40px; width:160px; height:160px; background:radial-gradient(circle,rgba(0,255,255,.12),transparent 70%); }
+  .proof-corner.br { bottom:-40px; right:-40px; width:160px; height:160px; background:radial-gradient(circle,rgba(157,0,255,.10),transparent 70%); }
+
+  /* proof caption bar */
+  .proof-caption {
+    padding:14px 18px; border-top:var(--edge); display:flex; align-items:center; justify-content:space-between;
+    font-family:var(--mono); gap:12px;
+  }
+  .proof-caption .cap-name { font-size:13px; letter-spacing:.04em; }
+  .proof-caption .cap-source { font-size:10px; letter-spacing:.06em; color:var(--faint); }
+  .proof-caption .cap-right { text-align:right; }
+  .proof-caption .expiry { font-size:10px; letter-spacing:.08em; color:var(--amber); text-transform:uppercase; }
+
+  /* Side panel */
+  .side-panel {
+    display:flex; flex-direction:column; gap:20px;
+  }
+
+  .panel-card {
+    background:linear-gradient(180deg,var(--panel),var(--bg2));
+    border:var(--edge); border-radius:4px; padding:24px;
+  }
+  .panel-card h3 {
+    font-family:var(--display); font-weight:600; font-size:17px; margin:0 0 18px;
+    letter-spacing:-.01em; color:var(--ink);
+  }
+
+  dl.detail-list { margin:0; }
+  .detail-list div {
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+    border-top:var(--edge); padding:10px 0; font-size:13.5px;
+  }
+  .detail-list div:first-child { border-top:none; padding-top:0; }
+  .detail-list dt { color:var(--muted); font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; flex-shrink:0; }
+  .detail-list dd { margin:0; font-weight:600; text-align:right; color:var(--ink); word-break:break-word; }
+
+  .status-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:3px 9px; border-radius:2px; font-family:var(--mono);
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase; border:1px solid;
+  }
+  .status-pill::before { content:""; width:5px; height:5px; border-radius:50%; }
+  .status-pill.proof_ready { color:var(--spring); border-color:rgba(0,255,171,.35); background:rgba(0,255,171,.07); }
+  .status-pill.proof_ready::before { background:var(--spring); box-shadow:0 0 6px var(--spring); }
+  .status-pill.approved { color:var(--cyan); border-color:rgba(0,255,255,.35); background:rgba(0,255,255,.06); }
+  .status-pill.approved::before { background:var(--cyan); box-shadow:0 0 6px var(--cyan); }
+  .status-pill.pending { color:var(--amber); border-color:rgba(255,179,0,.35); background:rgba(255,179,0,.07); }
+  .status-pill.pending::before { background:var(--amber); }
+
+  /* Action buttons */
+  .action-stack { display:flex; flex-direction:column; gap:10px; }
+  .btn {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    border-radius:2px; border:1px solid var(--line); padding:13px 20px;
+    font-family:var(--mono); font-size:12px; letter-spacing:.07em; text-transform:uppercase;
+    cursor:pointer; background:transparent; color:var(--ink);
+    transition:transform .15s, border-color .2s, background .2s, box-shadow .2s;
+    width:100%;
+  }
+  .btn:hover:not(:disabled) { transform:translateY(-1px); }
+  .btn:disabled { opacity:.35; cursor:not-allowed; }
+  .btn.solid {
+    background:var(--cyan); color:#031318; border-color:var(--cyan); font-weight:500;
+  }
+  .btn.solid:hover:not(:disabled) { box-shadow:0 10px 28px rgba(0,255,255,.25); }
+  .btn.ghost { color:var(--cyan); border-color:rgba(0,255,255,.4); }
+  .btn.ghost:hover:not(:disabled) { background:rgba(0,255,255,.06); border-color:var(--cyan); }
+  .btn .arw { transition:transform .2s; }
+  .btn:hover:not(:disabled) .arw { transform:translateX(4px); }
+
+  /* Feedback banner */
+  .feedback {
+    border-radius:2px; padding:14px 16px; font-size:14px; line-height:1.5;
+    display:none; font-family:var(--serif);
+  }
+  .feedback.ok {
+    display:block; background:rgba(0,255,171,.08); border:1px solid rgba(0,255,171,.3);
+    color:var(--spring);
+  }
+  .feedback.err {
+    display:block; background:rgba(255,80,80,.08); border:1px solid rgba(255,80,80,.3);
+    color:#ff8080;
+  }
+
+  /* Full-page error / loading */
+  .state-screen {
+    min-height:60vh; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; text-align:center; gap:14px; padding:60px 20px;
+  }
+  .state-screen .icon {
+    font-size:42px; line-height:1; font-style:normal;
+    font-family:var(--mono); color:var(--faint);
+  }
+  .state-screen h2 {
+    font-family:var(--display); font-weight:600; font-size:26px;
+    letter-spacing:-.01em; margin:0; color:var(--ink);
+  }
+  .state-screen p { margin:0; color:var(--muted); font-size:15px; max-width:30em; }
+  .state-screen a { color:var(--cyan); border-bottom:1px dotted rgba(0,255,255,.4); }
+
+  /* Already-approved banner */
+  .approved-banner {
+    background:rgba(0,255,255,.06); border:1px solid rgba(0,255,255,.25);
+    border-radius:2px; padding:16px 20px;
+    display:flex; align-items:center; gap:14px; font-size:14px;
+  }
+  .approved-banner .icon { font-size:22px; font-style:normal; }
+  .approved-banner strong { color:var(--cyan); }
+
+  /* Footer */
+  footer {
+    position:relative; z-index:2; border-top:var(--edge);
+    padding:28px 0 36px; margin-top:20px;
+  }
+  .foot-inner {
+    display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--faint);
+  }
+  .foot-inner a { color:var(--muted); border-bottom:1px dotted var(--faint); }
+
+  @media (max-width:820px) {
+    .proof-grid { grid-template-columns:1fr; }
+    .side-panel { order:-1; }
+  }
+  @media (max-width:480px) {
+    .wrap { padding:0 16px; }
+    main { padding:36px 0 60px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    .grain { animation:none; }
+    .btn { transition:none; }
+  }
 </style>
 </head>
 <body>
 
-<header class="top">
-  <a class="brand" href="order.html">Hydro<b>&#9671;</b>Art</a>
-  <nav>
-    <a href="order.html">Order</a>
-    <a href="ops.html">Operations</a>
-    <a href="studio.html">Studio</a>
-  </nav>
+<div class="atmos"><div class="wash"></div><div class="grid"></div></div>
+<div class="grain"></div>
+
+<header>
+  <div class="wrap nav-inner">
+    <a class="brand" href="/web/start.html">Hydro<b>&#9671;</b>Art</a>
+    <span class="spacer"></span>
+    <span class="nav-tag">Proof review</span>
+  </div>
 </header>
 
-<main class="wrap">
-  <div id="content">
-    <div class="empty-state" id="loading-state">
-      <p>Loading proof...</p>
+<main>
+  <div class="wrap" id="root">
+    <!-- filled by JS -->
+    <div class="state-screen" id="loading-screen">
+      <span class="icon">◈</span>
+      <h2>Loading proof&hellip;</h2>
+      <p>Fetching your proof details — just a moment.</p>
     </div>
   </div>
 </main>
 
-<footer class="footer">
-  <span>HYDRO-ART / PROOF REVIEW</span>
-  <span>&copy; 2026 RUNDE STRATEGIES</span>
+<footer>
+  <div class="wrap foot-inner">
+    <span>Data sources: <a href="https://www.usgs.gov/national-hydrography/nhdplus-high-resolution" target="_blank" rel="noopener">USGS NHDPlus HR</a> · <a href="https://www.usgs.gov/national-hydrography" target="_blank" rel="noopener">USGS NHD</a> · <a href="https://www.usgs.gov/national-hydrography/watershed-boundary-dataset" target="_blank" rel="noopener">USGS WBD</a></span>
+    <span>&copy; 2026 Runde Strategies</span>
+  </div>
 </footer>
 
 <script>
 "use strict";
 (function () {
-  var params = new URLSearchParams(window.location.search);
-  var orderId = params.get("order");
-  var content = document.getElementById("content");
 
-  if (!orderId) {
-    content.innerHTML = '<div class="empty-state"><h2>No order specified</h2><p>Add <code>?order=REQ-...</code> to the URL, or navigate from the <a href="ops.html">operations dashboard</a>.</p></div>';
+  var root = document.getElementById("root");
+
+  // ---- Read token from URL ----
+  var params = new URLSearchParams(window.location.search);
+  var token = params.get("token");
+
+  if (!token) {
+    showError("invalid", null);
     return;
   }
 
-  fetch("/api/orders/" + orderId)
+  // ---- Fetch proof data ----
+  fetch("/api/proof/" + encodeURIComponent(token))
     .then(function (r) {
-      if (!r.ok) throw new Error("Order not found");
+      if (r.status === 403) throw { code: 403 };
+      if (r.status === 410) throw { code: 410 };
+      if (!r.ok) throw { code: r.status };
       return r.json();
     })
-    .then(function (data) { renderProof(data); })
+    .then(function (data) {
+      renderProof(data);
+    })
     .catch(function (err) {
-      content.innerHTML = '<div class="empty-state"><h2>Error</h2><p>' + err.message + '</p></div>';
+      if (err && err.code === 403) {
+        showError("forbidden", null);
+      } else if (err && err.code === 410) {
+        showError("expired", null);
+      } else {
+        showError("network", err);
+      }
     });
 
-  function renderProof(req) {
-    var order = req.order || {};
-    var hasArtifact = req.job_id && (req.status === "proof_ready" || req.status === "approved" || req.status === "fulfilled");
+  // ---- Render proof page ----
+  function renderProof(p) {
+    var order = p.order || {};
+    var location = [order.county ? order.county + " County" : null, order.region || null].filter(Boolean).join(", ") || "—";
+    var statusClass = (p.status || "pending").replace(/[^a-z_]/g, "");
+    var statusLabel = (p.status || "pending").replace(/_/g, " ");
+    var isApproved = p.status === "approved";
+    var canAct = p.status === "proof_ready";
+    var expiryText = p.expires_at ? "Proof link expires " + formatExpiry(p.expires_at) : "";
 
-    content.innerHTML =
-      '<p class="eyebrow">Proof review</p>' +
-      '<h1>' + req.request_id + '</h1>' +
-      '<div class="proof-layout">' +
-        '<div class="proof-canvas" id="canvas">' +
-          (hasArtifact
-            ? '<div class="loading" id="art-loading">Loading artwork...</div>'
-            : '<div class="loading">No rendered proof available yet. Status: ' + req.status + '</div>') +
+    root.innerHTML =
+      '<div class="eyebrow">Proof review</div>' +
+      '<h1 id="proof-title">' + esc(location) + '</h1>' +
+
+      '<div class="proof-grid">' +
+
+        // Left: proof frame
+        '<div>' +
+          '<div class="proof-frame">' +
+            '<div class="proof-canvas" id="proof-canvas">' +
+              '<div class="proof-corner tl"></div>' +
+              '<div class="proof-corner br"></div>' +
+              buildPlaceholder(p, order, location) +
+            '</div>' +
+            '<div class="proof-caption">' +
+              '<div>' +
+                '<div class="cap-name">' + esc(location) + '</div>' +
+                '<div class="cap-source">USGS NHDPlus HR · NHD · WBD</div>' +
+              '</div>' +
+              '<div class="cap-right">' +
+                (expiryText ? '<div class="expiry">' + esc(expiryText) + '</div>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="proof-details">' +
-          '<h3>Order details</h3>' +
-          '<dl>' +
-            '<div class="detail-row"><dt>Status</dt><dd><span class="status status-' + req.status + '">' + req.status.replace("_"," ") + '</span></dd></div>' +
-            '<div class="detail-row"><dt>Product</dt><dd>' + (req.product || "—") + '</dd></div>' +
-            '<div class="detail-row"><dt>Location</dt><dd>' + (order.county || "—") + ' County, ' + (order.region || "—") + '</dd></div>' +
-            '<div class="detail-row"><dt>Style</dt><dd>' + (order.style || "—") + '</dd></div>' +
-            '<div class="detail-row"><dt>Size</dt><dd>' + (order.size || "—") + '</dd></div>' +
-            '<div class="detail-row"><dt>Email</dt><dd>' + (req.email || "—") + '</dd></div>' +
-          '</dl>' +
-          '<div class="action-bar" id="proof-actions"></div>' +
-          '<div class="feedback" id="feedback"></div>' +
-        '</div>' +
-      '</div>';
 
-    // Load artifact if available
-    if (hasArtifact) {
-      fetch("/api/jobs/" + req.job_id + "/artifact?fmt=svg")
-        .then(function (r) {
-          if (!r.ok) throw new Error("Artifact not ready");
-          return r.text();
-        })
-        .then(function (svg) {
-          var canvas = document.getElementById("canvas");
-          canvas.innerHTML = svg;
-        })
-        .catch(function () {
-          document.getElementById("art-loading").textContent = "Could not load artwork.";
-        });
-    }
+        // Right: side panel
+        '<div class="side-panel">' +
 
-    // Render action buttons
-    var actions = document.getElementById("proof-actions");
-    if (req.status === "proof_ready") {
-      actions.innerHTML =
-        '<button class="btn" id="act-approve">Approve</button>' +
-        '<button class="btn ghost" id="act-revision">Request revision</button>';
+          // Order details card
+          '<div class="panel-card">' +
+            '<h3>Order details</h3>' +
+            '<dl class="detail-list">' +
+              '<div><dt>Status</dt><dd><span class="status-pill ' + statusClass + '">' + esc(statusLabel) + '</span></dd></div>' +
+              '<div><dt>Product</dt><dd>' + esc(p.product || "—") + '</dd></div>' +
+              '<div><dt>Location</dt><dd>' + esc(location) + '</dd></div>' +
+              '<div><dt>Art direction</dt><dd>' + esc(order.style ? styleLabel(order.style) : "—") + '</dd></div>' +
+              '<div><dt>Size</dt><dd>' + esc(order.size || "—") + '</dd></div>' +
+              '<div><dt>Order ID</dt><dd>' + esc(p.request_id || "—") + '</dd></div>' +
+            '</dl>' +
+          '</div>' +
 
-      document.getElementById("act-approve").addEventListener("click", function () {
-        patchStatus(req.request_id, "approved");
+          // Actions card
+          '<div class="panel-card">' +
+            '<h3>' + (isApproved ? 'Approved' : 'Your decision') + '</h3>' +
+            (isApproved ? buildApprovedBanner() : '') +
+            (canAct ? buildActionButtons() : '') +
+            (!isApproved && !canAct ? '<p style="color:var(--muted);font-size:14px;margin:0">Actions will be available once your proof is ready. Current status: <strong>' + esc(statusLabel) + '</strong>.</p>' : '') +
+            '<div class="feedback" id="feedback"></div>' +
+          '</div>' +
+
+        '</div>' + // side-panel
+      '</div>'; // proof-grid
+
+    // Wire up action buttons
+    if (canAct) {
+      document.getElementById("btn-approve").addEventListener("click", function () {
+        doApprove();
       });
-      document.getElementById("act-revision").addEventListener("click", function () {
-        patchStatus(req.request_id, "submitted");
+      document.getElementById("btn-adjust").addEventListener("click", function () {
+        doAdjust(p, order);
       });
-    } else if (req.status === "approved") {
-      actions.innerHTML = '<p style="color:var(--ok);font:700 14px var(--ui-sans);">Approved and ready for fulfillment.</p>';
     }
   }
 
-  function patchStatus(id, status) {
-    var feedback = document.getElementById("feedback");
-    fetch("/api/orders/" + id, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: status }),
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.error) {
-          feedback.className = "feedback err";
-          feedback.textContent = data.error;
-          return;
+  // ---- Placeholder artwork ----
+  function buildPlaceholder(p, order, location) {
+    return (
+      '<div class="proof-placeholder">' +
+        '<div class="proof-watermark">PROOF</div>' +
+        '<p class="proof-region">' + esc(location) + '</p>' +
+        '<p class="proof-sub">' + esc(styleLabel(order.style || "")) + (order.size ? ' · ' + esc(order.size) : '') + '</p>' +
+        '<p class="proof-id">' + esc(p.request_id || "") + '</p>' +
+      '</div>'
+    );
+  }
+
+  function buildApprovedBanner() {
+    return (
+      '<div class="approved-banner">' +
+        '<span class="icon">✓</span>' +
+        '<div><strong>Approved.</strong> Your proof has been accepted and is queued for fulfillment. Watch for a delivery email at the address on file.</div>' +
+      '</div>'
+    );
+  }
+
+  function buildActionButtons() {
+    return (
+      '<div class="action-stack">' +
+        '<button class="btn solid" id="btn-approve">Approve <span class="arw">→</span></button>' +
+        '<button class="btn ghost" id="btn-adjust">Adjust &amp; Re-render</button>' +
+      '</div>' +
+      '<p style="color:var(--faint);font-family:var(--mono);font-size:10px;letter-spacing:.05em;margin:12px 0 0;line-height:1.6">' +
+        'Approving sends your order to production. "Adjust &amp; Re-render" returns you to the order form with your current settings pre-filled.' +
+      '</p>'
+    );
+  }
+
+  // ---- Approve action ----
+  function doApprove() {
+    var btn = document.getElementById("btn-approve");
+    var adjBtn = document.getElementById("btn-adjust");
+    var fb = document.getElementById("feedback");
+    btn.disabled = true;
+    adjBtn.disabled = true;
+    btn.textContent = "Approving…";
+
+    fetch("/api/proof/" + encodeURIComponent(token) + "/approve", { method: "POST" })
+      .then(function (r) {
+        if (!r.ok) return r.json().then(function (d) { throw new Error(d.error || "Request failed"); });
+        return r.json();
+      })
+      .then(function () {
+        fb.className = "feedback ok";
+        fb.innerHTML = "<strong>Approved!</strong> Your proof has been accepted. We'll be in touch with delivery details.";
+        btn.style.display = "none";
+        adjBtn.style.display = "none";
+        // Swap status pill
+        var pill = document.querySelector(".status-pill");
+        if (pill) {
+          pill.className = "status-pill approved";
+          pill.textContent = "approved";
         }
-        feedback.className = "feedback ok";
-        feedback.textContent = status === "approved"
-          ? "Proof approved! The order is ready for fulfillment."
-          : "Revision requested. The order has been sent back for rework.";
-        // Refresh after a beat
-        setTimeout(function () { window.location.reload(); }, 1500);
       })
       .catch(function (err) {
-        feedback.className = "feedback err";
-        feedback.textContent = "Error: " + err.message;
+        fb.className = "feedback err";
+        fb.textContent = "Could not approve: " + (err.message || "unknown error") + ". Please try again or contact support.";
+        btn.disabled = false;
+        adjBtn.disabled = false;
+        btn.innerHTML = 'Approve <span class="arw">→</span>';
       });
   }
+
+  // ---- Adjust & Re-render action ----
+  function doAdjust(p, order) {
+    var qs = new URLSearchParams();
+    if (order.region) qs.set("region", order.region);
+    if (order.county) qs.set("county", order.county);
+    if (order.style) qs.set("style", order.style);
+    if (order.size) qs.set("size", order.size);
+    if (p.product) qs.set("product", p.product);
+    if (p.email) qs.set("email", p.email);
+    window.location.href = "/web/order.html?" + qs.toString();
+  }
+
+  // ---- Error screens ----
+  function showError(type, err) {
+    var map = {
+      forbidden: {
+        icon: "⊘",
+        title: "Invalid proof link",
+        body: "This proof link is not valid. It may have been entered incorrectly. If you received this link by email, please use the original link from that message or <a href=\"mailto:hello@runde.studio\">contact support</a>."
+      },
+      expired: {
+        icon: "⊗",
+        title: "Proof link has expired",
+        body: "This proof link has expired. Proof links are valid for 14 days from the time of issue. Please <a href=\"mailto:hello@runde.studio\">contact support</a> to request a fresh link."
+      },
+      network: {
+        icon: "◌",
+        title: "Could not load proof",
+        body: "There was a problem reaching the server. Please check your connection and refresh the page. If the problem persists, <a href=\"mailto:hello@runde.studio\">contact support</a>."
+      },
+      invalid: {
+        icon: "◇",
+        title: "No proof token",
+        body: "This URL is missing a proof token. If you arrived here from an email, please use the full link provided. Otherwise, <a href=\"mailto:hello@runde.studio\">contact support</a>."
+      }
+    };
+    var m = map[type] || map.network;
+    root.innerHTML =
+      '<div class="state-screen">' +
+        '<span class="icon">' + m.icon + '</span>' +
+        '<h2>' + m.title + '</h2>' +
+        '<p>' + m.body + '</p>' +
+      '</div>';
+  }
+
+  // ---- Helpers ----
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function styleLabel(s) {
+    var map = {
+      "neon-basin": "Neon basin",
+      "elevation-tint": "Elevation tint"
+    };
+    return map[s] || s || "—";
+  }
+
+  function formatExpiry(iso) {
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      var now = new Date();
+      var diffMs = d - now;
+      if (diffMs < 0) return "expired";
+      var diffDays = Math.ceil(diffMs / 86400000);
+      if (diffDays === 1) return "in 1 day";
+      if (diffDays < 14) return "in " + diffDays + " days";
+      return "on " + d.toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" });
+    } catch (e) {
+      return iso;
+    }
+  }
+
 })();
 </script>
+
 </body>
 </html>
