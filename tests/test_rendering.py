@@ -2,12 +2,21 @@
 
 Pure geometry -> SVG helpers, tested with hand-built shapely lines (no GDAL,
 no real data). Covers bounding box, deterministic number formatting, the
-cartesian Y-flip transform, and path ``d`` string building.
+cartesian Y-flip transform, path ``d`` string building, and streaming writer.
 """
+
+import io
 
 from shapely.geometry import LineString, MultiLineString
 
-from src.rendering import bounds, format_number, path_d, transform_coords
+from src.rendering import (
+    bounds,
+    format_number,
+    path_d,
+    render_svg,
+    render_svg_stream,
+    transform_coords,
+)
 
 
 def test_bounds_over_lines_and_empty():
@@ -123,3 +132,42 @@ def test_monthly_width_frames_wet_gt_dry_on_shared_span():
     assert frames[4][1] > frames[0][1]
     # seg 2 constant across months (flat flow, fixed span).
     assert math.isclose(frames[0][2], frames[6][2])
+
+
+# -- Streaming SVG writer (Item #108) ----------------------------------------
+
+# A small network used by the streaming tests.
+_STREAM_LINE_A = LineString([(0.0, 0.0), (5.0, 10.0)])
+_STREAM_LINE_B = LineString([(5.0, 10.0), (10.0, 15.0)])
+_STREAM_GEOMS = {1: _STREAM_LINE_A, 2: _STREAM_LINE_B}
+_STREAM_COLORS = {1: "#ff0000", 2: "#00ff00"}
+_STREAM_WATERSHEDS = {"HUC_A": {1}, "HUC_B": {2}}
+
+
+def test_render_svg_stream_byte_identical_to_render_svg():
+    """render_svg_stream produces the exact same bytes as render_svg."""
+    string_svg = render_svg(_STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS)
+    buf = io.StringIO()
+    render_svg_stream(buf, _STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS)
+    streamed_svg = buf.getvalue()
+    assert string_svg == streamed_svg
+
+
+def test_render_svg_stream_byte_identical_with_glow():
+    """Streaming matches string output when glow is enabled."""
+    kwargs = dict(glow=True, glow_mode="blur", glow_radius=3.0)
+    string_svg = render_svg(_STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS, **kwargs)
+    buf = io.StringIO()
+    render_svg_stream(buf, _STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS, **kwargs)
+    assert string_svg == buf.getvalue()
+
+
+def test_render_svg_stream_writes_valid_svg():
+    """Streamed output starts with XML header and contains <svg> and </svg>."""
+    buf = io.StringIO()
+    render_svg_stream(buf, _STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS)
+    svg = buf.getvalue()
+    assert svg.startswith('<?xml version="1.0"')
+    assert "<svg" in svg
+    assert "</svg>" in svg
+    assert svg.endswith("\n")

@@ -8,13 +8,13 @@ import io
 import zipfile
 from pathlib import Path
 
+import pytest
 from rich.console import Console
 from shapely.geometry import LineString, box
 
 from src.config import DEFAULTS, ConfigError, build_settings
 from src.loading import Layer
 from src.pipeline import Pipeline
-
 
 # -- Config validation -------------------------------------------------------
 
@@ -29,13 +29,11 @@ def test_min_order_accepts_positive_int():
 
 
 def test_min_order_zero_raises():
-    import pytest
     with pytest.raises(ConfigError, match="min_order"):
         build_settings({**DEFAULTS, "min_order": 0})
 
 
 def test_min_order_negative_raises():
-    import pytest
     with pytest.raises(ConfigError, match="min_order"):
         build_settings({**DEFAULTS, "min_order": -1})
 

@@ -1,0 +1,5 @@
+task_groups:
+  - name: config-cli-pipeline-integration
+    claude_code_subagent: implementer
+    standards:
+      - global/hydro-art-invariants.md

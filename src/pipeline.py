@@ -10,10 +10,12 @@ shares results through ``context.artifacts``; there is no global state.
 from __future__ import annotations
 
 import hashlib
+import io
 import shutil
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from rich.console import Console
 
@@ -54,6 +56,7 @@ from src.rendering import (
     DEFAULT_POINT_STYLES,
     bounds,
     render_svg,
+    render_svg_stream,
     scaled_widths,
 )
 from src.waterbodies import classify_layer
@@ -63,7 +66,7 @@ from src.waterbody_selection import (
 )
 from src.watersheds import group_segments_by_huc, watershed_stats
 
-__all__ = ["Stage", "RunContext", "PIPELINE_STAGES", "Pipeline"]
+__all__ = ["PIPELINE_STAGES", "Pipeline", "RunContext", "Stage"]
 
 
 @dataclass
@@ -316,16 +319,40 @@ def _compute_watersheds_stage(ctx: RunContext) -> None:
 
     stream_orders = assign_stream_order(hydro_graph, method)
     max_order = max(stream_orders.values(), default=0)
+    total_before = len(stream_orders)
+
+    # min_order filtering (roadmap #107): drop segments below the threshold
+    # so downstream stages (coloring, rendering) only see the kept network.
+    # Default min_order=1 keeps everything — no filtering fires.
+    min_order = ctx.settings.min_order
+    if min_order > 1:
+        stream_orders = {
+            sid: order for sid, order in stream_orders.items()
+            if order >= min_order
+        }
+
     watersheds = group_segments_by_huc(hydro_graph, level)
+    if min_order > 1:
+        kept = set(stream_orders)
+        watersheds = {
+            code: frozenset(sid for sid in sids if sid in kept)
+            for code, sids in watersheds.items()
+        }
+        # Drop empty watersheds (all segments filtered out).
+        watersheds = {code: sids for code, sids in watersheds.items() if sids}
     stats = watershed_stats(watersheds)
 
     ctx.artifacts["stream_orders"] = stream_orders
     ctx.artifacts["watersheds"] = watersheds
     ctx.artifacts["max_stream_order"] = max_order
+    filter_note = ""
+    if min_order > 1:
+        dropped = total_before - len(stream_orders)
+        filter_note = f"; min_order={min_order} dropped {dropped}"
     ctx.log(
         f"[bold]compute_watersheds[/bold] {method} order (max {max_order}) "
         f"for {len(stream_orders)} segments; {stats.num_watersheds} {level} "
-        f"watershed(s) over {stats.num_segments} segments"
+        f"watershed(s) over {stats.num_segments} segments{filter_note}"
     )
 
 
@@ -454,10 +481,7 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     af = ctx.settings.areal_features
     hs = ctx.settings.hydro_structures
     wb_stroke = wb.stroke_width * units_per_px
-    svg = render_svg(
-        geometries,
-        segment_colors,
-        watersheds,
+    render_kwargs = dict(
         background=ctx.settings.background,
         line_width=line_width,
         stroke_widths=stroke_widths,
@@ -477,6 +501,9 @@ def _generate_svg_stage(ctx: RunContext) -> None:
         hydro_structure_styles=_hydro_structure_styles(hs) if hydro_items else None,
         hydro_structure_order=hs.render_order,
     )
+    buf = io.StringIO()
+    render_svg_stream(buf, geometries, segment_colors, watersheds, **render_kwargs)
+    svg = buf.getvalue()
     ctx.artifacts["svg"] = svg
 
     groups = sum(

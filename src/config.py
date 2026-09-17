@@ -13,50 +13,51 @@ injection into the pipeline.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 import yaml
 
 from src.crs import INTERNAL_CRS
 
 __all__ = [
-    "ConfigError",
-    "Settings",
-    "WaterbodySettings",
-    "ElevationSettings",
-    "DEFAULTS",
-    "SUPPORTED_REGIONS",
-    "SUPPORTED_PROJECTIONS",
-    "SUPPORTED_OUTPUTS",
-    "SUPPORTED_PNG_SIZES",
-    "SUPPORTED_STREAM_METHODS",
-    "SUPPORTED_HUC_LEVELS",
-    "SUPPORTED_PALETTES",
-    "SUPPORTED_COLOR_MODES",
-    "SUPPORTED_WIDTH_MODES",
-    "WIDTH_PRESETS",
-    "SUPPORTED_WIDTH_PRESETS",
-    "SUPPORTED_GLOW_MODES",
-    "SUPPORTED_COASTAL_MODES",
-    "SUPPORTED_RENDER_ORDERS",
-    "WATERBODY_PRESETS",
-    "SUPPORTED_WATERBODY_PRESETS",
-    "PointFeatureSettings",
-    "ArealFeatureSettings",
-    "HydroStructureSettings",
-    "POINT_FEATURE_PRESETS",
     "AREAL_FEATURE_PRESETS",
+    "DEFAULTS",
     "HYDRO_STRUCTURE_PRESETS",
-    "SUPPORTED_POINT_FEATURE_PRESETS",
+    "POINT_FEATURE_PRESETS",
     "SUPPORTED_AREAL_FEATURE_PRESETS",
-    "SUPPORTED_HYDRO_STRUCTURE_PRESETS",
+    "SUPPORTED_CACHE_POLICIES",
+    "SUPPORTED_COASTAL_MODES",
+    "SUPPORTED_COLOR_MODES",
     "SUPPORTED_ELEVATION_SOURCES",
     "SUPPORTED_ELEVATION_TIERS",
-    "SUPPORTED_CACHE_POLICIES",
-    "load_yaml",
+    "SUPPORTED_GLOW_MODES",
+    "SUPPORTED_HUC_LEVELS",
+    "SUPPORTED_HYDRO_STRUCTURE_PRESETS",
+    "SUPPORTED_OUTPUTS",
+    "SUPPORTED_PALETTES",
+    "SUPPORTED_PNG_SIZES",
+    "SUPPORTED_POINT_FEATURE_PRESETS",
+    "SUPPORTED_PROJECTIONS",
+    "SUPPORTED_REGIONS",
+    "SUPPORTED_RENDER_ORDERS",
+    "SUPPORTED_STREAM_METHODS",
+    "SUPPORTED_WATERBODY_PRESETS",
+    "SUPPORTED_WIDTH_MODES",
+    "SUPPORTED_WIDTH_PRESETS",
+    "WATERBODY_PRESETS",
+    "WIDTH_PRESETS",
+    "ArealFeatureSettings",
+    "ConfigError",
+    "ElevationSettings",
+    "HydroStructureSettings",
+    "PointFeatureSettings",
+    "Settings",
+    "WaterbodySettings",
     "build_settings",
+    "load_yaml",
 ]
 
 
@@ -340,6 +341,7 @@ DEFAULTS: dict[str, Any] = {
     "projection": INTERNAL_CRS,
     "stream_order": "all",
     "stream_method": "strahler",
+    "min_order": 1,
     "huc_level": "HUC4",
     "background": "#000000",
     "line_width": 0.35,
@@ -573,6 +575,9 @@ class Settings:
         projection: Internal EPSG code used for all geometry operations.
         stream_order: Stream-order render filter (e.g. ``"all"``).
         stream_method: Stream-hierarchy method (strahler/shreve/hack/custom).
+        min_order: Minimum stream order to keep in the network (roadmap #107).
+            ``1`` (default) keeps all segments; higher values drop headwater
+            tributaries below that Strahler order before coloring/rendering.
         huc_level: Watershed grouping level (HUC2..HUC12).
         background: Background color as a hex string (e.g. ``"#000000"``).
         line_width: Default stroke width in SVG user units; must be > 0.
@@ -611,6 +616,7 @@ class Settings:
     projection: str
     stream_order: str
     stream_method: str
+    min_order: int
     huc_level: str
     background: str
     line_width: float
@@ -1261,6 +1267,18 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             f"Unsupported stream_method: {stream_method!r}. Valid: {valid}."
         )
 
+    try:
+        min_order = int(values.get("min_order", DEFAULTS["min_order"]))
+    except (TypeError, ValueError):
+        raise ConfigError(
+            f"Invalid min_order: {values.get('min_order')!r}. "
+            "Expected a positive integer."
+        )
+    if min_order < 1:
+        raise ConfigError(
+            f"min_order must be >= 1 (1 keeps all segments), got {min_order}."
+        )
+
     huc_level = str(values.get("huc_level", DEFAULTS["huc_level"])).upper()
     if huc_level not in SUPPORTED_HUC_LEVELS:
         valid = ", ".join(SUPPORTED_HUC_LEVELS)
@@ -1414,6 +1432,7 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         projection=projection,
         stream_order=stream_order,
         stream_method=stream_method,
+        min_order=min_order,
         huc_level=huc_level,
         background=background,
         line_width=line_width,

@@ -19,27 +19,29 @@ by ``-min_x``) to keep north up in the rendered image.
 from __future__ import annotations
 
 import math
-from typing import Any, Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping
+from typing import Any
 
 __all__ = [
+    "DEFAULT_AREAL_STYLES",
+    "DEFAULT_HYDRO_STRUCTURE_STYLES",
+    "DEFAULT_POINT_STYLES",
+    "HYDRO_STRUCTURE_GLYPHS",
+    "POINT_GLYPHS",
     "bounds",
+    "fixed_flow_span",
+    "flow_widths",
     "format_number",
-    "transform_coords",
+    "hypsometric_colors",
+    "monthly_width_frames",
     "path_d",
     "polygon_path_d",
     "render_svg",
-    "stream_order_widths",
-    "flow_widths",
+    "render_svg_stream",
     "scaled_widths",
-    "fixed_flow_span",
+    "stream_order_widths",
+    "transform_coords",
     "widths_on_span",
-    "monthly_width_frames",
-    "hypsometric_colors",
-    "POINT_GLYPHS",
-    "DEFAULT_POINT_STYLES",
-    "DEFAULT_AREAL_STYLES",
-    "HYDRO_STRUCTURE_GLYPHS",
-    "DEFAULT_HYDRO_STRUCTURE_STYLES",
 ]
 
 Coord = tuple[float, float]
@@ -84,14 +86,10 @@ def bounds(geometries: Iterable[Any]) -> tuple[float, float, float, float]:
         for part in _iter_line_parts(geom):
             for x, y, *_ in part.coords:
                 seen = True
-                if x < min_x:
-                    min_x = x
-                if y < min_y:
-                    min_y = y
-                if x > max_x:
-                    max_x = x
-                if y > max_y:
-                    max_y = y
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x)
+                max_y = max(max_y, y)
     if not seen:
         return (0.0, 0.0, 0.0, 0.0)
     return (min_x, min_y, max_x, max_y)
@@ -168,14 +166,10 @@ def polygon_bounds(geometries: Iterable[Any]) -> tuple[float, float, float, floa
         for ring in _iter_polygon_rings(geom):
             for x, y, *_ in ring:
                 seen = True
-                if x < min_x:
-                    min_x = x
-                if y < min_y:
-                    min_y = y
-                if x > max_x:
-                    max_x = x
-                if y > max_y:
-                    max_y = y
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x)
+                max_y = max(max_y, y)
     if not seen:
         return None
     return (min_x, min_y, max_x, max_y)
@@ -214,8 +208,8 @@ def _waterbody_lines(
     """Serialize the ``<g id="waterbodies">`` layer (no fill, one path per feature)."""
     width = format_number(stroke_width, _WIDTH_PRECISION)
     lines = [
-        f'  <g id="waterbodies" fill="none" stroke="{color}" '
-        f'stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round">'
+        (f'  <g id="waterbodies" fill="none" stroke="{color}" '
+        f'stroke-width="{width}" stroke-linecap="round" stroke-linejoin="round">')
     ]
     for feature_id, geom, *rest in items:
         wb_class = rest[0] if rest else None
@@ -390,10 +384,10 @@ def _areal_pattern_defs(items: list[tuple], styles: Mapping | None) -> list[str]
         color = style.get("color", "#4fae86")
         out.extend(
             [
-                f'    <pattern id="areal_{family}_hatch" width="4" height="4" '
-                'patternUnits="userSpaceOnUse">',
-                f'      <path d="M 0,4 L 4,0" stroke="{color}" '
-                'stroke-width="0.5" fill="none"/>',
+                (f'    <pattern id="areal_{family}_hatch" width="4" height="4" '
+                'patternUnits="userSpaceOnUse">'),
+                (f'      <path d="M 0,4 L 4,0" stroke="{color}" '
+                'stroke-width="0.5" fill="none"/>'),
                 "    </pattern>",
             ]
         )
@@ -841,6 +835,119 @@ def render_svg(
         The SVG document as a string (trailing newline included). With
         ``glow=False`` the output is identical to the un-glowed render.
     """
+    return "\n".join(_render_lines(
+        geometries, segment_colors, watersheds,
+        background=background, line_width=line_width, precision=precision,
+        stroke_widths=stroke_widths, fallback_color=fallback_color,
+        glow=glow, glow_mode=glow_mode, glow_radius=glow_radius,
+        waterbodies=waterbodies, waterbody_color=waterbody_color,
+        waterbody_stroke_width=waterbody_stroke_width,
+        waterbody_order=waterbody_order,
+        areal_features=areal_features,
+        areal_feature_styles=areal_feature_styles,
+        point_features=point_features,
+        point_feature_styles=point_feature_styles,
+        point_feature_order=point_feature_order,
+        hydro_structures=hydro_structures,
+        hydro_structure_styles=hydro_structure_styles,
+        hydro_structure_order=hydro_structure_order,
+    )) + "\n"
+
+
+def render_svg_stream(
+    f,
+    geometries: Mapping[int, Any],
+    segment_colors: Mapping[int, str],
+    watersheds: Mapping[str, set[int]],
+    *,
+    background: str = "#000000",
+    line_width: float = 0.35,
+    precision: int = 3,
+    stroke_widths: Mapping[int, float] | None = None,
+    fallback_color: str = DEFAULT_FALLBACK_COLOR,
+    glow: bool = False,
+    glow_mode: str = "blur",
+    glow_radius: float = 2.0,
+    waterbodies: Iterable[tuple] | None = None,
+    waterbody_color: str = "#2ec4ff",
+    waterbody_stroke_width: float = 0.45,
+    waterbody_order: str = "below",
+    areal_features: Iterable[tuple] | None = None,
+    areal_feature_styles: Mapping[str, Mapping] | None = None,
+    point_features: Iterable[tuple] | None = None,
+    point_feature_styles: Mapping[str, Mapping] | None = None,
+    point_feature_order: str = "above",
+    hydro_structures: Iterable[tuple] | None = None,
+    hydro_structure_styles: Mapping[str, Mapping] | None = None,
+    hydro_structure_order: str = "above",
+) -> None:
+    """Write the SVG document line-by-line to a file object.
+
+    Accepts the same arguments as :func:`render_svg` (except ``f`` is the
+    writable text stream). Produces byte-identical output — each line is
+    followed by ``"\\n"``, matching the ``"\\n".join(lines) + "\\n"`` of
+    :func:`render_svg`.
+
+    This eliminates the need to hold the entire SVG in memory at once, which
+    is critical for continent-scale renders with millions of ``<path>``
+    elements.
+
+    Args:
+        f: A writable text stream (e.g. an open file or ``io.StringIO``).
+        (remaining args): see :func:`render_svg`.
+    """
+    for line in _render_lines(
+        geometries, segment_colors, watersheds,
+        background=background, line_width=line_width, precision=precision,
+        stroke_widths=stroke_widths, fallback_color=fallback_color,
+        glow=glow, glow_mode=glow_mode, glow_radius=glow_radius,
+        waterbodies=waterbodies, waterbody_color=waterbody_color,
+        waterbody_stroke_width=waterbody_stroke_width,
+        waterbody_order=waterbody_order,
+        areal_features=areal_features,
+        areal_feature_styles=areal_feature_styles,
+        point_features=point_features,
+        point_feature_styles=point_feature_styles,
+        point_feature_order=point_feature_order,
+        hydro_structures=hydro_structures,
+        hydro_structure_styles=hydro_structure_styles,
+        hydro_structure_order=hydro_structure_order,
+    ):
+        f.write(line)
+        f.write("\n")
+
+
+def _render_lines(
+    geometries: Mapping[int, Any],
+    segment_colors: Mapping[int, str],
+    watersheds: Mapping[str, set[int]],
+    *,
+    background: str = "#000000",
+    line_width: float = 0.35,
+    precision: int = 3,
+    stroke_widths: Mapping[int, float] | None = None,
+    fallback_color: str = DEFAULT_FALLBACK_COLOR,
+    glow: bool = False,
+    glow_mode: str = "blur",
+    glow_radius: float = 2.0,
+    waterbodies: Iterable[tuple] | None = None,
+    waterbody_color: str = "#2ec4ff",
+    waterbody_stroke_width: float = 0.45,
+    waterbody_order: str = "below",
+    areal_features: Iterable[tuple] | None = None,
+    areal_feature_styles: Mapping[str, Mapping] | None = None,
+    point_features: Iterable[tuple] | None = None,
+    point_feature_styles: Mapping[str, Mapping] | None = None,
+    point_feature_order: str = "above",
+    hydro_structures: Iterable[tuple] | None = None,
+    hydro_structure_styles: Mapping[str, Mapping] | None = None,
+    hydro_structure_order: str = "above",
+) -> Iterator[str]:
+    """Yield each SVG line (without trailing newlines).
+
+    Internal generator shared by :func:`render_svg` and
+    :func:`render_svg_stream`.
+    """
     waterbody_items = list(waterbodies) if waterbodies else []
     areal_items = list(areal_features) if areal_features else []
     point_items = list(point_features) if point_features else []
@@ -880,8 +987,8 @@ def render_svg(
     filter_ref = f"url(#{GLOW_FILTER_ID})" if blur_glow else None
     halo_width = format_number(line_width + 2 * glow_radius, _WIDTH_PRECISION)
 
-    lines: list[str] = ['<?xml version="1.0" encoding="UTF-8"?>']
-    lines.append(
+    yield '<?xml version="1.0" encoding="UTF-8"?>'
+    yield (
         '<svg xmlns="http://www.w3.org/2000/svg" '
         f'viewBox="0 0 {width} {height}" width="{width}px" height="{height}px" '
         'fill="none" stroke-linecap="round" stroke-linejoin="round" '
@@ -893,45 +1000,37 @@ def render_svg(
     if areal_items:
         def_body.extend(_areal_pattern_defs(areal_items, areal_feature_styles))
     if def_body:
-        lines.append("  <defs>")
-        lines.extend(def_body)
-        lines.append("  </defs>")
+        yield "  <defs>"
+        yield from def_body
+        yield "  </defs>"
     else:
-        lines.append("  <defs/>")
-    lines.append('  <g id="background">')
-    lines.append(
-        f'    <rect x="0" y="0" width="{width}" height="{height}" fill="{background}"/>'
-    )
-    lines.append("  </g>")
+        yield "  <defs/>"
+    yield '  <g id="background">'
+    yield f'    <rect x="0" y="0" width="{width}" height="{height}" fill="{background}"/>'
+    yield "  </g>"
 
     areal_groups = _group_by_family(areal_items)
 
     # Areal families default beneath everything (before waterbodies + rivers).
     if areal_items:
-        lines.extend(
-            _areal_lines_for_order(
-                areal_groups, areal_feature_styles, "below", min_x, max_y, precision
-            )
+        yield from _areal_lines_for_order(
+            areal_groups, areal_feature_styles, "below", min_x, max_y, precision
         )
 
     if waterbody_items and waterbody_order == "below":
-        lines.extend(
-            _waterbody_lines(
-                waterbody_items, waterbody_color, waterbody_stroke_width,
-                min_x, max_y, precision,
-            )
+        yield from _waterbody_lines(
+            waterbody_items, waterbody_color, waterbody_stroke_width,
+            min_x, max_y, precision,
         )
 
     if point_items and point_feature_order == "below":
-        lines.extend(
-            _point_features_lines(point_items, point_feature_styles, min_x, max_y, precision)
+        yield from _point_features_lines(
+            point_items, point_feature_styles, min_x, max_y, precision
         )
 
     if structure_items and hydro_structure_order == "below":
-        lines.extend(
-            _hydro_structure_lines(
-                structure_items, hydro_structure_styles, min_x, max_y, precision
-            )
+        yield from _hydro_structure_lines(
+            structure_items, hydro_structure_styles, min_x, max_y, precision
         )
 
     grouped: set[int] = set().union(*watersheds.values()) if watersheds else set()
@@ -950,48 +1049,37 @@ def render_svg(
 
     for group_id, color, segment_ids in river_groups:
         if vector_glow:
-            lines.extend(
-                _halo_lines(
-                    group_id, color, segment_ids, geometries, segment_colors,
-                    fallback_color, min_x, max_y, precision, halo_width,
-                )
-            )
-        lines.extend(
-            _group_lines(
+            yield from _halo_lines(
                 group_id, color, segment_ids, geometries, segment_colors,
-                fallback_color, min_x, max_y, precision, stroke_widths, filter_ref,
+                fallback_color, min_x, max_y, precision, halo_width,
             )
+        yield from _group_lines(
+            group_id, color, segment_ids, geometries, segment_colors,
+            fallback_color, min_x, max_y, precision, stroke_widths, filter_ref,
         )
 
     if waterbody_items and waterbody_order == "above":
-        lines.extend(
-            _waterbody_lines(
-                waterbody_items, waterbody_color, waterbody_stroke_width,
-                min_x, max_y, precision,
-            )
+        yield from _waterbody_lines(
+            waterbody_items, waterbody_color, waterbody_stroke_width,
+            min_x, max_y, precision,
         )
 
     if areal_items:
-        lines.extend(
-            _areal_lines_for_order(
-                areal_groups, areal_feature_styles, "above", min_x, max_y, precision
-            )
+        yield from _areal_lines_for_order(
+            areal_groups, areal_feature_styles, "above", min_x, max_y, precision
         )
 
     if point_items and point_feature_order == "above":
-        lines.extend(
-            _point_features_lines(point_items, point_feature_styles, min_x, max_y, precision)
+        yield from _point_features_lines(
+            point_items, point_feature_styles, min_x, max_y, precision
         )
 
     if structure_items and hydro_structure_order == "above":
-        lines.extend(
-            _hydro_structure_lines(
-                structure_items, hydro_structure_styles, min_x, max_y, precision
-            )
+        yield from _hydro_structure_lines(
+            structure_items, hydro_structure_styles, min_x, max_y, precision
         )
 
-    lines.append("</svg>")
-    return "\n".join(lines) + "\n"
+    yield "</svg>"
 
 
 def stream_order_widths(

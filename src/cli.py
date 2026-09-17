@@ -12,7 +12,8 @@ YAML (or default) values untouched. The public entry point is
 from __future__ import annotations
 
 import argparse
-from typing import Any, Sequence
+from collections.abc import Sequence
+from typing import Any
 
 from src.config import (
     DEFAULTS,
@@ -127,6 +128,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--stream-method",
         default=None,
         help="Stream-hierarchy method: strahler shreve hack custom.",
+    )
+    parser.add_argument(
+        "--min-order",
+        type=int,
+        default=None,
+        help="Minimum Strahler stream order to keep (1 = all, default).",
     )
     parser.add_argument(
         "--huc-level",
@@ -311,6 +318,8 @@ def cli_overrides(args: argparse.Namespace) -> dict[str, Any]:
         overrides["width_log"] = args.width_log
     if args.stream_method is not None:
         overrides["stream_method"] = args.stream_method
+    if args.min_order is not None:
+        overrides["min_order"] = args.min_order
     if args.huc_level is not None:
         overrides["huc_level"] = args.huc_level
     if args.glow is not None:
