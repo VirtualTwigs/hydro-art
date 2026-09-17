@@ -12,9 +12,7 @@
 | 58 | 11.5 | Instrument the test | Not started | Depends on #56 |
 | 59 | 11.5 | Revenue gate | Not started | 60-day window from first listing |
 | 66 | 16 | Canal / ditch / pipeline styling | Not started | Descoped from Epoch 16 close |
-| 107 | 26 | `--min-order` in pipeline (CONUS prereq) | Proposed | — |
-| 108 | 26 | Streaming SVG writer (CONUS prereq) | Proposed | — |
-| 109–111 | 26 | CONUS wiring, coloring & hero render | Proposed | #107, #108, data download |
+| 111 | 26 | CONUS hero image & gallery entry | Not started | Needs all CONUS NHDPlus HR data |
 | 112–119 | 27 | Water-facility and data-center intelligence | Proposed | Source-rights and revenue-priority gate |
 | 99–106 | 25 | Operations library & ledger | Proposed | — |
 
@@ -303,31 +301,26 @@ blockers first (independently useful), then build CONUS on top.
 
 **Phase 26.1 — Pipeline prerequisites (independently useful)**
 
-107. [ ] Promote `--min-order` to the pipeline — Wire Strahler-order filtering into the
-`validate`/`build_graph` stages as a `--min-order N` CLI flag (default `1` = no filter). Drop
-flowlines below the threshold before graph construction so memory scales with the displayable
-network, not the full NHDPlus HR. Fail-fast `ConfigError` validation. Byte-identical when
-`min_order=1`. This is the single most impactful change for CONUS feasibility — without it,
-both the graph and the SVG exceed workstation RAM. Also independently useful for any large-state
-render (California, Texas). `M`
+107. [x] Promote `--min-order` to the pipeline — `min_order` field on `Settings` (default `1`),
+`--min-order` CLI flag, Strahler-order filtering in `_compute_watersheds_stage` after
+`assign_stream_order`. Drops segments below threshold from `stream_orders` and `watersheds`;
+downstream stages only see kept segments. Byte-identical when `min_order=1`. 8 tests.
+Committed `fa31bc1` (2026-09-17).
 
-108. [ ] Streaming SVG writer — Add `render_svg_stream(f: IO, ...)` alongside the existing
-`render_svg() -> str`. The pipeline writes SVG directly to disk via the streaming path; the
-`str`-return signature stays for tests and small regions. Eliminates the ~400 MB in-memory
-string for continent-scale renders. Byte-identical output (same bytes, written incrementally).
-Also independently useful for high-resolution multi-feature renders. `M`
+108. [x] Streaming SVG writer — `render_svg_stream(f: IO, ...)` alongside `render_svg() -> str`.
+Internal `_render_lines()` generator shared by both. Pipeline uses streaming path via `StringIO`.
+Byte-identical output. 3 new tests. Committed `fa31bc1` (2026-09-17).
 
 **Phase 26.2 — CONUS wiring**
 
-109. [ ] CONUS region alias & eastern state data — Add `"CONUS"` as a pseudo-region alias in
-`src/config.py` that expands to all 48 contiguous states. Wire the remaining ~20 eastern states
-(HU2 01–08) into `REGION_HUC4`, `STATE_FIPS`, `REGION_BOUNDS` (same `derive_state_huc4.py`
-pattern used for western states). Download + extract the eastern NHDPlus HR + WBD archives.
-Handle the `unary_union` boundary cost (pre-simplified CONUS outline or chunked clip). `M`
+109. [x] CONUS region alias — `CONUS_STATES` constant (48 contiguous states, all 50 minus
+Hawaii/Alaska). `build_settings` expands `region=['CONUS']` to all 48 states before
+normalization. Case-insensitive. All 50 states already have `REGION_HUC4` and `STATE_FIPS`
+entries. 5 new tests. Committed `159a06a` (2026-09-17).
 
-110. [ ] Continental coloring — Default to `huc_level=HUC2` when region is `CONUS` (~18 macro-
-basin color families cycling the 12-color neon palette — clean continent-wide). The coloring
-algorithm already works at this scale; this is config/default wiring. `S`
+110. [x] Continental coloring — CONUS builds default to `huc_level=HUC2` (~18 macro-basin color
+families). Non-default explicit `huc_level` overrides. Single-state builds keep HUC4. 3 new
+tests. Committed `45c6b7d` (2026-09-17).
 
 **Phase 26.3 — Hero render**
 
