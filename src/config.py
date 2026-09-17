@@ -24,6 +24,7 @@ from src.crs import INTERNAL_CRS
 
 __all__ = [
     "AREAL_FEATURE_PRESETS",
+    "CONUS_STATES",
     "DEFAULTS",
     "HYDRO_STRUCTURE_PRESETS",
     "POINT_FEATURE_PRESETS",
@@ -92,6 +93,12 @@ SUPPORTED_REGIONS: tuple[str, ...] = (
     "Colorado", "Arizona", "New Mexico",
     # Pacific
     "Oregon", "Washington", "California", "Hawaii", "Alaska",
+)
+
+#: The 48 contiguous US states (all 50 minus Hawaii and Alaska). Used to expand
+#: the ``CONUS`` pseudo-region alias at config time (roadmap #109).
+CONUS_STATES: tuple[str, ...] = tuple(
+    s for s in SUPPORTED_REGIONS if s not in ("Hawaii", "Alaska")
 )
 
 #: Coordinate reference systems the pipeline knows how to handle.
@@ -1218,6 +1225,9 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
         raise ConfigError("At least one region must be specified.")
     if isinstance(regions_raw, str):
         regions_raw = [regions_raw]
+    # Expand the CONUS pseudo-region alias (roadmap #109) before normalization.
+    if any(str(r).strip().upper() == "CONUS" for r in regions_raw):
+        regions_raw = list(CONUS_STATES)
     regions = tuple(dict.fromkeys(_normalize_region(r) for r in regions_raw))
 
     county_raw = values.get("county", DEFAULTS["county"])

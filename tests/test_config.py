@@ -5,11 +5,11 @@ import dataclasses
 import pytest
 
 from src.config import (
+    CONUS_STATES,
     DEFAULTS,
     SUPPORTED_WIDTH_PRESETS,
     WIDTH_PRESETS,
     ConfigError,
-    Settings,
     build_settings,
 )
 
@@ -338,3 +338,40 @@ def test_hydro_structure_preset_tuning_leaves_default_disabled():
     assert hs.enabled is False
     assert hs.min_area_m2 == 0.0
     assert hs.min_spacing_m == 0.0
+
+
+# -- CONUS alias (Item #109) -------------------------------------------------
+
+
+def test_conus_states_has_48_contiguous():
+    """CONUS_STATES contains exactly the 48 contiguous states."""
+    assert len(CONUS_STATES) == 48
+    assert "Hawaii" not in CONUS_STATES
+    assert "Alaska" not in CONUS_STATES
+    assert "Oregon" in CONUS_STATES
+    assert "Texas" in CONUS_STATES
+
+
+def test_conus_alias_expands_to_48_states():
+    """region=['CONUS'] expands to all 48 contiguous states."""
+    settings = build_settings({**DEFAULTS, "region": ["CONUS"]})
+    assert len(settings.regions) == 48
+    assert settings.regions == CONUS_STATES
+
+
+def test_conus_alias_case_insensitive():
+    """The CONUS alias is case-insensitive."""
+    settings = build_settings({**DEFAULTS, "region": ["conus"]})
+    assert len(settings.regions) == 48
+
+
+def test_conus_alias_as_string():
+    """region='CONUS' (string, not list) also expands."""
+    settings = build_settings({**DEFAULTS, "region": "CONUS"})
+    assert len(settings.regions) == 48
+
+
+def test_conus_with_county_raises():
+    """CONUS + county is invalid (county needs exactly one state)."""
+    with pytest.raises(ConfigError, match="exactly one state"):
+        build_settings({**DEFAULTS, "region": ["CONUS"], "county": "Clark"})
