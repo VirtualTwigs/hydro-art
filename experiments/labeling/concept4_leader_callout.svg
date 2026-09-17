@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" width="900" height="700" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .title { font: bold 28px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #e8f4ff; }
+      .subtitle { font: 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #6b8da6; }
+      .callout-name { font: 600 11px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 1px; }
+      .callout-detail { font: 300 9px 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+      .overall-label { font: 300 14px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 6px; text-transform: uppercase; }
+      .overall-title { font: bold 22px 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="900" height="700" fill="#0a0a12"/>
+
+  <text x="450" y="48" class="title" text-anchor="middle">Concept 4: Leader-Line Callouts</text>
+  <text x="450" y="68" class="subtitle" text-anchor="middle">Labels sit in clear space, thin leader lines point to features  ·  information-dense without clutter</text>
+
+  <!-- Overall graphic label — bottom-right corner block -->
+  <g>
+    <text x="830" y="630" class="overall-label" fill="#e8f4ff" fill-opacity="0.4" text-anchor="end">Columbia Basin</text>
+    <text x="830" y="650" class="overall-title" fill="#e8f4ff" fill-opacity="0.2" text-anchor="end">Washington State</text>
+    <line x1="710" y1="658" x2="835" y2="658" stroke="#e8f4ff" stroke-opacity="0.15" stroke-width="0.5"/>
+  </g>
+
+  <!-- Rivers -->
+  <g filter="url(#glow)">
+    <path d="M 80,340 Q 200,320 300,350 Q 400,380 500,360 Q 600,340 720,330 L 850,340" stroke="#00ffff" stroke-width="5"/>
+    <path d="M 250,160 Q 280,210 300,270 Q 310,310 300,350" stroke="#0a5cff" stroke-width="3.5"/>
+    <path d="M 180,180 Q 220,195 250,215 Q 270,230 280,248" stroke="#0a5cff" stroke-width="1.5"/>
+    <path d="M 350,560 Q 380,510 400,450 Q 420,410 440,390 Q 470,370 500,360" stroke="#9d00ff" stroke-width="3"/>
+    <path d="M 460,580 Q 440,530 420,470 Q 410,445 400,425" stroke="#9d00ff" stroke-width="1.5"/>
+    <path d="M 700,160 Q 680,220 660,270 Q 640,310 640,340" stroke="#00ffab" stroke-width="2.5"/>
+    <path d="M 600,510 Q 620,465 640,415 Q 660,375 680,350" stroke="#ff7a00" stroke-width="2"/>
+    <path d="M 140,290 Q 160,310 180,325 Q 200,335 220,338" stroke="#00ffff" stroke-width="1"/>
+  </g>
+
+  <!-- Callout: Columbia River -->
+  <g>
+    <circle cx="500" cy="360" r="3" fill="none" stroke="#00ffff" stroke-width="0.75" stroke-opacity="0.6"/>
+    <line x1="503" y1="358" x2="560" y2="290" stroke="#00ffff" stroke-width="0.5" stroke-opacity="0.4"/>
+    <line x1="560" y1="290" x2="650" y2="290" stroke="#00ffff" stroke-width="0.5" stroke-opacity="0.4"/>
+    <text x="655" y="287" class="callout-name" fill="#00ffff" fill-opacity="0.9">Columbia River</text>
+    <text x="655" y="300" class="callout-detail" fill="#00ffff" fill-opacity="0.5">HUC4 1707  ·  trunk, order 8</text>
+  </g>
+
+  <!-- Callout: North Fork -->
+  <g>
+    <circle cx="290" cy="260" r="2.5" fill="none" stroke="#0a5cff" stroke-width="0.75" stroke-opacity="0.6"/>
+    <line x1="288" y1="258" x2="130" y2="220" stroke="#0a5cff" stroke-width="0.5" stroke-opacity="0.4"/>
+    <line x1="60" y1="220" x2="130" y2="220" stroke="#0a5cff" stroke-width="0.5" stroke-opacity="0.4"/>
+    <text x="55" y="217" class="callout-name" fill="#0a5cff" fill-opacity="0.9" text-anchor="end">North Fork</text>
+    <text x="55" y="230" class="callout-detail" fill="#0a5cff" fill-opacity="0.5" text-anchor="end">order 5  ·  90 cfs mean annual</text>
+  </g>
+
+  <!-- Callout: Cedar Creek (sub) -->
+  <g>
+    <circle cx="230" cy="200" r="2" fill="none" stroke="#0a5cff" stroke-width="0.5" stroke-opacity="0.5"/>
+    <line x1="228" y1="198" x2="110" y2="145" stroke="#0a5cff" stroke-width="0.4" stroke-opacity="0.3"/>
+    <line x1="50" y1="145" x2="110" y2="145" stroke="#0a5cff" stroke-width="0.4" stroke-opacity="0.3"/>
+    <text x="45" y="142" class="callout-detail" fill="#0a5cff" fill-opacity="0.6" text-anchor="end">Cedar Creek  ·  order 2</text>
+  </g>
+
+  <!-- Callout: South Fork -->
+  <g>
+    <circle cx="420" cy="430" r="2.5" fill="none" stroke="#9d00ff" stroke-width="0.75" stroke-opacity="0.6"/>
+    <line x1="418" y1="432" x2="300" y2="510" stroke="#9d00ff" stroke-width="0.5" stroke-opacity="0.4"/>
+    <line x1="180" y1="510" x2="300" y2="510" stroke="#9d00ff" stroke-width="0.5" stroke-opacity="0.4"/>
+    <text x="175" y="507" class="callout-name" fill="#9d00ff" fill-opacity="0.9" text-anchor="end">South Fork</text>
+    <text x="175" y="520" class="callout-detail" fill="#9d00ff" fill-opacity="0.5" text-anchor="end">order 4  ·  45 cfs mean annual</text>
+  </g>
+
+  <!-- Callout: Pine River -->
+  <g>
+    <circle cx="665" cy="250" r="2.5" fill="none" stroke="#00ffab" stroke-width="0.75" stroke-opacity="0.6"/>
+    <line x1="667" y1="248" x2="780" y2="200" stroke="#00ffab" stroke-width="0.5" stroke-opacity="0.4"/>
+    <line x1="780" y1="200" x2="850" y2="200" stroke="#00ffab" stroke-width="0.5" stroke-opacity="0.4"/>
+    <text x="855" y="197" class="callout-name" fill="#00ffab" fill-opacity="0.9">Pine River</text>
+    <text x="855" y="210" class="callout-detail" fill="#00ffab" fill-opacity="0.5">order 4  ·  55 cfs</text>
+  </g>
+
+  <!-- Callout: Deer Creek -->
+  <g>
+    <circle cx="640" cy="430" r="2" fill="none" stroke="#ff7a00" stroke-width="0.75" stroke-opacity="0.5"/>
+    <line x1="642" y1="432" x2="780" y2="500" stroke="#ff7a00" stroke-width="0.5" stroke-opacity="0.35"/>
+    <line x1="780" y1="500" x2="850" y2="500" stroke="#ff7a00" stroke-width="0.5" stroke-opacity="0.35"/>
+    <text x="855" y="497" class="callout-name" fill="#ff7a00" fill-opacity="0.85">Deer Creek</text>
+    <text x="855" y="510" class="callout-detail" fill="#ff7a00" fill-opacity="0.45">order 3  ·  22 cfs</text>
+  </g>
+
+  <text x="450" y="680" class="subtitle" text-anchor="middle">Pro: labels never overlap rivers, room for metadata  ·  Con: leader lines add visual noise, harder to auto-place</text>
+</svg>

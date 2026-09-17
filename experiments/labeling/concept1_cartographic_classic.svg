@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" width="900" height="700" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="text-halo" x="-5%" y="-5%" width="110%" height="110%">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="2" result="fat"/>
+      <feFlood flood-color="#000000" flood-opacity="0.85" result="black"/>
+      <feComposite in="black" in2="fat" operator="in" result="halo"/>
+      <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .title { font: bold 28px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #e8f4ff; }
+      .subtitle { font: 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #6b8da6; }
+      .river-label { font: italic 11px 'Georgia', 'Times New Roman', serif; letter-spacing: 2px; }
+      .river-label-major { font: italic 14px 'Georgia', 'Times New Roman', serif; letter-spacing: 3px; }
+      .basin-label { font: 600 10px 'Helvetica Neue', Helvetica, Arial, sans-serif; letter-spacing: 4px; text-transform: uppercase; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="700" fill="#0a0a12"/>
+
+  <!-- Title block -->
+  <text x="450" y="48" class="title" text-anchor="middle">Concept 1: Cartographic Classic</text>
+  <text x="450" y="68" class="subtitle" text-anchor="middle">Italic serif labels along rivers, uppercase basin names  ·  traditional map typography</text>
+
+  <!-- Main trunk river (Columbia-style) -->
+  <g filter="url(#glow)">
+    <path d="M 80,340 Q 200,320 300,350 Q 400,380 500,360 Q 600,340 720,330 L 850,340" stroke="#00ffff" stroke-width="5"/>
+    <!-- Major tributary 1 (north fork) -->
+    <path d="M 250,140 Q 280,200 300,260 Q 310,300 300,350" stroke="#0a5cff" stroke-width="3.5"/>
+    <!-- Sub-tributary -->
+    <path d="M 180,160 Q 220,180 250,200 Q 270,220 280,240" stroke="#0a5cff" stroke-width="1.5"/>
+    <!-- Major tributary 2 (south fork) -->
+    <path d="M 350,580 Q 380,520 400,460 Q 420,420 440,400 Q 470,380 500,360" stroke="#9d00ff" stroke-width="3"/>
+    <!-- Sub-tributary south -->
+    <path d="M 460,600 Q 440,540 420,480 Q 410,450 400,430" stroke="#9d00ff" stroke-width="1.5"/>
+    <!-- Eastern tributary -->
+    <path d="M 700,140 Q 680,200 660,260 Q 640,300 640,340 Q 650,340 660,338" stroke="#00ffab" stroke-width="2.5"/>
+    <!-- Small feeder -->
+    <path d="M 600,520 Q 620,470 640,420 Q 660,380 680,350" stroke="#ff7a00" stroke-width="2"/>
+    <!-- Headwater creek -->
+    <path d="M 140,280 Q 160,300 180,320 Q 200,330 220,336" stroke="#00ffff" stroke-width="1"/>
+  </g>
+
+  <!-- River labels — italic, following flow direction, with halo -->
+  <g filter="url(#text-halo)">
+    <!-- Main river label along path -->
+    <text x="540" y="348" class="river-label-major" fill="#00ffff" fill-opacity="0.9" transform="rotate(-2, 540, 348)">Columbia River</text>
+
+    <!-- Tributary labels -->
+    <text x="270" y="210" class="river-label" fill="#0a5cff" fill-opacity="0.85" transform="rotate(-72, 270, 210)">North Fork</text>
+
+    <text x="200" y="185" class="river-label" fill="#0a5cff" fill-opacity="0.65" transform="rotate(-30, 200, 185)" font-size="9">Cedar Cr.</text>
+
+    <text x="420" y="490" class="river-label" fill="#9d00ff" fill-opacity="0.85" transform="rotate(72, 420, 490)">South Fork</text>
+
+    <text x="450" y="555" class="river-label" fill="#9d00ff" fill-opacity="0.65" transform="rotate(68, 450, 555)" font-size="9">Elk Creek</text>
+
+    <text x="670" y="210" class="river-label" fill="#00ffab" fill-opacity="0.85" transform="rotate(78, 670, 210)">Pine River</text>
+
+    <text x="630" y="470" class="river-label" fill="#ff7a00" fill-opacity="0.75" transform="rotate(72, 630, 470)" font-size="10">Deer Creek</text>
+
+    <text x="165" y="310" class="river-label" fill="#00ffff" fill-opacity="0.55" transform="rotate(-25, 165, 310)" font-size="8">Spring Cr.</text>
+  </g>
+
+  <!-- Basin labels — uppercase, spaced, semi-transparent -->
+  <text x="220" y="130" class="basin-label" fill="#0a5cff" fill-opacity="0.3" text-anchor="middle">NORTH BASIN</text>
+  <text x="420" y="620" class="basin-label" fill="#9d00ff" fill-opacity="0.3" text-anchor="middle">SOUTH BASIN</text>
+  <text x="700" y="130" class="basin-label" fill="#00ffab" fill-opacity="0.3" text-anchor="middle">PINE BASIN</text>
+  <text x="640" y="580" class="basin-label" fill="#ff7a00" fill-opacity="0.25" text-anchor="middle">DEER BASIN</text>
+
+  <!-- Concept notes -->
+  <text x="450" y="680" class="subtitle" text-anchor="middle">Pro: familiar, readable  ·  Con: labels collide at density, fixed angles don't curve with rivers</text>
+</svg>

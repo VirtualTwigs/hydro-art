@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" width="900" height="700" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <defs>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="text-halo" x="-5%" y="-5%" width="110%" height="110%">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="2.5" result="fat"/>
+      <feFlood flood-color="#0a0a12" flood-opacity="0.9" result="black"/>
+      <feComposite in="black" in2="fat" operator="in" result="halo"/>
+      <feMerge><feMergeNode in="halo"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .title { font: bold 28px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #e8f4ff; }
+      .subtitle { font: 13px 'Helvetica Neue', Helvetica, Arial, sans-serif; fill: #6b8da6; }
+      .flow-label { font: italic 12px 'Georgia', serif; letter-spacing: 3px; }
+      .flow-label-major { font: italic 15px 'Georgia', serif; letter-spacing: 4px; }
+      .flow-label-minor { font: italic 9px 'Georgia', serif; letter-spacing: 2px; }
+    </style>
+
+    <!-- Path definitions for textPath flow -->
+    <path id="main-river" d="M 80,340 Q 200,320 300,350 Q 400,380 500,360 Q 600,340 720,330 L 850,340"/>
+    <path id="north-trib" d="M 250,140 Q 280,200 300,260 Q 310,300 300,350"/>
+    <path id="north-sub" d="M 180,160 Q 220,180 250,200 Q 270,220 280,240"/>
+    <path id="south-trib" d="M 350,580 Q 380,520 400,460 Q 420,420 440,400 Q 470,380 500,360"/>
+    <path id="south-sub" d="M 460,600 Q 440,540 420,480 Q 410,450 400,430"/>
+    <path id="east-trib" d="M 700,140 Q 680,200 660,260 Q 640,300 640,340"/>
+    <path id="sw-creek" d="M 600,520 Q 620,470 640,420 Q 660,380 680,350"/>
+    <path id="headwater" d="M 140,280 Q 160,300 180,320 Q 200,330 220,336"/>
+  </defs>
+
+  <rect width="900" height="700" fill="#0a0a12"/>
+
+  <text x="450" y="48" class="title" text-anchor="middle">Concept 2: Text-on-Path Flow</text>
+  <text x="450" y="68" class="subtitle" text-anchor="middle">Labels follow river curves via &lt;textPath&gt;  ·  text bends with the water</text>
+
+  <!-- River strokes -->
+  <g filter="url(#glow)">
+    <use href="#main-river" stroke="#00ffff" stroke-width="5"/>
+    <use href="#north-trib" stroke="#0a5cff" stroke-width="3.5"/>
+    <use href="#north-sub" stroke="#0a5cff" stroke-width="1.5"/>
+    <use href="#south-trib" stroke="#9d00ff" stroke-width="3"/>
+    <use href="#south-sub" stroke="#9d00ff" stroke-width="1.5"/>
+    <use href="#east-trib" stroke="#00ffab" stroke-width="2.5"/>
+    <use href="#sw-creek" stroke="#ff7a00" stroke-width="2"/>
+    <use href="#headwater" stroke="#00ffff" stroke-width="1"/>
+  </g>
+
+  <!-- Text flowing along river paths -->
+  <g filter="url(#text-halo)">
+    <text class="flow-label-major" fill="#00ffff" fill-opacity="0.9">
+      <textPath href="#main-river" startOffset="35%">Columbia River</textPath>
+    </text>
+
+    <text class="flow-label" fill="#0a5cff" fill-opacity="0.85">
+      <textPath href="#north-trib" startOffset="20%">North Fork</textPath>
+    </text>
+
+    <text class="flow-label-minor" fill="#0a5cff" fill-opacity="0.6">
+      <textPath href="#north-sub" startOffset="15%">Cedar Creek</textPath>
+    </text>
+
+    <text class="flow-label" fill="#9d00ff" fill-opacity="0.85">
+      <textPath href="#south-trib" startOffset="15%">South Fork</textPath>
+    </text>
+
+    <text class="flow-label-minor" fill="#9d00ff" fill-opacity="0.6">
+      <textPath href="#south-sub" startOffset="10%">Elk Creek</textPath>
+    </text>
+
+    <text class="flow-label" fill="#00ffab" fill-opacity="0.85">
+      <textPath href="#east-trib" startOffset="20%">Pine River</textPath>
+    </text>
+
+    <text class="flow-label-minor" fill="#ff7a00" fill-opacity="0.75">
+      <textPath href="#sw-creek" startOffset="15%">Deer Creek</textPath>
+    </text>
+
+    <text class="flow-label-minor" fill="#00ffff" fill-opacity="0.5">
+      <textPath href="#headwater" startOffset="10%">Spring Cr.</textPath>
+    </text>
+  </g>
+
+  <text x="450" y="680" class="subtitle" text-anchor="middle">Pro: labels curve naturally with geometry  ·  Con: SVG textPath rendering varies; long names on short segments clip</text>
+</svg>
