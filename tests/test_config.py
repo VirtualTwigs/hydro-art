@@ -375,3 +375,24 @@ def test_conus_with_county_raises():
     """CONUS + county is invalid (county needs exactly one state)."""
     with pytest.raises(ConfigError, match="exactly one state"):
         build_settings({**DEFAULTS, "region": ["CONUS"], "county": "Clark"})
+
+
+# -- Continental coloring (Item #110) -----------------------------------------
+
+
+def test_conus_defaults_to_huc2():
+    """CONUS builds default to HUC2 for clean continent-wide coloring."""
+    settings = build_settings({**DEFAULTS, "region": ["CONUS"]})
+    assert settings.huc_level == "HUC2"
+
+
+def test_conus_explicit_huc_level_overrides():
+    """An explicit non-default huc_level overrides the CONUS HUC2 default."""
+    settings = build_settings({**DEFAULTS, "region": ["CONUS"], "huc_level": "HUC8"})
+    assert settings.huc_level == "HUC8"
+
+
+def test_non_conus_still_defaults_to_huc4():
+    """Single-state builds still default to HUC4."""
+    settings = build_settings({**DEFAULTS, "region": ["Oregon"]})
+    assert settings.huc_level == "HUC4"

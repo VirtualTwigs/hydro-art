@@ -1289,7 +1289,13 @@ def build_settings(values: Mapping[str, Any]) -> Settings:
             f"min_order must be >= 1 (1 keeps all segments), got {min_order}."
         )
 
-    huc_level = str(values.get("huc_level", DEFAULTS["huc_level"])).upper()
+    # Continental coloring (roadmap #110): default to HUC2 when the build
+    # targets CONUS so ~18 macro-basin color families cycle the palette cleanly
+    # at continent scale. An explicit non-default huc_level still wins.
+    huc_raw = values.get("huc_level", DEFAULTS["huc_level"])
+    if regions == CONUS_STATES and str(huc_raw).upper() == str(DEFAULTS["huc_level"]).upper():
+        huc_raw = "HUC2"
+    huc_level = str(huc_raw).upper()
     if huc_level not in SUPPORTED_HUC_LEVELS:
         valid = ", ".join(SUPPORTED_HUC_LEVELS)
         raise ConfigError(
