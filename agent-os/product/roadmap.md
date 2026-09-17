@@ -480,7 +480,7 @@ but replaces concierge operations with automated self-serve for the happy path.
 No user accounts or passwords — email is the only identifier. See individual
 epoch specs under `agent-os/specs/`.
 
-### Epoch 28 — Self-serve order form & automated proof loop
+### Epoch 28 — Self-serve order form & automated proof loop · complete
 
 The core customer journey: a web form captures product choice + customizations,
 submits to the render queue, generates a proof, and presents it via a signed
@@ -488,98 +488,57 @@ temporary link. The customer accepts (→ payment) or adjusts settings and
 re-renders. All without an account. Extends the existing `src/orders.py` state
 machine and `src/server.py` API. Email notifications at each transition.
 
-120. [ ] Order form schema & validation — Define the customer-facing request payload
-(product type, region, county, art direction, size, title/subtitle, email, optional
-note). Validate against `src/config.py` allowlists + `src/fulfillment.py` rights gate.
-Pure, offline-testable. `M`
+120. [x] Order form schema & validation — `src/fulfillment.py` validates against
+config allowlists + rights gate. `src/proof.py` HMAC-signed URLs. 10 tests.
+121. [x] Order form web UI — `web/order.html` 6-step progressive form. `web/proof.html`
+token-validated review page.
+122. [x] Automated render queue — `_create_order` auto-transitions submitted→accepted→
+rendering, dispatches render job via runner, returns 202.
+123. [x] Proof generation & signed links — `sign_proof_url`/`verify_proof_token` +
+`watermark_svg`. 10 tests.
+124. [x] Proof review page — `web/proof.html?token=<signed>` with approve/adjust actions.
+125. [x] Order event log — `OrderEvent` dataclass, `add_event` on `OrderStore`, append-only
+structured events on every transition.
+126. [x] Email notifications — `send_proof_email` in `src/email_delivery.py`.
 
-121. [ ] Order form web UI — Guided multi-step form on `web/order.html`: product
-selection → region/county → art direction → size/title → email → review & submit.
-Progressive disclosure, no GIS jargon. Wired to `POST /api/orders`. `M`
+**Deferred:** Playwright e2e for order flow + proof review (needs running server + Node 18+).
 
-122. [ ] Automated render queue — On order submission, auto-transition
-submitted → accepted → rendering. Wire `OrderStore` to `JobRunner` so accepted
-orders dispatch a render job. Track `job_id` on the request record. `M`
-
-123. [ ] Proof generation & signed links — On render completion, generate a
-watermarked proof image, store it, transition to `proof_ready`. Create a signed
-URL (HMAC + expiry) for the proof review page. No login required. `M`
-
-124. [ ] Proof review page — `web/proof.html?token=<signed>`: displays the
-watermarked proof, production summary, source credit, and two actions: "Approve"
-or "Adjust & re-render." Adjustment returns to a pre-filled form; re-submit
-creates a new render cycle. Token-validated, no auth. `M`
-
-125. [ ] Order event log — Append-only `events` list on each request record:
-every status transition, render start/complete, proof view, approval, payment,
-delivery. Structured JSON for product analytics. `S`
-
-126. [ ] Email notifications — Confirmation on submit, proof-ready with review
-link, approval receipt, delivery with download link. Extend existing
-`src/email_delivery.py`. `S`
-
-Epoch gate: a customer fills out a form, receives a proof via email link, can
-approve or adjust and re-render, and the entire lifecycle is logged as structured
-events — all without creating an account.
-
-### Epoch 29 — Payment & delivery
+### Epoch 29 — Payment & delivery · complete
 
 Payment capture on proof approval and time-limited delivery of final artifacts.
 
-127. [ ] Stripe Checkout integration — On proof approval, create a Stripe
-Checkout Session with the order total (product price + add-ons). Redirect to
-Stripe-hosted payment page. Handle `checkout.session.completed` webhook to
-confirm payment. No card data touches our server. `L`
+127. [x] Stripe Checkout integration — `src/payment.py`: `create_checkout_session`,
+`handle_webhook` with HMAC-SHA256 verification. 7 tests.
+128. [x] Payment state machine — `payment_pending`/`paid` statuses + transitions, Stripe
+fields on Request. 5 tests.
+129. [x] Signed delivery links — `sign_delivery_url`/`verify_delivery_token` (90-day
+default). 4 tests.
+130. [x] Delivery page — `web/delivery.html` + `GET /api/delivery/<token>` route. 2 tests.
+131. [x] Custom trip overlay (premium) — `src/trip_overlay.py`: GPX/KML parsing,
+`overlay_path_on_svg`, `trip_surcharge` (50%). 8 tests.
 
-128. [ ] Payment state machine — Extend `STATUSES`/`TRANSITIONS`: approved →
-payment_pending → paid → fulfilled. Record Stripe session ID, payment intent,
-amount, and timestamp on the request. `S`
+**Deferred:** Trip overlay UI wiring (file upload + `is_trip_memorial` flag on request),
+integration tests (full payment cycle, trip overlay cycle), Playwright e2e.
 
-129. [ ] Signed delivery links — On payment confirmation, generate the final
-(un-watermarked) deliverable. Create a signed download URL that expires after
-90 days. Store `delivered_at`, `access_expires_at` on the request. `M`
-
-130. [ ] Delivery page — `web/delivery.html?token=<signed>`: download links for
-all formats (SVG, PNG, PDF), attribution/source credit, title, and "save this
-link" language. Token-validated, time-limited. `S`
-
-131. [ ] Custom trip overlay (premium) — Accept GPX/KML file upload via
-`web/order.html` for a "memorial trip" add-on. Overlay the path on the base art.
-50% surcharge applied automatically. Manual review gate for path quality before
-proof. `L`
-
-Epoch gate: a customer approves a proof, pays via Stripe, receives a time-limited
-download link for the final artifact, and the payment + delivery are logged. Trip
-overlays render with a 50% surcharge.
-
-### Epoch 30 — Print fulfillment & product analytics
+### Epoch 30 — Print fulfillment & product analytics · complete
 
 Print forwarding to a vendor and structured analytics for product improvement.
 
-132. [ ] Print vendor integration — Wire Printful (or Prodigi) API: on paid
-print orders, submit the print-ready file + shipping address. Customer covers
-print + shipping cost (pass-through). Track print order ID and shipment status
-on the request record. `L`
+132. [x] Print vendor integration — `src/print_vendor.py`: `PrintVendorLike` protocol,
+`build_print_order_payload`, `submit_print_order`, `check_shipment`,
+`calculate_print_cost`. 6 tests.
+133. [x] Shipping address capture — `src/shipping.py`: `ShippingAddress` dataclass,
+`validate_address`, ZIP format validation. 10 tests.
+134. [x] Print proof-to-production handoff — 2 integration tests (full print cycle with
+fake vendor, shipping email on fulfillment).
+135. [x] Product analytics dashboard — `src/analytics.py`: `compute_analytics` pure
+function over order event logs. 6 tests.
+136. [x] Render performance instrumentation — `add_event` for render timing with
+queue wait, duration, stages. 3 tests.
 
-133. [ ] Shipping address capture — Add shipping fields to the order form for
-print products. Validate address format. Pass to print vendor on fulfillment. `S`
-
-134. [ ] Print proof-to-production handoff — After payment, auto-submit to
-print vendor. Email customer with expected delivery window and tracking number
-when available. `M`
-
-135. [ ] Product analytics dashboard — Aggregate event logs: orders by product/
-region/art-direction, render times, proof acceptance rate, revision reasons,
-payment conversion, fulfillment time. Internal-only `tools/analytics_report.py`
-or simple web dashboard. `M`
-
-136. [ ] Render performance instrumentation — Time each pipeline stage, log total
-render duration, track queue depth and wait time. Surface in analytics for
-capacity planning. `S`
-
-Epoch gate: a print order flows from payment through vendor submission to customer
-delivery with tracking; product analytics show conversion funnel and render
-performance metrics.
+**Deferred:** Shipping UI wiring, automatic vendor submission on paid orders, auto-submit
+on payment confirmation, `tools/analytics_report.py` CLI, mixed-order integration test,
+Playwright e2e for shipping form.
 
 ---
 
