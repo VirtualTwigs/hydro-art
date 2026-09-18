@@ -42,7 +42,7 @@ class GallerySelection:
 
     item_id: str
     region: str
-    county: str
+    county: str | None
     style: str
     endpoint: str
     rationale: str
@@ -96,6 +96,14 @@ GALLERY_MATRIX: tuple[GallerySelection, ...] = (
         endpoint="report",
         huc="17080003",
         rationale="Watershed analytics report — the data-story deliverable.",
+    ),
+    GallerySelection(
+        item_id="conus-neon-hero",
+        region="CONUS",
+        county=None,
+        style="neon-basin",
+        endpoint="digital_image",
+        rationale="Continental hero — every major river basin in the contiguous US.",
     ),
 )
 

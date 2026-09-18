@@ -226,3 +226,34 @@ def test_every_contract_round_trips_build_plan_manifest():
         for d in plan.items:
             assert " " not in d.filename
         assert plan.items == endpoint_plan(req).items
+
+
+# --- Group 5: CONUS region support (Item #111) ----------------------------
+
+def test_conus_request_accepted_without_county():
+    """CONUS region accepts None/empty county — no county clip for continental."""
+    req = build_endpoint_request(_payload(region="CONUS", county=None))
+    assert isinstance(req, EndpointRequest)
+    assert req.region == "CONUS"
+    assert req.county == ""
+
+
+def test_non_conus_still_requires_county():
+    """Non-CONUS regions still require a non-empty county."""
+    with pytest.raises(EndpointError, match="county"):
+        build_endpoint_request(_payload(region="Oregon", county=""))
+
+
+def test_conus_stem_has_no_double_dash():
+    """The filename stem for a CONUS request is clean (no empty county segment)."""
+    req = build_endpoint_request(_payload(region="CONUS", county=None))
+    plan = endpoint_plan(req)
+    for d in plan.items:
+        assert "--" not in d.filename
+        assert "conus" in d.filename.lower()
+
+
+def test_conus_request_passes_rights_gate():
+    """CONUS + neon-basin is public domain — sellable."""
+    req = build_endpoint_request(_payload(region="CONUS", county=None))
+    assert_sellable(req)

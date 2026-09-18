@@ -149,12 +149,12 @@ def build_endpoint_request(payload, *, styles=ORDER_STYLES, sizes=SIZES) -> Endp
         raise EndpointError("request_id is required.")
 
     region = payload.get("region")
-    if region not in SUPPORTED_REGIONS:
-        valid = ", ".join(SUPPORTED_REGIONS)
+    if region != "CONUS" and region not in SUPPORTED_REGIONS:
+        valid = ", ".join((*SUPPORTED_REGIONS, "CONUS"))
         raise EndpointError(f"Unsupported region {region!r}. Choose one of: {valid}.")
 
-    county = str(payload.get("county", "")).strip()
-    if not county:
+    county = str(payload.get("county") or "").strip()
+    if not county and region != "CONUS":
         raise EndpointError("county must be a non-empty name.")
 
     endpoint = payload.get("endpoint")
@@ -226,12 +226,12 @@ def assert_sellable(request, *, styles=ORDER_STYLES) -> None:
 
 def _stem(request) -> str:
     """A filesystem-safe, deterministic stem from the request identity."""
-    county = request.county.lower().replace(" ", "-")
+    region = request.region.lower()
     suffix = ENDPOINT_CONTRACTS[request.endpoint].stem_suffix
-    return (
-        f"{request.request_id}_{request.region.lower()}-{county}"
-        f"_{request.style}_{suffix}"
-    )
+    if request.county:
+        county = request.county.lower().replace(" ", "-")
+        return f"{request.request_id}_{region}-{county}_{request.style}_{suffix}"
+    return f"{request.request_id}_{region}_{request.style}_{suffix}"
 
 
 def endpoint_plan(request, *, sizes=SIZES) -> DeliverablePlan:

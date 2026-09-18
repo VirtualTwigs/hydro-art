@@ -11,7 +11,7 @@
 | 57 | 11.5 | Repeatable fulfillment pack | Not started (code core shipped) | Operational |
 | 58 | 11.5 | Instrument the test | Not started | Depends on #56 |
 | 59 | 11.5 | Revenue gate | Not started | 60-day window from first listing |
-| 66 | 16 | Canal / ditch / pipeline styling | Not started | Descoped from Epoch 16 close |
+| 66 | 16 | Canal / ditch / pipeline styling | **Done** (2026-09-17) | — |
 | 111 | 26 | CONUS hero image & gallery entry | Not started | Needs all CONUS NHDPlus HR data |
 | 112–119 | 27 | Water-facility and data-center intelligence | Proposed | Source-rights and revenue-priority gate |
 | 99–106 | 25 | Operations library & ledger | Proposed | — |
@@ -117,17 +117,18 @@ waterbody taxonomy.
 **Deferred (non-blocking):** Task Group 0 FType code verification against a real GDB — the
 classification rule is fixed, only placeholder numeric codes for falls/rapids need confirming.
 
-### Epoch 16 — Hydro-infrastructure layers · complete (except #66)
+### Epoch 16 — Hydro-infrastructure layers · complete
 
-Items #65, #67, #68 shipped. Hydro-structure taxonomy (`src/hydro_structures.py`: dam/weir, gate,
+Items #65–#68 shipped. Hydro-structure taxonomy (`src/hydro_structures.py`: dam/weir, gate,
 lock chamber, gaging station, intake/outflow, spillway, canal/ditch), selection + QA
 (`src/hydro_structure_selection.py`, `src/hydro_structure_qa.py`), infrastructure rendering with
 point glyphs / line bars / areal paths, `HydroStructureSettings` + presets, pipeline integration.
 Real HUC4 1807 validated: 557 structures, 553/557 on-network. Default (disabled) byte-identical.
 
-**Item #66 (canal/ditch/pipeline flowline styling) was descoped** from the epoch close — it styles
-*NHDFlowline* engineered FTypes distinctly from natural streams, which is a separate concern from
-the structure rendering that shipped. Tracked as open work above.
+Item #66 (canal/ditch/pipeline flowline styling) shipped 2026-09-17: `src/flowline_channels.py`
+classifies NHDFlowline FTypes (CanalDitch/Pipeline/ArtificialPath) and threads per-segment
+`stroke-dasharray` through the rendering path. `--flowline-channels` flag + presets. 46 new tests,
+1133 total. Default (disabled) byte-identical.
 
 ### Epoch 17 — Watershed report: creative analytics · complete
 

@@ -28,6 +28,33 @@
       "style": "neon-basin"
     },
     {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "conus-neon-hero_conus_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "conus-neon-hero_conus_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "conus-neon-hero",
+      "rationale": "Continental hero \u2014 every major river basin in the contiguous US.",
+      "region": "CONUS",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
       "county": "Blaine",
       "deliverables": [
         {
