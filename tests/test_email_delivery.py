@@ -8,6 +8,7 @@ from __future__ import annotations
 from src.email_delivery import (
     _build_confirmation_message,
     _build_message,
+    _build_proof_message,
     send_confirmation_email,
     send_delivery_email,
 )
@@ -45,6 +46,23 @@ class TestBuildMessage:
         msg = _build_message("a@b.com", "REQ-001", "http://localhost:8765/delivery.html?order=REQ-001")
         plain = msg.get_payload()[0].get_payload(decode=True).decode()
         assert "http://localhost:8765/delivery.html?order=REQ-001" in plain
+
+    def test_delivery_plain_uses_riverglyph_brand(self):
+        msg = _build_message("a@b.com", "REQ-001", "http://x")
+        plain = msg.get_payload()[0].get_payload(decode=True).decode()
+        assert "Riverglyph" in plain
+        assert "Hydro-Art" not in plain
+
+    def test_delivery_html_uses_riverglyph_brand(self):
+        msg = _build_message("a@b.com", "REQ-001", "http://x")
+        html = msg.get_payload()[1].get_payload(decode=True).decode()
+        assert "Riverglyph" in html
+        assert "Hydro&#9671;Art" not in html
+
+    def test_delivery_keeps_runde_strategies_footer(self):
+        msg = _build_message("a@b.com", "REQ-001", "http://x")
+        plain = msg.get_payload()[0].get_payload(decode=True).decode()
+        assert "Runde Strategies" in plain
 
 
 class TestSendDeliveryEmail:
@@ -111,6 +129,18 @@ class TestSendProofEmail:
         result = send_proof_email("a@b.com", "REQ-001", "http://x", sender=sender)
         assert result is False
 
+    def test_proof_html_uses_riverglyph_brand(self):
+        msg = _build_proof_message("a@b.com", "REQ-001", "http://x")
+        html = msg.get_payload()[1].get_payload(decode=True).decode()
+        assert "Riverglyph" in html
+        assert "Hydro&#9671;Art" not in html
+
+    def test_proof_plain_uses_riverglyph_brand(self):
+        msg = _build_proof_message("a@b.com", "REQ-001", "http://x")
+        plain = msg.get_payload()[0].get_payload(decode=True).decode()
+        assert "Riverglyph" in plain
+        assert "Hydro-Art" not in plain
+
 
 class TestSendConfirmationEmail:
     def test_sends_via_fake_sender(self):
@@ -124,7 +154,7 @@ class TestSendConfirmationEmail:
         )
         assert result is True
         assert len(sender.sent) == 1
-        assert sender.sent[0]["Subject"] == "We received your Hydro-Art request — REQ-001"
+        assert sender.sent[0]["Subject"] == "We received your Riverglyph request — REQ-001"
 
     def test_confirmation_includes_request_details(self):
         msg = _build_confirmation_message(
@@ -137,3 +167,15 @@ class TestSendConfirmationEmail:
         assert "REQ-001" in plain
         assert "Fine-art print" in plain
         assert "Clark County, Washington" in plain
+
+    def test_confirmation_html_uses_riverglyph_brand(self):
+        msg = _build_confirmation_message("a@b.com", "REQ-001")
+        html = msg.get_payload()[1].get_payload(decode=True).decode()
+        assert "Riverglyph" in html
+        assert "Hydro&#9671;Art" not in html
+
+    def test_confirmation_plain_uses_riverglyph_brand(self):
+        msg = _build_confirmation_message("a@b.com", "REQ-001")
+        plain = msg.get_payload()[0].get_payload(decode=True).decode()
+        assert "Riverglyph" in plain
+        assert "Hydro-Art" not in plain

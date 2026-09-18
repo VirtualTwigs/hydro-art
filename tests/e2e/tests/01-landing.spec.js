@@ -26,9 +26,21 @@ test.describe('Alpha landing (#95, #96)', () => {
     const errors = trackErrors(page);
     const resp = await page.goto('/web/start.html', { waitUntil: 'load' });
     expect(resp?.status()).toBe(200);
-    await expect(page).toHaveTitle(/Hydro-Art/i);
+    await expect(page).toHaveTitle(/Riverglyph/i);
     await expect(page.locator('h1.head')).toBeVisible();
     expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('Riverglyph wordmark visible at desktop width (1280px)', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+    await expect(page.getByText('Riverglyph').first()).toBeVisible();
+  });
+
+  test('Riverglyph wordmark visible at mobile width (375px)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+    await expect(page.getByText('Riverglyph').first()).toBeVisible();
   });
 
   test('landing art + font assets resolve (no 404s)', async ({ page }) => {

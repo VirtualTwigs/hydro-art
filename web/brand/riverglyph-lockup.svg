@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 260" role="img" aria-label="Riverglyph stacked lockup">
+  <style>
+    .letter { font-family: Georgia, serif; font-size: 132px; font-weight: 700; fill: #142923; }
+    .g { font: 700 104px Georgia, serif; fill: #142923; }
+    .shore { fill: none; stroke: #142923; stroke-linecap: round; stroke-linejoin: round; }
+    .wordmark { font-family: Georgia, serif; font-size: 42px; font-weight: 600; letter-spacing: -0.045em; fill: #142923; }
+  </style>
+  <!-- R/g monogram centered -->
+  <g transform="translate(78, 0)">
+    <text class="letter" x="14" y="112">R</text>
+    <text class="g" x="72" y="111">g</text>
+    <path class="shore" stroke-width="4" d="M8 129c39-11 87-9 131 0"/>
+    <path class="shore" stroke-width="2" d="M19 135c34-6 72-5 109 0"/>
+  </g>
+  <!-- Wordmark below -->
+  <text class="wordmark" x="150" y="200" text-anchor="middle">Riverglyph</text>
+  <!-- Double shore under wordmark -->
+  <path class="shore" stroke-width="2.5" d="M30 214c60-8 180-8 240 0"/>
+  <path class="shore" stroke-width="1.5" d="M45 220c50-5 155-5 210 0"/>
+</svg>

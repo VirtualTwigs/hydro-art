@@ -1,6 +1,32 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-09-17, Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+_Last updated: 2026-09-18, Epoch 31 implementation complete (Riverglyph brand transition, #137-#141); Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+
+## Current state (2026-09-18)
+
+- **Epoch 31 IMPLEMENTATION DONE (2026-09-18) — Riverglyph brand transition (#137-#141).**
+  Migrated the public product identity from Hydro-Art to Riverglyph across the entire
+  presentation surface. This is presentation-only — no pipeline changes, no `Settings` shape
+  changes, no rendered artifact byte changes.
+  - **Brand assets created:** 8 SVG/PNG/ICO files under `web/brand/` (wordmark, lockup, icon,
+    print, reversed, favicon SVG) + `web/favicon.ico` + `web/brand/social-preview.png`.
+  - **CSS token layer:** `web/shared/brand.css` defines canonical Riverglyph tokens (River Teal
+    `#176C70`, Watershed Ink `#142923`, Field Paper `#F4F2E9`). Both `editorial.css` and
+    `ux.css` import and reference these tokens.
+  - **10 web pages updated:** `start.html`, `order.html`, `proof.html`, `delivery.html`,
+    `gallery.html`, `report.html`, `studio.html`, `ops.html`, `proto-b-guided.html`,
+    `proto-c-canvas.html` — all titles, wordmarks, nav, headings, favicon/OG meta migrated.
+  - **Email copy updated:** `src/email_delivery.py` subjects and HTML bodies use Riverglyph.
+    `tests/test_email_delivery.py` assertions updated. E2E title regex updated.
+  - **Suite:** 1151 tests passing, no regressions. Recipe roundtrip green.
+    `PIPELINE_STAGES` untouched. 2D default build byte-identical. Technical identifiers
+    (`HYDRO_ART_*`, `hydro-art/*`, `HydroUX`) stable.
+  - **Listing copy:** `fulfillment-pack/listing.md` updated to use Riverglyph brand name.
+  - **Deferred (business clearance, not code):** domain registration (`riverglyph.com`),
+    trademark clearance (Class 16/9), full public-path walkthrough (needs running server),
+    go-live date recording (when listing actually publishes), epoch retrospective (epoch not
+    fully closed until business clearance completes).
+  - Spec: `agent-os/specs/2026-09-18-riverglyph-brand-transition/`.
 
 ## Current state (2026-09-17)
 

@@ -9,11 +9,19 @@ impressions alone._
 
 Proceed to catalog/POD + self-serve **only** if, within 60 days of listing:
 
-- [ ] ≥ 8 paid orders **or** ≥ $500 gross revenue, **and**
+- [ ] >= 8 paid orders **or** >= $500 gross revenue, **and**
 - [ ] median fulfillment time < 45 min.
 
 If not met: interview 10 non-buyers, revise the visual/offer, run one further test.
 Do **not** build subscriptions or expand region scope (Utah #47) before the gate passes.
+
+## Go-live date
+
+**Not yet recorded.** The public listing go-live date should be recorded here when
+the Riverglyph listing (Epoch 31, roadmap #56) actually publishes on Etsy. This
+date starts the 60-day measurement window for roadmap #59. Pending business
+clearance (domain registration, trademark clearance) and full public-path
+walkthrough before publishing.
 
 ## Funnel snapshot
 
@@ -29,7 +37,7 @@ _Update weekly. Impressions alone do not clear the gate._
 | Gross revenue | $0 |
 | Marketplace + payment fees | $0 |
 | Net revenue | $0 |
-| Median fulfillment time | — |
+| Median fulfillment time | -- |
 
 ## Order ledger
 

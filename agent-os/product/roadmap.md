@@ -15,6 +15,7 @@
 | 111 | 26 | CONUS hero image & gallery entry | Not started | Needs all CONUS NHDPlus HR data |
 | 112–119 | 27 | Water-facility and data-center intelligence | Proposed | Source-rights and revenue-priority gate |
 | 99–106 | 25 | Operations library & ledger | Proposed | — |
+| 137–141 | 31 | Riverglyph brand transition | **Done** (2026-09-18) | Business clearance deferred |
 
 **Revenue gate timing:** measure #59 for 60 days from the actual listing go-live date. The
 2026-08-30 planning window did not start the measurement clock; record the launch date in the
@@ -243,10 +244,11 @@ listing (#56) must go live for the 60-day measurement window (#59) to start.
 Code core shipped: `src/fulfillment.py` (order validation, Rights gate, deterministic deliverable
 plan + provenance manifest; 29 offline tests) + `tools/fulfill_order.py`.
 
-56. [ ] Narrow made-to-order listing — publish an Etsy (or equivalent) made-to-order listing for a
+56. [ ] Narrow made-to-order listing — publish an Etsy (or equivalent) made-to-order listing under
+the approved **Riverglyph** public identity (Epoch 31) for a
 **personalized county watershed print** in the supported geography (OR/WA/CA/ID). Deliver a
 print-ready PDF/PNG in 24–48 h; editable SVG + commercial license are paid add-ons. `S`
-57. [ ] Repeatable fulfillment pack — customer intake form, two approved art directions,
+57. [ ] Repeatable fulfillment pack — Riverglyph-branded customer intake form, two approved art directions,
 title/subtitle rules, export checklist, source-credit/attribution line, proof/approval template. `S`
 58. [ ] Instrument the test — track listing views, favorites, inquiries, paid orders, fulfillment
 time, refund rate, requested locations/styles, and net revenue in
@@ -533,6 +535,41 @@ queue wait, duration, stages. 3 tests.
 **Deferred:** Shipping UI wiring, automatic vendor submission on paid orders, auto-submit
 on payment confirmation, `tools/analytics_report.py` CLI, mixed-order integration test,
 Playwright e2e for shipping form.
+
+---
+
+### Epoch 31 — Riverglyph brand transition · complete
+
+Presentation-only migration from Hydro-Art to **Riverglyph** across all public surfaces. No
+pipeline changes, no `Settings` shape changes, no rendered artifact byte changes. Technical
+identifiers (`HYDRO_ART_*`, `hydro-art/*`, `HydroUX`) stable.
+
+137. [x] Brand foundation — 8 SVG/PNG/ICO assets under `web/brand/` (wordmark, lockup, icon,
+print, reversed, favicon SVG) + `web/favicon.ico` + `web/brand/social-preview.png`. Canonical
+`web/shared/brand.css` tokens: River Teal `#176C70`, Watershed Ink `#142923`, Field Paper
+`#F4F2E9`. Both `editorial.css` and `ux.css` import and reference these tokens. `S`
+
+138. [x] Public customer-surface migration — 6 public pages updated (`start.html`, `order.html`,
+`proof.html`, `delivery.html`, `gallery.html`, `report.html`): titles, wordmarks, nav, headings,
+favicon/OG meta migrated. Recipe roundtrip green. `M`
+
+139. [x] Studio, operations, and demo migration — 4 internal pages updated (`studio.html`,
+`ops.html`, `proto-b-guided.html`, `proto-c-canvas.html`). River Teal on Watershed Ink legible
+for interactive elements. `S`
+
+140. [x] Transactional, discovery, and measurement migration — `src/email_delivery.py` subjects
+and HTML bodies use Riverglyph. `tests/test_email_delivery.py` assertions updated. E2E title
+regex updated with visual smoke check at desktop and mobile sizes. `S`
+
+141. [x] Riverglyph launch gate — implementation complete. `fulfillment-pack/listing.md` updated.
+Suite 1151 green, recipe roundtrip green, `PIPELINE_STAGES` untouched. **Deferred (business
+clearance):** domain registration (`riverglyph.com`), trademark clearance (Class 16/9), full
+public-path walkthrough (needs running server), go-live date recording (when listing publishes,
+starts Epoch 11.5 #59 60-day window). `S`
+
+Epoch gate: a customer encounters one consistent Riverglyph identity across public pages,
+email, proof, and delivery; the Tideline E mark is legible in black, River Teal, and reverse;
+the legacy technical contracts remain compatible and the offline suite stays green.
 
 ---
 

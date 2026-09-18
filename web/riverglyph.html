@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Riverglyph — Identity Review</title>
+  <link rel="stylesheet" href="shared/editorial.css" />
+  <style>
+    :root {
+      --paper: #f4f2e9;
+      --ink: #142923;
+      --river: #176c70;
+      --river-light: #cbe0d8;
+      --line: #bcc6bd;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--ui-sans); }
+    .shell { max-width: 1240px; margin: 0 auto; padding: 24px 28px 72px; }
+    header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 18px; }
+    .eyebrow, .caption, .mark-label { font: 10px/1.4 var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+    .eyebrow { color: var(--river); }
+    .status { color: #52615a; }
+    h1, h2, .wordmark { font-family: var(--ui-serif); }
+    h1 { font-size: clamp(48px, 8vw, 92px); line-height: .92; margin: 62px 0 16px; letter-spacing: -.06em; font-weight: 600; }
+    .intro { max-width: 620px; font: 21px/1.4 var(--ui-serif); margin: 0 0 58px; color: #40524a; }
+    .rule { height: 1px; border: 0; background: var(--line); margin: 0 0 26px; }
+    .review-head { display: flex; justify-content: space-between; gap: 20px; align-items: end; margin-bottom: 20px; }
+    h2 { margin: 0; font-size: 27px; letter-spacing: -.03em; }
+    .concepts { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
+    .concept { min-height: 450px; padding: 26px; border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+    .concept:last-child { border-right: 0; }
+    .concept svg { width: 100%; max-width: 260px; height: 210px; margin: 12px auto 20px; overflow: visible; }
+    .concept-a .river, .concept-a .tributary, .concept-b .river, .concept-c .river { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .concept-a .river, .concept-b .river, .concept-c .river { stroke-width: 12; }
+    .concept-a .tributary { stroke-width: 4; }
+    .concept-a .basin, .concept-b .contour, .concept-c .contour { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .concept-b .contour { stroke-width: 3.5; }
+    .concept-c .river { stroke-width: 9; }
+    .wordmark { font-size: 32px; line-height: 1; letter-spacing: -.045em; margin: 0; }
+    .concept-name { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; color: #52615a; }
+    .concept-name strong { color: var(--ink); font: 11px var(--ui-mono); }
+    .applications { display: grid; grid-template-columns: 1.45fr 1fr 1fr; gap: 14px; margin-top: 14px; }
+    .tile { min-height: 230px; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--line); background: #fffef9; }
+    .tile.dark { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+    .tile.teal { color: #fffef9; background: var(--river); border-color: var(--river); }
+    .small-lockup { display: flex; align-items: center; gap: 11px; }
+    .small-lockup svg { width: 38px; height: 38px; flex: 0 0 auto; overflow: visible; }
+    .small-lockup .wordmark { font-size: 25px; }
+    .icon-only svg { width: 72px; height: 72px; overflow: visible; }
+    .word-specimen { font-size: clamp(36px, 4vw, 58px); letter-spacing: -.055em; }
+    .palette { margin-top: 48px; display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .monograms { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); }
+    .monogram { min-height: 285px; padding: 22px; display: flex; flex-direction: column; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .monogram:nth-child(3n) { border-right: 0; }
+    .monogram:nth-last-child(-n+3) { border-bottom: 0; }
+    .monogram svg { height: 165px; width: 165px; max-width: 100%; margin: 0 auto 12px; overflow: visible; }
+    .monogram .stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .monogram .letter { font-family: Georgia, serif; font-size: 132px; font-weight: 700; }
+    .monogram .mono-note { margin-top: auto; color: #52615a; }
+    .monogram-grid-15 { grid-template-columns: repeat(5, 1fr); }
+    .monogram-grid-15 .monogram { min-height: 245px; }
+    .monogram-grid-15 .monogram:nth-child(3n) { border-right: 1px solid var(--line); }
+    .monogram-grid-15 .monogram:nth-child(5n) { border-right: 0; }
+    .monogram-grid-15 .monogram:nth-last-child(-n+3) { border-bottom: 1px solid var(--line); }
+    .monogram-grid-15 .monogram:nth-last-child(-n+5) { border-bottom: 0; }
+    .monogram-grid-15 .monogram svg { height: 130px; width: 130px; }
+    .color-studies { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .color-study { min-height: 270px; padding: 22px; display: flex; flex-direction: column; justify-content: space-between; color: var(--mark); background: var(--field); border: 1px solid var(--line); }
+    .color-study svg { height: 155px; width: 155px; max-width: 100%; margin: 0 auto; overflow: visible; }
+    .color-study .stroke { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .color-study .letter { font-family: Georgia, serif; font-size: 132px; font-weight: 700; }
+    .color-study .color-note { color: inherit; opacity: .78; }
+    .legacy-lowercase { display: none; }
+    .swatch { display: flex; gap: 14px; align-items: center; padding: 18px 0; }
+    .dot { display: block; width: 20px; height: 20px; border-radius: 100%; background: var(--swatch); border: 1px solid #0002; }
+    .swatch span { color: #52615a; }
+    footer { margin-top: 55px; color: #52615a; }
+    @media (max-width: 760px) { .shell { padding: 20px; } header { align-items: start; } .concepts, .applications, .palette, .monograms, .monogram-grid-15, .color-studies { grid-template-columns: 1fr; } .concept { border-right: 0; border-bottom: 1px solid var(--line); min-height: 380px; } .concept:last-child { border-bottom: 0; } .monogram, .monogram:nth-child(3n), .monogram-grid-15 .monogram:nth-child(3n), .monogram-grid-15 .monogram:nth-child(5n) { border-right: 0; border-bottom: 1px solid var(--line); } .monogram:last-child, .monogram-grid-15 .monogram:last-child { border-bottom: 0; } .review-head { display: block; } .review-head .caption { margin-top: 10px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="eyebrow">Riverglyph / identity studies</div>
+      <div class="caption status">01 — review sheet</div>
+    </header>
+
+    <h1>Riverglyph</h1>
+    <p class="intro">Cartographic art shaped by the rivers beneath a place. A quiet identity built to read in black ink, deep teal, or a single line.</p>
+
+    <hr class="rule" />
+    <section aria-labelledby="marks-title">
+      <div class="review-head">
+        <h2 id="marks-title">Three mark directions</h2>
+        <p class="caption">All marks shown in one-color black</p>
+      </div>
+      <div class="concepts">
+        <article class="concept concept-a">
+          <div class="mark-label">A / Basin line</div>
+          <svg viewBox="0 0 250 210" role="img" aria-label="A river within a basin outline">
+            <path class="basin" d="M52 40C78 15 113 24 130 44c18-20 52-24 73 3 26 33-1 56 10 88 11 31-19 57-52 45-24 26-63 12-70-13-34 3-62-29-42-57 15-22-16-45 3-68Z" />
+            <path class="river" d="M91 43c-3 28 27 33 27 58 0 23-25 28-20 59 4 23 27 32 38 45" />
+            <path class="tributary" d="M65 83c20 7 23 26 37 32M168 83c-18 11-23 29-39 36" />
+          </svg>
+          <p class="wordmark">Riverglyph</p>
+          <div class="concept-name"><strong>SPECIMEN</strong><span>Landscape held in a line.</span></div>
+        </article>
+
+        <article class="concept concept-b">
+          <div class="mark-label">B / Contour current</div>
+          <svg viewBox="0 0 250 210" role="img" aria-label="A river crossing nested contour lines">
+            <path class="contour" d="M49 54c24-29 79-36 124-10 47 28 32 76 7 99-30 28-88 32-121 0C35 118 28 80 49 54Z" />
+            <path class="contour" d="M73 66c24-19 59-25 89-8 31 18 25 52 5 69-25 21-66 20-91-2-21-19-20-44-3-59Z" />
+            <path class="contour" d="M99 80c18-11 38-12 54-2 19 12 15 32 1 44-17 14-43 13-58 0-13-12-12-30 3-42Z" />
+            <path class="river" d="M63 36c8 28 37 35 48 55 11 22-1 42 28 58 11 6 25 13 39 29" />
+          </svg>
+          <p class="wordmark">Riverglyph</p>
+          <div class="concept-name"><strong>TOPOGRAPHIC</strong><span>Water cuts through terrain.</span></div>
+        </article>
+
+        <article class="concept concept-c">
+          <div class="mark-label">C / Tributary glyph</div>
+          <svg viewBox="0 0 250 210" role="img" aria-label="An abstract network of river paths">
+            <path class="river" d="M116 32c-8 31 18 45 18 72 0 29-20 43-13 75" />
+            <path class="contour" d="M48 62c26 7 33 29 61 42M196 68c-29 8-33 33-59 45M63 150c20-17 34-19 54-13M188 150c-20-17-32-19-52-14" />
+          </svg>
+          <p class="wordmark">Riverglyph</p>
+          <div class="concept-name"><strong>GLYPH</strong><span>The distilled river network.</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="monogram-title" style="margin-top: 46px">
+      <div class="review-head">
+        <h2 id="monogram-title">R/G monogram studies</h2>
+        <p class="caption">One-color, small-format explorations</p>
+      </div>
+      <div class="monograms">
+        <article class="monogram">
+          <div class="mark-label">01 / river spine</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="R and G blend with a river spine">
+            <path class="stroke" stroke-width="13" d="M59 145V35h37c27 0 37 38 8 52L62 91m43-3 28 57" />
+            <path class="stroke" stroke-width="10" d="M143 55c-11-14-35-18-51-1-17 18-13 52 8 64 16 10 37 4 43-13H117" />
+          </svg>
+          <div class="mono-note"><strong class="caption">RIVER SPINE</strong><br>A shared stem carries both letters.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">02 / open contour</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="R and G blend as a contour loop">
+            <path class="stroke" stroke-width="12" d="M53 149V31h35c29 0 39 37 9 55L55 91m44-3 30 61" />
+            <path class="stroke" stroke-width="8" d="M132 51C117 31 81 37 73 65c-8 29 11 62 42 58 16-2 27-13 28-28h-28" />
+          </svg>
+          <div class="mono-note"><strong class="caption">OPEN CONTOUR</strong><br>Classic initials, softened by a basin loop.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">03 / confluence</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="R and G blend with converging river paths">
+            <path class="stroke" stroke-width="12" d="M47 151V30h34c28 0 37 37 7 53L48 89m40-2 42 64" />
+            <path class="stroke" stroke-width="12" d="M139 54c-25-19-56 0-56 35 0 38 36 55 60 31V97h-29" />
+            <path class="stroke" stroke-width="4" d="M111 31c-6 22-5 35 10 47" />
+          </svg>
+          <div class="mono-note"><strong class="caption">CONFLUENCE</strong><br>A fine tributary joins a confident G.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">04 / shared bowl</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="R and G blend sharing a circular bowl">
+            <path class="stroke" stroke-width="12" d="M48 148V31h39c42 0 45 60 4 60H49m44-1 39 58" />
+            <path class="stroke" stroke-width="9" d="M134 57c-21-18-55-3-55 31 0 35 36 54 62 30V95h-27" />
+          </svg>
+          <div class="mono-note"><strong class="caption">SHARED BOWL</strong><br>The R counter becomes the G landscape.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">05 / cut channel</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="R and G blend cut by a meandering river">
+            <text class="letter" x="27" y="136">R</text>
+            <path class="stroke" stroke-width="9" d="M130 49c-25-12-52 6-52 39 0 36 30 53 59 32v-24h-26" />
+            <path class="stroke" stroke-width="5" d="M111 22c-16 25 13 42 5 63-5 13-17 20-16 45" />
+          </svg>
+          <div class="mono-note"><strong class="caption">CUT CHANNEL</strong><br>A drawn river carves through the monogram.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">06 / seal</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="R and G monogram in a circular seal">
+            <circle class="stroke" stroke-width="4" cx="90" cy="90" r="62" />
+            <path class="stroke" stroke-width="10" d="M60 126V53h24c22 0 28 27 5 36l-28 4m27-4 20 37" />
+            <path class="stroke" stroke-width="8" d="M126 68c-17-12-36 3-36 26 0 24 20 36 38 22V99h-18" />
+          </svg>
+          <div class="mono-note"><strong class="caption">FIELD SEAL</strong><br>A compact edition stamp for prints.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="legacy-lowercase" aria-labelledby="lowercase-title" style="margin-top: 46px">
+      <div class="review-head">
+        <h2 id="lowercase-title">R/g monogram studies</h2>
+        <p class="caption">Lower-case g / quieter and more editorial</p>
+      </div>
+      <div class="monograms">
+        <article class="monogram">
+          <div class="mark-label">07 / river loop</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="Capital R combined with a lower-case g river loop">
+            <path class="stroke" stroke-width="12" d="M49 139V38h34c28 0 38 35 8 50l-42 5m40-5 30 51" />
+            <path class="stroke" stroke-width="10" d="M133 58c-23-11-46 7-43 32 3 27 33 34 47 16V75h-23m22 31c0 25-5 37-25 42" />
+          </svg>
+          <div class="mono-note"><strong class="caption">RIVER LOOP</strong><br>The g descender continues the river.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">08 / joined current</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="Capital R and lower-case g with a joined current">
+            <path class="stroke" stroke-width="12" d="M47 142V36h34c27 0 38 34 8 50l-42 6m40-5 35 55" />
+            <path class="stroke" stroke-width="9" d="M133 62c-20-8-40 8-37 29 3 23 30 28 42 11V77h-20m19 25c3 23-7 37-27 43" />
+            <path class="stroke" stroke-width="4" d="M57 121c18-9 29-3 40 7" />
+          </svg>
+          <div class="mono-note"><strong class="caption">JOINED CURRENT</strong><br>A tributary quietly binds the initials.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">09 / round counter</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="Capital R and lower-case g with a circular counter">
+            <path class="stroke" stroke-width="12" d="M43 144V35h38c29 0 39 37 8 54L45 95m43-6 32 55" />
+            <circle class="stroke" stroke-width="9" cx="124" cy="83" r="27" />
+            <path class="stroke" stroke-width="9" d="M149 84v36c0 19-16 29-34 24" />
+          </svg>
+          <div class="mono-note"><strong class="caption">ROUND COUNTER</strong><br>A familiar g, pared to its essentials.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">10 / fine tributary</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="Capital R and lower-case g with a fine tributary line">
+            <path class="stroke" stroke-width="12" d="M50 143V38h34c27 0 37 34 8 50l-42 5m40-5 31 54" />
+            <path class="stroke" stroke-width="10" d="M136 64c-21-8-41 8-38 30 2 23 29 29 42 11V80h-21m20 25c2 25-8 39-28 45" />
+            <path class="stroke" stroke-width="3.5" d="M101 48c12 9 17 19 13 34" />
+          </svg>
+          <div class="mono-note"><strong class="caption">FINE TRIBUTARY</strong><br>One delicate line introduces the watershed.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">11 / letterform</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="Editorial R and g letterform blend">
+            <text class="letter" x="26" y="130">R</text>
+            <text x="95" y="126" style="font-family: Georgia, serif; font-weight: 700; font-size: 122px">g</text>
+            <path class="stroke" stroke-width="4" d="M103 32c-7 22 5 34 19 42" />
+          </svg>
+          <div class="mono-note"><strong class="caption">LETTERFORM</strong><br>The most typographic, with a small river cue.</div>
+        </article>
+        <article class="monogram">
+          <div class="mark-label">12 / falling water</div>
+          <svg viewBox="0 0 180 180" role="img" aria-label="Capital R and lower-case g forming a falling river line">
+            <path class="stroke" stroke-width="12" d="M47 140V37h36c28 0 37 35 8 51l-43 5m41-5 31 52" />
+            <path class="stroke" stroke-width="10" d="M133 56c-23-9-45 8-42 34 3 25 31 32 46 13V77h-23m23 25c-1 31-11 43-31 48" />
+            <path class="stroke" stroke-width="5" d="M119 36c-6 18 13 29 6 46" />
+          </svg>
+          <div class="mono-note"><strong class="caption">FALLING WATER</strong><br>A small flowing accent animates the g.</div>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="rg-studies-title" style="margin-top: 46px">
+      <div class="review-head">
+        <h2 id="rg-studies-title">R/g — fifteen fresh studies</h2>
+        <p class="caption">Typography first / one ink / no container</p>
+      </div>
+      <div class="monograms monogram-grid-15" id="rg-studies"></div>
+    </section>
+
+    <section aria-labelledby="tideline-title" style="margin-top: 46px">
+      <div class="review-head">
+        <h2 id="tideline-title">Tideline — refinement studies</h2>
+        <p class="caption">Selected from 06 / baseline as waterline</p>
+      </div>
+      <div class="monograms" id="tideline-studies"></div>
+    </section>
+
+    <section aria-labelledby="tideline-color-title" style="margin-top: 46px">
+      <div class="review-head">
+        <h2 id="tideline-color-title">Tideline E — color studies</h2>
+        <p class="caption">Long Shore mark / color is optional, never structural</p>
+      </div>
+      <div class="color-studies" id="tideline-color-studies"></div>
+    </section>
+
+    <section aria-labelledby="applications-title" style="margin-top: 46px">
+      <div class="review-head"><h2 id="applications-title">At working size</h2><p class="caption">Mark B shown in applications</p></div>
+      <div class="applications">
+        <div class="tile">
+          <div class="small-lockup">
+            <svg viewBox="0 0 60 60" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M11 15c8-10 28-12 39-2 15 13 6 31-7 37-14 7-32 2-35-13-2-9-2-15 3-22Z"/><path fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" d="M15 10c3 10 12 13 15 21 3 8-1 15 12 23"/></svg>
+            <span class="wordmark">Riverglyph</span>
+          </div>
+          <div class="caption">Primary lockup / ink on paper</div>
+        </div>
+        <div class="tile dark">
+          <div class="icon-only"><svg viewBox="0 0 60 60" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" d="M11 15c8-10 28-12 39-2 15 13 6 31-7 37-14 7-32 2-35-13-2-9-2-15 3-22Z"/><path fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" d="M15 10c3 10 12 13 15 21 3 8-1 15 12 23"/></svg></div>
+          <div class="caption">Reversed / icon only</div>
+        </div>
+        <div class="tile teal">
+          <div class="wordmark word-specimen">Riverglyph</div>
+          <div class="caption">Wordmark / deep teal field</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="palette" aria-label="Proposed colors">
+      <div class="swatch"><i class="dot" style="--swatch:#142923"></i><div><b>Watershed Ink</b><br><span class="caption">#142923</span></div></div>
+      <div class="swatch"><i class="dot" style="--swatch:#176c70"></i><div><b>River Teal</b><br><span class="caption">#176C70</span></div></div>
+      <div class="swatch"><i class="dot" style="--swatch:#f4f2e9"></i><div><b>Field Paper</b><br><span class="caption">#F4F2E9</span></div></div>
+    </section>
+
+    <footer class="caption">Riverglyph identity review — black is the primary color; teal is optional emphasis.</footer>
+  </main>
+  <script>
+    (function () {
+      var studies = [
+        ['01', 'GRAFT', '<text class="letter" x="13" y="112">R</text><text x="70" y="111" style="font:700 104px Georgia,serif">g</text>'],
+        ['02', 'DESCENDER', '<text class="letter" x="16" y="111">R</text><path class="stroke" stroke-width="10" d="M104 48c26-8 39 20 24 38-8 9-22 11-29 3-9-11 1-28 19-21v35c0 20-13 29-31 25"/>'],
+        ['03', 'RIVER CUT', '<text class="letter" x="16" y="112">R</text><text x="73" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="4" d="M91 20c-9 22 10 29 7 49-2 13-12 20-7 40"/>'],
+        ['04', 'SPLIT STEM', '<path class="stroke" stroke-width="12" d="M43 133V29h31c26 0 32 34 6 47l-37 5m35-5 31 57"/><text x="76" y="113" style="font:700 103px Georgia,serif">g</text>'],
+        ['05', 'SOFT JOIN', '<text class="letter" x="17" y="112">R</text><path class="stroke" stroke-width="9" d="M101 46c29-8 39 27 20 43-17 13-36-2-28-19 5-11 18-10 25-2v35c0 20-14 29-32 23"/>'],
+        ['06', 'TIDELINE', '<text class="letter" x="12" y="112">R</text><text x="74" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="5" d="M18 132c29-13 53-2 75 10"/>'],
+        ['07', 'NESTED', '<text class="letter" x="13" y="112">R</text><path class="stroke" stroke-width="10" d="M118 46c-25-7-39 15-31 35 8 21 34 18 38 0V66h-20m20 15v23c0 19-14 28-32 22"/>'],
+        ['08', 'LIGATURE', '<text class="letter" x="18" y="112">R</text><text x="75" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="6" d="M66 88c13-4 19-16 23-30"/>'],
+        ['09', 'EDDY', '<path class="stroke" stroke-width="12" d="M42 133V29h33c27 0 34 35 6 48l-38 5m37-5 29 56"/><path class="stroke" stroke-width="10" d="M111 54c23-5 31 24 15 37-13 11-29-1-23-15 4-8 13-8 19-2v29c0 19-14 28-31 23"/>'],
+        ['10', 'FIELD NOTE', '<text class="letter" x="16" y="112">R</text><text x="73" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="3" d="M80 30c13 5 23 3 35-5"/>'],
+        ['11', 'THREAD', '<text class="letter" x="18" y="112">R</text><path class="stroke" stroke-width="9" d="M105 48c25-9 39 18 26 36-10 14-31 11-33-4-2-12 11-20 23-12v35c0 20-15 29-33 23"/><path class="stroke" stroke-width="3.5" d="M116 19c-10 19-4 28 5 39"/>'],
+        ['12', 'CROSSING', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="5" d="M53 52c22 12 31 25 48 29"/>'],
+        ['13', 'QUIET G', '<text class="letter" x="13" y="112">R</text><text x="76" y="110" style="font:700 98px Georgia,serif">g</text><path class="stroke" stroke-width="3" d="M106 120c-7 9-14 14-25 17"/>'],
+        ['14', 'BANK', '<path class="stroke" stroke-width="12" d="M43 133V29h31c27 0 34 35 6 48l-37 5m35-5 31 57"/><text x="75" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="4" d="M91 36c8 5 13 11 15 19"/>'],
+        ['15', 'SIGNATURE', '<text class="letter" x="17" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif;font-style:italic">g</text><path class="stroke" stroke-width="4" d="M80 121c19-11 35-8 50 3"/>']
+      ];
+      document.getElementById('rg-studies').innerHTML = studies.map(function (study) {
+        return '<article class="monogram"><div class="mark-label">' + study[0] + ' / ' + study[1].toLowerCase() + '</div><svg viewBox="0 0 145 145" role="img" aria-label="Riverglyph R g monogram ' + study[1].toLowerCase() + '">' + study[2] + '</svg><div class="mono-note"><strong class="caption">' + study[1] + '</strong><br>R/g monogram study</div></article>';
+      }).join('');
+
+      var tidelines = [
+        ['A', 'LOW TIDE', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="4" d="M15 127c32-9 67-7 112 0"/>'],
+        ['B', 'GENTLE ARC', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="4" d="M15 126c27-12 69-11 113 0"/>'],
+        ['C', 'JOINED BANK', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="5" d="M18 127c28-9 64-8 90-1 11 3 19 4 28 2"/>'],
+        ['D', 'RIPPLE', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="3" d="M20 123c20-6 38-6 55 0m16 2c15-6 28-6 42 0"/>'],
+        ['E', 'LONG SHORE', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="4" d="M8 129c39-11 87-9 131 0"/><path class="stroke" stroke-width="2" d="M19 135c34-6 72-5 109 0"/>'],
+        ['F', 'DESCENDER', '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="5" d="M17 124c24-5 46-5 65 0 16 4 32 4 48 0"/>']
+      ];
+      document.getElementById('tideline-studies').innerHTML = tidelines.map(function (study) {
+        return '<article class="monogram"><div class="mark-label">TIDELINE / ' + study[0] + '</div><svg viewBox="0 0 145 145" role="img" aria-label="Tideline R g refinement ' + study[1].toLowerCase() + '">' + study[2] + '</svg><div class="mono-note"><strong class="caption">' + study[1] + '</strong><br>R/g monogram refinement</div></article>';
+      }).join('');
+
+      var longShore = '<text class="letter" x="14" y="112">R</text><text x="72" y="111" style="font:700 104px Georgia,serif">g</text><path class="stroke" stroke-width="4" d="M8 129c39-11 87-9 131 0"/><path class="stroke" stroke-width="2" d="M19 135c34-6 72-5 109 0"/>';
+      var colors = [
+        ['WATERSHED INK', '#142923', '#f4f2e9', 'Primary / quiet archival'],
+        ['RIVER TEAL', '#176c70', '#f4f2e9', 'Primary color / digital'],
+        ['BASIN BLUE', '#235b86', '#f3f1e9', 'Cool / geographic'],
+        ['MOSS', '#456a58', '#f5f2e7', 'Natural / field guide'],
+        ['OCHRE', '#9d672a', '#faf5e9', 'Warm / edition marker'],
+        ['NIGHT WATER', '#c5e6df', '#102523', 'Reversed / dark field']
+      ];
+      document.getElementById('tideline-color-studies').innerHTML = colors.map(function (color) {
+        return '<article class="color-study" style="--mark:' + color[1] + ';--field:' + color[2] + '"><div class="mark-label">TIDELINE E</div><svg viewBox="0 0 145 145" role="img" aria-label="Tideline E in ' + color[0].toLowerCase() + '">' + longShore + '</svg><div class="color-note"><strong class="caption">' + color[0] + '</strong><br>' + color[3] + '</div></article>';
+      }).join('');
+    }());
+  </script>
+</body>
+</html>

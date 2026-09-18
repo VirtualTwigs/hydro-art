@@ -1,0 +1,13 @@
+/* ==========================================================================
+   Riverglyph brand tokens
+   --------------------------------------------------------------------------
+   Canonical colour palette for the Riverglyph product identity.  Imported by
+   both the editorial (light) and UX (dark) theme files so values are defined
+   in exactly one place.
+   ========================================================================== */
+
+:root {
+  --brand-teal:  #176C70;   /* River Teal  — primary accent            */
+  --brand-ink:   #142923;   /* Watershed Ink — text / dark background   */
+  --brand-paper: #F4F2E9;   /* Field Paper — light background           */
+}

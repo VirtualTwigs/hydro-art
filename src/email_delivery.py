@@ -67,7 +67,7 @@ def _build_message(
     """Build the delivery notification email."""
     subject = f"Your artwork is ready — {order_id}"
 
-    text = f"""Your Hydro-Art order is complete.
+    text = f"""Your Riverglyph order is complete.
 
 Order:    {order_id}
 Product:  {product}
@@ -85,7 +85,7 @@ All source data is U.S. federal public domain.
     html = f"""\
 <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#182622">
   <div style="border-bottom:2px solid #236c6a;padding:16px 0;margin-bottom:24px">
-    <strong style="font-size:20px;letter-spacing:-.02em">Hydro&#9671;Art</strong>
+    <strong style="font-size:20px;letter-spacing:-.02em">Riverglyph</strong>
   </div>
   <h2 style="margin:0 0 8px;font-size:22px">Your artwork is ready</h2>
   <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">
@@ -120,8 +120,8 @@ def _build_confirmation_message(
     location: str = "",
 ) -> MIMEMultipart:
     """Build the acknowledgement sent after a buyer submits a request."""
-    subject = f"We received your Hydro-Art request — {request_id}"
-    text = f"""Thanks for your Hydro-Art request.
+    subject = f"We received your Riverglyph request — {request_id}"
+    text = f"""Thanks for your Riverglyph request.
 
 Your request reference is: {request_id}
 Product: {product}
@@ -136,7 +136,7 @@ Hydrographic artwork produced by Runde Strategies.
     html = f"""\
 <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#182622">
   <div style="border-bottom:2px solid #236c6a;padding:16px 0;margin-bottom:24px">
-    <strong style="font-size:20px;letter-spacing:-.02em">Hydro&#9671;Art</strong>
+    <strong style="font-size:20px;letter-spacing:-.02em">Riverglyph</strong>
   </div>
   <h2 style="margin:0 0 8px;font-size:22px">We received your request</h2>
   <p style="line-height:1.55">Thanks for getting in touch. We will review your
@@ -194,7 +194,7 @@ def _build_proof_message(
     """Build the proof-ready notification email."""
     subject = f"Your proof is ready for review — {request_id}"
 
-    text = f"""Your Hydro-Art proof is ready for review.
+    text = f"""Your Riverglyph proof is ready for review.
 
 Order:  {request_id}
 Title:  {title or "(untitled)"}
@@ -211,7 +211,7 @@ Hydrographic artwork produced by Runde Strategies.
     html = f"""\
 <div style="font-family:sans-serif;max-width:560px;margin:0 auto;color:#182622">
   <div style="border-bottom:2px solid #236c6a;padding:16px 0;margin-bottom:24px">
-    <strong style="font-size:20px;letter-spacing:-.02em">Hydro&#9671;Art</strong>
+    <strong style="font-size:20px;letter-spacing:-.02em">Riverglyph</strong>
   </div>
   <h2 style="margin:0 0 8px;font-size:22px">Your proof is ready</h2>
   <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:14px">

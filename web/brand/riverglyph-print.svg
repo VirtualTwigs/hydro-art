@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 145 145" role="img" aria-label="Riverglyph R/g monogram — single-color black for print">
+  <style>
+    .letter { font-family: Georgia, serif; font-size: 132px; font-weight: 700; fill: #000000; }
+    .g { font: 700 104px Georgia, serif; fill: #000000; }
+    .shore { fill: none; stroke: #000000; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+  <text class="letter" x="14" y="112">R</text>
+  <text class="g" x="72" y="111">g</text>
+  <path class="shore" stroke-width="4" d="M8 129c39-11 87-9 131 0"/>
+  <path class="shore" stroke-width="2" d="M19 135c34-6 72-5 109 0"/>
+</svg>
