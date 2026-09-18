@@ -12,6 +12,8 @@ regression fingerprint of the real warp/mosaic path).
 from __future__ import annotations
 
 import json
+import re
+from pathlib import Path
 
 import pytest
 
@@ -185,3 +187,26 @@ def test_record_golden_refuses_flaky() -> None:
     flaky = evaluate("Oregon", [_A, _B], {})
     with pytest.raises(DeterminismError):
         record_golden({}, flaky)
+
+
+# --- Committed golden registry shape-check (#40) ---
+
+
+_GOLDEN_REGISTRY = Path(__file__).parent / "fixtures" / "golden" / "registry.json"
+_HEX64 = re.compile(r"^[0-9a-f]{64}$")
+
+
+def test_committed_golden_registry_exists_and_loads() -> None:
+    """The committed golden registry is valid JSON that load_registry accepts."""
+    assert _GOLDEN_REGISTRY.exists()
+    reg = load_registry(_GOLDEN_REGISTRY)
+    assert len(reg) >= 1  # at least one region
+
+
+def test_committed_golden_hashes_are_hex64() -> None:
+    """Every hash in the committed registry is a 64-char lowercase hex string."""
+    reg = load_registry(_GOLDEN_REGISTRY)
+    for key, golden in reg.items():
+        assert _HEX64.match(golden.svg_sha256), f"{key} svg_sha256 not hex64"
+        if golden.dem_mosaic_sha256 is not None:
+            assert _HEX64.match(golden.dem_mosaic_sha256), f"{key} dem_mosaic_sha256 not hex64"

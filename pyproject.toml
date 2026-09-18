@@ -17,6 +17,8 @@ hydro-art = "build:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not real_data'"
+markers = ["real_data: requires GDAL + NAS + HYDRO_ART_REAL_DATA=1 (not part of the offline suite)"]
 
 [tool.ruff]
 line-length = 88
