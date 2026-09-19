@@ -34,13 +34,13 @@ test.describe('Alpha landing (#95, #96)', () => {
   test('Riverglyph wordmark visible at desktop width (1280px)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/web/start.html', { waitUntil: 'load' });
-    await expect(page.getByText('Riverglyph').first()).toBeVisible();
+    await expect(page.locator('.mark .logo')).toBeVisible();
   });
 
   test('Riverglyph wordmark visible at mobile width (375px)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/web/start.html', { waitUntil: 'load' });
-    await expect(page.getByText('Riverglyph').first()).toBeVisible();
+    await expect(page.locator('.mark .logo')).toBeVisible();
   });
 
   test('landing art + font assets resolve (no 404s)', async ({ page }) => {
@@ -107,14 +107,14 @@ test.describe('Order form (#138, #140)', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 
-  test('state dropdown populates with at least 4 states', async ({ page }) => {
+  test('state dropdown populates with all 50 states', async ({ page }) => {
     await page.goto('/web/order.html', { waitUntil: 'networkidle' });
     // Advance to step 2 by clicking a product card
     await page.click('[data-product="digital-image"]');
     await page.waitForTimeout(300);
     const optionCount = await page.locator('#sel-state option').count();
-    // Placeholder + at least OR/WA/CA/ID = 5+
-    expect(optionCount).toBeGreaterThanOrEqual(5);
+    // Placeholder + 50 states = 51
+    expect(optionCount).toBeGreaterThanOrEqual(51);
   });
 
   test('selecting a state populates the county dropdown', async ({ page }) => {
