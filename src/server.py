@@ -48,6 +48,11 @@ _CONTENT_TYPES: dict[str, str] = {
     ".svg": "image/svg+xml",
     ".png": "image/png",
     ".pdf": "application/pdf",
+    ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".ico": "image/x-icon",
+    ".ttf": "font/ttf",
+    ".woff2": "font/woff2",
 }
 
 #: Output format → artifact MIME type.
@@ -68,6 +73,7 @@ def _content_type(path: Path) -> str:
 
 def handle_request(
     runner: Any, method: str, path: str, body: bytes, *, web_root: str,
+    output_root: str | None = None,
     order_store: Any = None, email_sender: Any = None,
     proof_secret: bytes | None = None,
     webhook_secret: str | None = None,
@@ -125,6 +131,11 @@ def handle_request(
         return _order_dispatch(order_store, runner, method, route, body, email_sender)
 
     if method == "GET":
+        # Serve /output/ paths from the output directory when configured.
+        if output_root and route.startswith("/output/"):
+            result = _static(route[len("/output"):], output_root)
+            if result.status == 200:
+                return result
         return _static(route, web_root)
 
     return _json(404, {"error": "Not found."})
@@ -472,7 +483,8 @@ def _static(route: str, web_root: str) -> Response:
 
 
 def make_handler(
-    runner: Any, web_root: str, *, order_store: Any = None,
+    runner: Any, web_root: str, *, output_root: str | None = None,
+    order_store: Any = None,
     email_sender: Any = None, proof_secret: bytes | None = None,
     webhook_secret: str | None = None, delivery_secret: bytes | None = None,
 ) -> type[BaseHTTPRequestHandler]:
@@ -488,7 +500,8 @@ def make_handler(
                 hdrs["Stripe-Signature"] = stripe_sig
             resp = handle_request(
                 runner, method, self.path, body,
-                web_root=web_root, order_store=order_store,
+                web_root=web_root, output_root=output_root,
+                order_store=order_store,
                 email_sender=email_sender,
                 proof_secret=proof_secret,
                 webhook_secret=webhook_secret,
@@ -522,6 +535,7 @@ def serve(
     host: str = "127.0.0.1",
     port: int = 8765,
     web_root: str | os.PathLike[str] = "web",
+    output_root: str | os.PathLike[str] | None = None,
     order_store: Any = None,
     email_sender: Any = None,
     proof_secret: bytes | None = None,
@@ -534,7 +548,9 @@ def serve(
     to is covered by :func:`handle_request` tests.
     """
     handler = make_handler(
-        runner, str(web_root), order_store=order_store, email_sender=email_sender,
+        runner, str(web_root),
+        output_root=str(output_root) if output_root else None,
+        order_store=order_store, email_sender=email_sender,
         proof_secret=proof_secret, webhook_secret=webhook_secret,
         delivery_secret=delivery_secret,
     )

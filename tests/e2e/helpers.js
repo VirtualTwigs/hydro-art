@@ -14,11 +14,14 @@ const COUNTY = process.env.HARNESS_COUNTY || 'Clark';
 
 // The four catalog pages the landing (web/start.html) fans out to, one per product
 // endpoint (src/endpoints.py). Hrefs are the repo-root-absolute paths start.html uses.
+// Catalog links use relative hrefs from start.html — when the browser resolves
+// them from /web/start.html they become /web/<page>.  The `page` values here
+// are the resolved absolute paths the navigation tests compare against.
 const CATALOG = [
-  { endpoint: 'print_image', card: 'Archival poster', page: '/web/proto-b-guided.html' },
+  { endpoint: 'print_image', card: 'Archival poster', page: '/web/order.html?product=print' },
   { endpoint: 'report', card: 'Watershed report', page: '/web/report.html' },
-  { endpoint: 'digital_image', card: 'Digital image', page: '/web/studio.html' },
-  { endpoint: 'animation', card: 'Year in motion', page: '/web/proto-c-canvas.html' },
+  { endpoint: 'digital_image', card: 'Digital image', page: '/web/order.html?product=digital' },
+  { endpoint: 'animation', card: 'Year in motion', page: '/web/order.html?product=animation' },
 ];
 
 // POST a render to the live /api/render backend and poll /api/jobs/<id> to a terminal

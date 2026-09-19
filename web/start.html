@@ -13,10 +13,10 @@
 
 <!-- Self-hosted type: Fraunces (editorial serif) + DM Mono (atlas labels). -->
 <style>
-  @font-face { font-family:"Fraunces"; src:url("/web/shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
-  @font-face { font-family:"Fraunces Display"; src:url("/web/shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
+  @font-face { font-family:"Fraunces"; src:url("shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Fraunces Display"; src:url("shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
 
   :root{
     /* Brand tokens — matched to web/shared/ux.css so the surfaces stay cohesive. */
@@ -214,7 +214,7 @@
       <nav class="nav-links">
         <a href="#catalog">The catalog</a>
         <a href="#how">How it works</a>
-        <a href="/web/gallery.html">Gallery</a>
+        <a href="gallery.html">Gallery</a>
       </nav>
     </div>
   </header>
@@ -231,8 +231,8 @@
           through the year. Pick a place; we draw its water.
         </p>
         <div class="cta-row reveal" data-delay="4">
-          <a class="btn solid" href="/web/order.html">Order now <span class="arw">→</span></a>
-          <a class="btn ghost" href="/web/report.html">Build a report <span class="arw">→</span></a>
+          <a class="btn solid" href="order.html">Order now <span class="arw">→</span></a>
+          <a class="btn ghost" href="report.html">Build a report <span class="arw">→</span></a>
         </div>
         <div class="trust reveal" data-delay="5">
           <span><i></i>No account needed</span>
@@ -243,8 +243,11 @@
 
       <div class="frame reveal" data-delay="3">
         <div class="art-stage">
-          <img src="/output/landing/clark-flow.webp" width="1600" height="2004"
-               alt="Animated neon map of Clark County, Washington rivers cycling through a year of flow" />
+          <img id="heroImg" src="/output/landing/clark-flow.webp" width="1600" height="2004"
+               alt="Neon map of Clark County, Washington rivers colored by watershed"
+               onerror="this.style.display='none';document.getElementById('heroCanvas').style.display='block'" />
+          <canvas id="heroCanvas" style="width:100%;height:100%;display:none;position:absolute;inset:0"
+                  aria-label="Procedural river network animation"></canvas>
           <div class="sheen"></div>
         </div>
         <div class="plate">
@@ -282,7 +285,7 @@
               <span class="go">Start design <span class="arw">→</span></span>
             </div>
           </div>
-          <a class="cover" href="/web/order.html?product=print" aria-label="Archival poster"></a>
+          <a class="cover" href="order.html?product=print" aria-label="Archival poster"></a>
         </article>
 
         <article class="card feature reveal" data-delay="2">
@@ -301,7 +304,7 @@
               <span class="go">Start report <span class="arw">→</span></span>
             </div>
           </div>
-          <a class="cover" href="/web/report.html" aria-label="Watershed report"></a>
+          <a class="cover" href="report.html" aria-label="Watershed report"></a>
         </article>
 
         <article class="card reveal" data-delay="3">
@@ -319,7 +322,7 @@
               <span class="go">Start design <span class="arw">→</span></span>
             </div>
           </div>
-          <a class="cover" href="/web/order.html?product=digital" aria-label="Digital image"></a>
+          <a class="cover" href="order.html?product=digital" aria-label="Digital image"></a>
         </article>
 
         <article class="card reveal" data-delay="4">
@@ -337,7 +340,7 @@
               <span class="go">Start design <span class="arw">→</span></span>
             </div>
           </div>
-          <a class="cover" href="/web/order.html?product=animation" aria-label="Year in motion"></a>
+          <a class="cover" href="order.html?product=animation" aria-label="Year in motion"></a>
         </article>
       </div>
     </section>
@@ -410,6 +413,295 @@
     requestAnimationFrame(function(){
       document.querySelectorAll(".hero .reveal, .nav .reveal").forEach(function(el){ el.classList.add("in"); });
     });
+  })();
+  </script>
+
+  <!-- Procedural river hero animation -->
+  <script>
+  (function(){
+    var canvas = document.getElementById("heroCanvas");
+    if (!canvas || !canvas.getContext) return;
+    var ctx = canvas.getContext("2d");
+    var reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var VB = { w: 1000, h: 1254 };
+    var PALETTE = ["#00ffff","#9d00ff","#00ffab","#0a5cff","#ffb300"];
+
+    /* ---- PRNG (mulberry32) + network generation (from hydro-ux.js) ---- */
+    function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+    function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+
+    function grow(out, x, y, ang, len, depth, rnd){
+      if (depth <= 0 || len < 6) return null;
+      var j = (rnd()-0.5)*len*0.25;
+      var nx = x+Math.cos(ang)*len, ny = y+Math.sin(ang)*len;
+      var mx = (x+nx)/2+Math.cos(ang+Math.PI/2)*j, my = (y+ny)/2+Math.sin(ang+Math.PI/2)*j;
+      var seg = { pts:[[x,y],[mx,my],[nx,ny]], children:[], flow:1, depth:depth };
+      out.push(seg);
+      var br = rnd()<0.78 ? 2 : (rnd()<0.7 ? 1 : 3);
+      var sp = 0.35+rnd()*0.5;
+      for (var k=0; k<br; k++){
+        var da = br===1 ? (rnd()-0.5)*0.4 : (-sp/2+sp*k/(br-1))+(rnd()-0.5)*0.2;
+        var ch = grow(out, nx, ny, ang+da, len*(0.66+rnd()*0.12), depth-1, rnd);
+        if (ch) seg.children.push(ch);
+      }
+      return seg;
+    }
+
+    function generateNetwork(seed, nBasins){
+      var rnd = mulberry32(seed);
+      var basins = [];
+      for (var b=0; b<nBasins; b++) basins.push({ segs:[], color:PALETTE[b%PALETTE.length] });
+      var rootX=500, rootY=VB.h-40, spread=2.1;
+      for (var b=0; b<nBasins; b++){
+        var a0 = -Math.PI/2-spread/2+spread*(b+0.5)/nBasins+(rnd()-0.5)*0.15;
+        grow(basins[b].segs, rootX, rootY, a0, 250, 10, rnd);
+      }
+      var maxFlow=1;
+      for (var b=0; b<nBasins; b++){
+        for (var i=basins[b].segs.length-1; i>=0; i--){
+          var s=basins[b].segs[i];
+          s.flow=1; for(var c=0;c<s.children.length;c++) s.flow+=s.children[c].flow;
+          if(s.flow>maxFlow) maxFlow=s.flow;
+        }
+      }
+      return { basins:basins, maxFlow:maxFlow };
+    }
+
+    /* ---- Flatten tree to draw list with timing ---- */
+    function flatten(net){
+      var list=[], maxDepth=0;
+      for(var b=0; b<net.basins.length; b++){
+        var basin=net.basins[b];
+        for(var i=0; i<basin.segs.length; i++){
+          var s=basin.segs[i], d=10-s.depth;
+          if(d>maxDepth) maxDepth=d;
+          var p=s.pts, dx=p[2][0]-p[0][0], dy=p[2][1]-p[0][1];
+          var len=Math.sqrt(dx*dx+dy*dy);
+          var t=Math.pow(Math.log(s.flow+1)/Math.log(net.maxFlow+1),0.5);
+          list.push({ pts:p, width:0.5+(3.0-0.5)*t, color:basin.color, treeDepth:d, len:len, basinIdx:b });
+        }
+      }
+      /* Assign draw timing: trunks first, tips last, basins slightly staggered */
+      var nB=net.basins.length;
+      for(var i=0; i<list.length; i++){
+        var s=list[i];
+        s.drawStart=(s.treeDepth/maxDepth)*0.75+(s.basinIdx/nB)*0.12;
+        s.drawEnd=s.drawStart+0.18;
+      }
+      return list;
+    }
+
+    /* ---- Canvas sizing ---- */
+    var stage = canvas.parentElement, scale=1, offCanvas=null, offCtx=null;
+    function resize(){
+      var rect=stage.getBoundingClientRect();
+      var dpr=Math.min(devicePixelRatio||1,2);
+      canvas.width=rect.width*dpr; canvas.height=rect.height*dpr;
+      ctx.setTransform(1,0,0,1,0,0);
+      scale=Math.min(rect.width/VB.w, rect.height/VB.h);
+      ctx.setTransform(scale*dpr,0,0,scale*dpr,
+        (rect.width*dpr-VB.w*scale*dpr)/2,
+        (rect.height*dpr-VB.h*scale*dpr)/2);
+      offCanvas=null; // invalidate cache
+    }
+    var ro = new ResizeObserver(function(){ resize(); needsRedraw=true; });
+    ro.observe(stage);
+    resize();
+
+    /* ---- Generate network ---- */
+    var net = generateNetwork(hash("Clark County"), 6);
+    var drawList = flatten(net);
+    var needsRedraw = true;
+
+    /* ---- Render functions ---- */
+    function drawSegment(c, s, alpha){
+      var p=s.pts;
+      c.beginPath();
+      c.moveTo(p[0][0],p[0][1]);
+      c.quadraticCurveTo(p[1][0],p[1][1],p[2][0],p[2][1]);
+      c.lineWidth=s.width;
+      c.lineCap="round";
+      c.globalAlpha=alpha;
+      c.stroke();
+    }
+
+    function drawPartialSegment(c, s, frac){
+      if(frac<=0) return;
+      var p=s.pts;
+      c.beginPath();
+      c.moveTo(p[0][0],p[0][1]);
+      c.quadraticCurveTo(p[1][0],p[1][1],p[2][0],p[2][1]);
+      c.lineWidth=s.width;
+      c.lineCap="round";
+      if(frac<1){
+        c.setLineDash([s.len*frac, s.len]);
+        c.lineDashOffset=0;
+      }
+      c.stroke();
+      if(frac<1) c.setLineDash([]);
+    }
+
+    function renderFull(c, alpha){
+      /* Glow pass */
+      for(var i=0; i<drawList.length; i++){
+        var s=drawList[i];
+        c.strokeStyle=s.color;
+        c.shadowColor=s.color;
+        c.shadowBlur=s.width*3.5;
+        c.globalAlpha=(alpha||1)*0.5;
+        drawSegment(c,s,(alpha||1)*0.5);
+      }
+      c.shadowBlur=0; c.shadowColor="transparent";
+      /* Core pass */
+      for(var i=0; i<drawList.length; i++){
+        var s=drawList[i];
+        c.strokeStyle=s.color;
+        c.globalAlpha=alpha||1;
+        drawSegment(c,s,alpha||1);
+      }
+      c.globalAlpha=1;
+    }
+
+    function renderDrawOn(c, progress){
+      /* Glow pass */
+      for(var i=0; i<drawList.length; i++){
+        var s=drawList[i];
+        var frac=Math.max(0,Math.min(1,(progress-s.drawStart)/(s.drawEnd-s.drawStart)));
+        if(frac<=0) continue;
+        c.strokeStyle=s.color;
+        c.shadowColor=s.color;
+        c.shadowBlur=s.width*3.5;
+        c.globalAlpha=0.5;
+        drawPartialSegment(c,s,frac);
+      }
+      c.shadowBlur=0; c.shadowColor="transparent";
+      /* Core pass */
+      for(var i=0; i<drawList.length; i++){
+        var s=drawList[i];
+        var frac=Math.max(0,Math.min(1,(progress-s.drawStart)/(s.drawEnd-s.drawStart)));
+        if(frac<=0) continue;
+        c.strokeStyle=s.color;
+        c.globalAlpha=1;
+        drawPartialSegment(c,s,frac);
+      }
+      c.globalAlpha=1;
+    }
+
+    function cacheStatic(){
+      if(offCanvas) return;
+      offCanvas=document.createElement("canvas");
+      offCanvas.width=canvas.width; offCanvas.height=canvas.height;
+      offCtx=offCanvas.getContext("2d");
+      offCtx.setTransform(ctx.getTransform());
+      renderFull(offCtx,1);
+    }
+
+    /* ---- Pulse particles ---- */
+    var pulses=[], pulseRnd=mulberry32(42);
+    function spawnPulse(){
+      var bi=Math.floor(pulseRnd()*net.basins.length);
+      var basin=net.basins[bi];
+      if(!basin.segs.length) return;
+      /* Walk a random root-to-leaf path */
+      var path=[basin.segs[0]];
+      var cur=basin.segs[0];
+      while(cur.children.length>0){
+        cur=cur.children[Math.floor(pulseRnd()*cur.children.length)];
+        path.push(cur);
+      }
+      pulses.push({ path:path, t:0, speed:0.25+pulseRnd()*0.35, color:basin.color, idx:0 });
+    }
+
+    function updatePulses(dt){
+      for(var i=pulses.length-1; i>=0; i--){
+        var p=pulses[i];
+        p.t+=p.speed*dt;
+        if(p.t>=1){
+          p.t=0; p.idx++;
+          if(p.idx>=p.path.length){ pulses.splice(i,1); continue; }
+        }
+      }
+      /* Spawn */
+      if(pulses.length<18 && Math.random()<dt*1.8) spawnPulse();
+    }
+
+    function drawPulses(c){
+      for(var i=0; i<pulses.length; i++){
+        var p=pulses[i], seg=p.path[p.idx], t=p.t;
+        /* Evaluate quadratic bezier at t */
+        var pts=seg.pts, u=1-t;
+        var x=u*u*pts[0][0]+2*u*t*pts[1][0]+t*t*pts[2][0];
+        var y=u*u*pts[0][1]+2*u*t*pts[1][1]+t*t*pts[2][1];
+        /* Fade in/out at path boundaries */
+        var totalT=(p.idx+t)/p.path.length;
+        var fade=1-totalT; fade=fade<0.15?fade/0.15:1;
+        if(totalT<0.1) fade=Math.min(fade,totalT/0.1);
+        c.beginPath();
+        c.arc(x,y,1.8+seg.width*0.3,0,Math.PI*2);
+        c.fillStyle="#ffffff";
+        c.shadowColor=p.color;
+        c.shadowBlur=12;
+        c.globalAlpha=fade*0.9;
+        c.fill();
+      }
+      c.shadowBlur=0; c.shadowColor="transparent"; c.globalAlpha=1;
+    }
+
+    /* ---- Animation loop ---- */
+    var startTime=0, phase="draw", rafId=0, isVisible=true;
+    var DRAW_DURATION = reducedMotion ? 0 : 2800; // ms
+
+    function clear(){
+      ctx.save();
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.restore();
+    }
+
+    function tick(now){
+      if(!startTime) startTime=now;
+      var elapsed=now-startTime;
+
+      if(phase==="draw"){
+        var progress=DRAW_DURATION>0 ? Math.min(elapsed/DRAW_DURATION,1) : 1;
+        /* Ease: cubic-bezier approximation */
+        progress=progress<0.5 ? 4*progress*progress*progress : 1-Math.pow(-2*progress+2,3)/2;
+        clear();
+        if(progress>=1){
+          renderFull(ctx,1);
+          phase="pulse"; startTime=now;
+        } else {
+          renderDrawOn(ctx,progress);
+        }
+      } else {
+        var dt=Math.min((now-(startTime||now))/1000, 0.05);
+        startTime=now;
+        if(!reducedMotion) updatePulses(dt);
+        clear();
+        cacheStatic();
+        ctx.save();
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.drawImage(offCanvas,0,0);
+        ctx.restore();
+        if(!reducedMotion) drawPulses(ctx);
+      }
+      if(isVisible && !document.hidden) rafId=requestAnimationFrame(tick);
+      else rafId=0;
+    }
+
+    /* Visibility gating */
+    var visObs = new IntersectionObserver(function(entries){
+      isVisible=entries[0].isIntersecting;
+      if(isVisible && !rafId) { startTime=0; rafId=requestAnimationFrame(tick); }
+    }, { threshold:0.05 });
+    visObs.observe(canvas);
+    document.addEventListener("visibilitychange", function(){
+      if(document.hidden){ if(rafId){cancelAnimationFrame(rafId);rafId=0;} }
+      else if(isVisible && !rafId){ startTime=0; rafId=requestAnimationFrame(tick); }
+    });
+
+    /* Start */
+    rafId=requestAnimationFrame(tick);
   })();
   </script>
 </body>

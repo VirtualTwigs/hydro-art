@@ -158,7 +158,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"[dim]email:[/] {'[green]configured[/]' if email_sender.configured else '[yellow]not configured[/] (set ' + APP_PASSWORD_ENV + ')'}"
     )
     try:
-        serve(runner, host=args.host, port=args.port, web_root=web_root, order_store=order_store, email_sender=email_sender)
+        serve(runner, host=args.host, port=args.port, web_root=web_root,
+              output_root=roots.output, order_store=order_store,
+              email_sender=email_sender)
     except KeyboardInterrupt:
         console.print("\n[bold]Stopped.[/]")
     return 0

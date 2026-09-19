@@ -25,7 +25,11 @@ function stage() {
   fs.mkdirSync(SERVED_ROOT, { recursive: true });
 
   // /web/* — the customer pages + shared css/js/fonts (real files, no symlinks).
-  fs.cpSync(path.join(REPO_ROOT, 'web'), path.join(SERVED_ROOT, 'web'), { recursive: true });
+  // Use dereference: true to follow any symlinks and avoid chmod failures on
+  // files with extended attributes (macOS xattr from the brand SVG assets).
+  fs.cpSync(path.join(REPO_ROOT, 'web'), path.join(SERVED_ROOT, 'web'), {
+    recursive: true, dereference: true,
+  });
 
   // /output/* — landing WebP assets + display SVGs the viewer pages fetch. These
   // are the web-optimized copies deploy/stage-artifacts.sh produces; if they are

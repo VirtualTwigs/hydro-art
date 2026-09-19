@@ -11,10 +11,10 @@
 <meta property="og:image" content="brand/social-preview.png">
 <meta name="robots" content="noindex,nofollow">
 <style>
-  @font-face { font-family:"Fraunces"; src:url("/web/shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
-  @font-face { font-family:"Fraunces Display"; src:url("/web/shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("/web/shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
+  @font-face { font-family:"Fraunces"; src:url("shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
+  @font-face { font-family:"Fraunces Display"; src:url("shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
+  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
 
   :root {
     --bg:#07080c; --bg2:#0a0c13; --panel:#10121b; --panel2:#171a26; --line:#232838;
@@ -281,7 +281,7 @@
 
 <header>
   <div class="wrap nav-inner">
-    <a class="brand" href="/web/start.html">Riverglyph</a>
+    <a class="brand" href="start.html">Riverglyph</a>
     <span class="spacer"></span>
     <span class="nav-tag">Proof review</span>
   </div>
@@ -493,7 +493,7 @@
     if (order.size) qs.set("size", order.size);
     if (p.product) qs.set("product", p.product);
     if (p.email) qs.set("email", p.email);
-    window.location.href = "/web/order.html?" + qs.toString();
+    window.location.href = "order.html?" + qs.toString();
   }
 
   // ---- Error screens ----

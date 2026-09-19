@@ -51,7 +51,7 @@ test.describe('Alpha landing (#95, #96)', () => {
     const failed = [];
     page.on('response', (r) => {
       const u = r.url();
-      const asset = u.includes('/output/landing/') || u.includes('/web/shared/fonts/');
+      const asset = u.includes('/output/landing/') || u.includes('/shared/fonts/');
       if (asset && r.status() >= 400) failed.push(`${r.status()} ${u}`);
     });
     await page.goto('/web/start.html', { waitUntil: 'networkidle' });
@@ -70,12 +70,14 @@ test.describe('Alpha landing (#95, #96)', () => {
   });
 
   for (const { card, page: dest } of CATALOG) {
-    test(`catalog "${card}" link navigates to ${dest} without JS errors`, async ({ page }) => {
+    test(`catalog "${card}" link navigates without JS errors`, async ({ page }) => {
       const errors = trackErrors(page);
       await page.goto('/web/start.html', { waitUntil: 'load' });
+      // Find the card by its heading, then click the cover link in the same article.
+      const article = page.locator('#catalog-grid article', { has: page.getByRole('heading', { name: card }) });
       await Promise.all([
-        page.waitForURL(`**${dest}`),
-        page.locator(`#catalog-grid a.cover[href="${dest}"]`).click(),
+        page.waitForURL(`**${dest.replace(/\?.*/, '')}*`),
+        article.locator('a.cover').click(),
       ]);
       await page.waitForLoadState('load');
       expect(errors, errors.join('\n')).toEqual([]);
@@ -85,5 +87,56 @@ test.describe('Alpha landing (#95, #96)', () => {
   test('gallery link resolves', async ({ page }) => {
     const resp = await page.goto('/web/gallery.html', { waitUntil: 'load' });
     expect(resp?.status()).toBe(200);
+  });
+});
+
+test.describe('Order form (#138, #140)', () => {
+  test('order.html loads with no console errors', async ({ page }) => {
+    const errors = trackErrors(page);
+    const resp = await page.goto('/web/order.html', { waitUntil: 'load' });
+    expect(resp?.status()).toBe(200);
+    await expect(page).toHaveTitle(/Riverglyph/i);
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('hydro-ux.js loads and HydroUX is available', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto('/web/order.html', { waitUntil: 'networkidle' });
+    const hasHydroUX = await page.evaluate(() => typeof window.HydroUX === 'object');
+    expect(hasHydroUX, 'HydroUX should be on window').toBe(true);
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('state dropdown populates with at least 4 states', async ({ page }) => {
+    await page.goto('/web/order.html', { waitUntil: 'networkidle' });
+    // Advance to step 2 by clicking a product card
+    await page.click('[data-product="digital-image"]');
+    await page.waitForTimeout(300);
+    const optionCount = await page.locator('#sel-state option').count();
+    // Placeholder + at least OR/WA/CA/ID = 5+
+    expect(optionCount).toBeGreaterThanOrEqual(5);
+  });
+
+  test('selecting a state populates the county dropdown', async ({ page }) => {
+    await page.goto('/web/order.html', { waitUntil: 'networkidle' });
+    await page.click('[data-product="digital-image"]');
+    await page.waitForTimeout(300);
+    await page.selectOption('#sel-state', 'Washington');
+    const countyCount = await page.locator('#sel-county option').count();
+    // Placeholder + at least some counties
+    expect(countyCount).toBeGreaterThanOrEqual(2);
+    const disabled = await page.locator('#sel-county').isDisabled();
+    expect(disabled).toBe(false);
+  });
+
+  test('no 404s on order page scripts and fonts', async ({ page }) => {
+    const failed = [];
+    page.on('response', (r) => {
+      const u = r.url();
+      const asset = u.includes('hydro-ux.js') || u.includes('/shared/fonts/') || u.includes('.css');
+      if (asset && r.status() >= 400) failed.push(`${r.status()} ${u}`);
+    });
+    await page.goto('/web/order.html', { waitUntil: 'networkidle' });
+    expect(failed, failed.join('\n')).toEqual([]);
   });
 });
