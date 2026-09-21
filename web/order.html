@@ -613,6 +613,7 @@
         </div>
       </div>
     </div>
+    <div class="error-msg" id="shipping-error">Please fill in all required shipping fields (name, address, city, state, ZIP).</div>
 
     <div class="btn-row">
       <button class="btn ghost" id="btn-back-4">← Back</button>
@@ -793,6 +794,11 @@
   btnBack1.addEventListener("click", function () { showStep("step-1"); });
   btnNext2.addEventListener("click", function () { showStep("step-3"); });
 
+  // Re-validate continue button when returning to step 2
+  function revalidateStep2() {
+    btnNext2.disabled = !(S.region && S.county);
+  }
+
   // ── Step 3: Style ─────────────────────────────────────────────────────────
   var styleBtns = document.querySelectorAll("#style-grid .choice");
   var btnBack2  = document.getElementById("btn-back-2");
@@ -807,7 +813,7 @@
     });
   });
 
-  btnBack2.addEventListener("click", function () { showStep("step-2"); });
+  btnBack2.addEventListener("click", function () { revalidateStep2(); showStep("step-2"); });
   btnNext3.addEventListener("click", function () { showStep("step-4"); });
 
   // ── Step 4: Details ───────────────────────────────────────────────────────
@@ -864,7 +870,7 @@
   btnNext5.addEventListener("click", function () {
     S.email = inpEmail.value.trim();
     S.name  = inpName.value.trim();
-    // Capture shipping address for print orders
+    // Capture and validate shipping address for print orders
     if (S.product === "fine-art-print") {
       S.shipping_name  = (document.getElementById("inp-ship-name")  || {}).value || "";
       S.shipping_line1 = (document.getElementById("inp-ship-line1") || {}).value || "";
@@ -872,6 +878,12 @@
       S.shipping_city  = (document.getElementById("inp-ship-city")  || {}).value || "";
       S.shipping_state = (document.getElementById("inp-ship-state") || {}).value || "";
       S.shipping_zip   = (document.getElementById("inp-ship-zip")   || {}).value || "";
+      if (!S.shipping_name.trim() || !S.shipping_line1.trim() ||
+          !S.shipping_city.trim() || !S.shipping_state.trim() || !S.shipping_zip.trim()) {
+        var shipErr = document.getElementById("shipping-error");
+        if (shipErr) { shipErr.style.display = "block"; }
+        return;
+      }
     }
     populateReview();
     showStep("step-6");
@@ -973,37 +985,74 @@
       });
   });
 
-  // ── URL param pre-fill (from report builder handoff) ───────────────────────
+  // ── URL param pre-fill (report builder, start.html, proof.html handoffs) ──
   var urlParams = new URLSearchParams(window.location.search);
-  var prefillProduct = urlParams.get("product");
-  var prefillRegion  = urlParams.get("region");
-  var prefillCounty  = urlParams.get("county");
-  var prefilled = false;
 
+  // Normalize short product aliases from start.html links
+  var PRODUCT_ALIASES = {
+    "digital": "digital-image", "print": "fine-art-print",
+    "report": "watershed-report", "animation": "year-in-motion"
+  };
+  var prefillProduct = urlParams.get("product") || "";
+  prefillProduct = PRODUCT_ALIASES[prefillProduct] || prefillProduct;
+  var prefillRegion  = urlParams.get("region") || "";
+  var prefillCounty  = urlParams.get("county") || "";
+  var prefillTitle   = urlParams.get("title") || "";
+  var prefillEmail   = urlParams.get("email") || "";
+  var prefillStyle   = urlParams.get("style") || "";
+
+  var startStep = "step-1";
+
+  // Step 1: product
   if (prefillProduct) {
     var prodBtn = document.querySelector('[data-product="' + prefillProduct + '"]');
     if (prodBtn) {
       productBtns.forEach(function (b) { b.classList.remove("selected"); });
       prodBtn.classList.add("selected");
       S.product = prefillProduct;
-      prefilled = true;
+      startStep = "step-2";
     }
   }
 
-  if (prefillRegion && prefilled) {
+  // Step 2: location
+  if (prefillRegion && startStep !== "step-1") {
     selState.value = prefillRegion;
     selState.dispatchEvent(new Event("change"));
     if (prefillCounty) {
       setTimeout(function () {
         selCounty.value = prefillCounty;
         S.county = prefillCounty;
-        btnNext2.disabled = !S.county;
+        btnNext2.disabled = false;
       }, 0);
+      startStep = "step-3"; // location complete — skip to style
     }
   }
 
+  // Step 3: style
+  if (prefillStyle && startStep === "step-3") {
+    var styleBtn = document.querySelector('[data-style="' + prefillStyle + '"]');
+    if (styleBtn) {
+      styleBtns.forEach(function (b) { b.classList.remove("selected"); });
+      styleBtn.classList.add("selected");
+      S.style = prefillStyle;
+      btnNext3.disabled = false;
+      startStep = "step-4";
+    }
+  }
+
+  // Step 4: title (pre-fill field, don't skip step — user may want to adjust)
+  if (prefillTitle) {
+    document.getElementById("inp-title").value = prefillTitle;
+  }
+
+  // Step 5: email (pre-fill field for proof return flow)
+  if (prefillEmail) {
+    document.getElementById("inp-email").value = prefillEmail;
+    S.email = prefillEmail;
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
-  showStep(prefilled ? "step-2" : "step-1");
+  showStep(startStep);
 })();
 </script>
 </body>

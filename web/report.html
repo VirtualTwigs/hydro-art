@@ -714,27 +714,20 @@
     renderReport(doc);
   }
 
-  // ── Order button ──────────────────────────────────────────────────────────
-  btnOrder.addEventListener("click", function () {
+  // ── Order handoff (shared by both order buttons) ───────────────────────────
+  function goToOrder() {
     var params = new URLSearchParams();
     params.set("product", "watershed-report");
     params.set("region", pickedState);
     if (scope === "county" && pickedCounty) params.set("county", pickedCounty);
     if (scope === "basin" && pickedBasin) params.set("basin", pickedBasin);
     params.set("format", selectedFormat);
+    var customTitle = $("opt-title").value.trim();
+    if (customTitle) params.set("title", customTitle);
     window.location.href = "order.html?" + params.toString();
-  });
-
-  // ── Paywall order button ───────────────────────────────────────────────────
-  $("btnPaywallOrder").addEventListener("click", function () {
-    var params = new URLSearchParams();
-    params.set("product", "watershed-report");
-    params.set("region", pickedState);
-    if (scope === "county" && pickedCounty) params.set("county", pickedCounty);
-    if (scope === "basin" && pickedBasin) params.set("basin", pickedBasin);
-    params.set("format", selectedFormat);
-    window.location.href = "order.html?" + params.toString();
-  });
+  }
+  btnOrder.addEventListener("click", goToOrder);
+  $("btnPaywallOrder").addEventListener("click", goToOrder);
 
   // ── Live re-render on title change ────────────────────────────────────────
   $("opt-title").addEventListener("input", function () {
