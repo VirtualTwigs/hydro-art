@@ -17,7 +17,7 @@
 | 99–106 | 25 | Operations library & ledger | Proposed | — |
 | 137–141 | 31 | Riverglyph brand transition | **Done** (2026-09-18) | Business clearance deferred |
 
-| 142–145 | 32 | Report builder with paywall preview | In progress | — |
+| 142–145 | 32 | Report builder with paywall preview | **Done** (2026-09-21) | — |
 
 **Revenue gate timing:** measure #59 for 60 days from the actual listing go-live date. The
 2026-08-30 planning window did not start the measurement clock; record the launch date in the
@@ -586,7 +586,7 @@ Epoch 11.5 revenue gate for catalog/POD, self-serve, or commercial expansion.
 
 ---
 
-### Epoch 32 — Report builder with paywall preview · in progress
+### Epoch 32 — Report builder with paywall preview · complete
 
 Two-panel report builder (`web/report.html`): location picker + custom options in a
 config sidebar, live-updating sample preview in the main panel, paywall gradient fade
@@ -608,8 +608,8 @@ pre-fill from proof return and report builder. Shipping validation for print ord
 144. [x] E2E test coverage — 25 Playwright tests: picker, preview, paywall, section
 toggles, facility listing, order handoff + alias normalization, deep-link, responsive. `S`
 
-145. [ ] Report builder close — full suite green, recipe roundtrip green, implementation
-report. `XS`
+145. [x] Report builder close — full suite 1151 green, recipe roundtrip 11/11,
+implementation report written. `XS`
 
 Epoch gate: a potential buyer can configure a watershed report, see a convincing preview
 with sample data, hit the paywall boundary, and follow the CTA into the order form with
