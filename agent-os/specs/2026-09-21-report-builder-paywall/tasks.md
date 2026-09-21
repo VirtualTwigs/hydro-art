@@ -33,9 +33,15 @@
 
 ## Phase 4: E2E test coverage
 
-- [ ] 4.1 Add report builder navigation to `tests/e2e/tests/01-landing.spec.js`
-- [ ] 4.2 Create `tests/e2e/tests/03-report-builder.spec.js` — picker, preview, paywall, order link
-- [ ] 4.3 Deep-link e2e test — verify auto-populate from URL params
+- [x] 4.1 Create `tests/e2e/tests/03-report-builder.spec.js` — 25 tests across 8 describe blocks
+- [x] 4.2 Report builder: load, empty state, picker enable/disable, scope switching, preview generation
+- [x] 4.3 Paywall: CTA visible, price shown, fade div exists
+- [x] 4.4 Section toggles: toggle on/off, all 10 toggles exist
+- [x] 4.5 Facility listing: known basin, empty basin, county-scoped filtering
+- [x] 4.6 Order handoff: sidebar button, paywall button, params verified
+- [x] 4.7 Order form pre-fill: skip to style, alias normalization (print/digital/animation), title, email
+- [x] 4.8 Deep-link: county auto-preview, basin auto-preview + scope sync, state-only no auto-generate
+- [x] 4.9 Responsive: single-column at 600px viewport
 
 ## Phase 5: Close
 

@@ -605,8 +605,8 @@ normalization (`print`→`fine-art-print`, etc.) for `start.html` links. Email/t
 pre-fill from proof return and report builder. Shipping validation for print orders.
 12-issue UX audit fix. `S`
 
-144. [ ] E2E test coverage — report builder navigation, picker/preview/paywall flow,
-deep-link auto-populate. `S`
+144. [x] E2E test coverage — 25 Playwright tests: picker, preview, paywall, section
+toggles, facility listing, order handoff + alias normalization, deep-link, responsive. `S`
 
 145. [ ] Report builder close — full suite green, recipe roundtrip green, implementation
 report. `XS`
