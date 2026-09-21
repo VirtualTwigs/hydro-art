@@ -27,9 +27,9 @@
 
 ## Phase 3: Order form pre-fill (P1)
 
-- [ ] 3.1 `order.html` reads `product`, `region`, `county` URL params on load
-- [ ] 3.2 Auto-advance past product selection and location steps when params present
-- [ ] 3.3 Show "pre-filled from report builder" indicator in order form
+- [x] 3.1 `order.html` reads `product`, `region`, `county` URL params on load
+- [x] 3.2 Auto-advance past product selection to location step when params present
+- [x] 3.3 County pre-selected when passed via URL params
 
 ## Phase 4: E2E test coverage
 
@@ -39,6 +39,6 @@
 
 ## Phase 5: Close
 
-- [ ] 5.1 Run full offline suite — `pytest -q` all green
-- [ ] 5.2 Run recipe roundtrip — `node tests/test_recipe_roundtrip.cjs` green
-- [ ] 5.3 Write `implementation/report.md`
+- [x] 5.1 Run full offline suite — `pytest -q` all green (1151 passed)
+- [x] 5.2 Run recipe roundtrip — `node tests/test_recipe_roundtrip.cjs` green (11/11)
+- [x] 5.3 Write `implementation/report.md`

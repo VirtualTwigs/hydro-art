@@ -973,8 +973,37 @@
       });
   });
 
+  // ── URL param pre-fill (from report builder handoff) ───────────────────────
+  var urlParams = new URLSearchParams(window.location.search);
+  var prefillProduct = urlParams.get("product");
+  var prefillRegion  = urlParams.get("region");
+  var prefillCounty  = urlParams.get("county");
+  var prefilled = false;
+
+  if (prefillProduct) {
+    var prodBtn = document.querySelector('[data-product="' + prefillProduct + '"]');
+    if (prodBtn) {
+      productBtns.forEach(function (b) { b.classList.remove("selected"); });
+      prodBtn.classList.add("selected");
+      S.product = prefillProduct;
+      prefilled = true;
+    }
+  }
+
+  if (prefillRegion && prefilled) {
+    selState.value = prefillRegion;
+    selState.dispatchEvent(new Event("change"));
+    if (prefillCounty) {
+      setTimeout(function () {
+        selCounty.value = prefillCounty;
+        S.county = prefillCounty;
+        btnNext2.disabled = !S.county;
+      }, 0);
+    }
+  }
+
   // ── Init ──────────────────────────────────────────────────────────────────
-  showStep("step-1");
+  showStep(prefilled ? "step-2" : "step-1");
 })();
 </script>
 </body>
