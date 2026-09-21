@@ -201,6 +201,29 @@
   }
   .format-choice .fmt-icon { display: block; font-size: 16px; margin-bottom: 2px; }
 
+  /* ── Facility list ───────────────────────────────────────── */
+  .facility-list { list-style: none; margin: 8px 0 0; padding: 0; }
+  .facility-list li {
+    display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid var(--line); font-size: 12px;
+  }
+  .facility-list li:last-child { border-bottom: none; }
+  .facility-dot {
+    width: 8px; height: 8px; border-radius: 2px; flex: none;
+  }
+  .facility-dot.data_center { background: #ff3cc8; }
+  .facility-dot.water_treatment { background: #3cc8ff; }
+  .facility-dot.water_intake { background: #64ffb4; }
+  .facility-dot.water_reclamation { background: #ff9c3a; }
+  .facility-dot.reservoir { background: #78a0ff; }
+  .facility-dot.dam { background: #ff6e6e; }
+  .facility-dot.spring { background: #64ffa0; }
+  .facility-dot.industrial { background: #ffc83c; }
+  .facility-dot.power_plant { background: #ffeb3c; }
+  .facility-name { color: var(--ink); flex: 1; }
+  .facility-type { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+  .facility-empty { color: var(--muted); font-size: 11px; font-style: italic; padding: 8px 0; }
+
   /* ── Paywall overlay ─────────────────────────────────────── */
   .paywall-fade {
     position: relative;
@@ -365,6 +388,14 @@
 
   <div class="toggle-row">
     <div>
+      <div class="toggle-label">Facilities</div>
+      <div class="toggle-hint">Data centers, plants, dams</div>
+    </div>
+    <label class="toggle-switch"><input type="checkbox" checked data-section="facilities" /><span class="slider"></span></label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
       <div class="toggle-label">Flow-duration curves</div>
       <div class="toggle-hint">Exceedance by decade</div>
     </div>
@@ -447,6 +478,13 @@
         <div class="section-note">Annual peak vs. ocean state.</div>
         <div id="ensoSpark"></div>
       </div>
+    </div>
+
+    <!-- Facilities on this basin -->
+    <div class="chart-card" data-section-id="facilities" id="facilitiesCard">
+      <h3>Facilities on this watershed</h3>
+      <div class="section-note">Data centers, water treatment plants, intakes, dams, and other infrastructure drawing from or discharging to this basin.</div>
+      <div id="facilitiesBody"></div>
     </div>
 
     <!-- Paywall: remaining sections are teased behind a fade -->
@@ -829,11 +867,251 @@
     };
   }
 
+  // ── Facility registry ──────────────────────────────────────────────────────
+  // Curated from public sources: datacentermap.com, EPA FRS, USGS, Wikipedia.
+  // Keyed by HUC4 basin code. County-level lookups match against this too.
+  var TYPE_LABELS = {
+    data_center: "Data Center", water_treatment: "Water Treatment",
+    water_intake: "Water Intake", water_reclamation: "Reclamation",
+    reservoir: "Reservoir", dam: "Dam", spring: "Spring",
+    industrial: "Industrial", power_plant: "Power Plant"
+  };
+
+  var FACILITIES_BY_HUC4 = {
+    // Potomac basin — Northern Virginia "Data Center Alley"
+    "0207": [
+      { name: "Equinix Ashburn Campus", type: "data_center", county: "Loudoun" },
+      { name: "AWS US-East-1 (Ashburn)", type: "data_center", county: "Loudoun" },
+      { name: "Digital Realty Ashburn", type: "data_center", county: "Loudoun" },
+      { name: "Microsoft Azure Ashburn", type: "data_center", county: "Loudoun" },
+      { name: "Google Cloud (Sterling)", type: "data_center", county: "Loudoun" },
+      { name: "Meta Ashburn Campus", type: "data_center", county: "Loudoun" },
+      { name: "QTS Ashburn", type: "data_center", county: "Loudoun" },
+      { name: "CyrusOne Sterling", type: "data_center", county: "Loudoun" },
+      { name: "Vantage Ashburn", type: "data_center", county: "Loudoun" },
+      { name: "CloudHQ Ashburn", type: "data_center", county: "Loudoun" },
+      { name: "CoreSite Reston", type: "data_center", county: "Fairfax" },
+      { name: "Iron Mountain (Manassas)", type: "data_center", county: "Prince William" },
+      { name: "Trap Rock WTP", type: "water_treatment", county: "Loudoun" },
+      { name: "Potomac River Intake", type: "water_intake", county: "Loudoun" },
+      { name: "Broad Run WRF", type: "water_reclamation", county: "Loudoun" },
+      { name: "Goose Creek Reservoir", type: "reservoir", county: "Loudoun" },
+      { name: "Beaverdam Reservoir", type: "reservoir", county: "Loudoun" },
+    ],
+    // Rio Grande — New Mexico
+    "1302": [
+      { name: "Meta Los Lunas DC", type: "data_center", county: "Valencia" },
+      { name: "H5 Data Centers", type: "data_center", county: "Bernalillo" },
+      { name: "Connect Albuquerque", type: "data_center", county: "Bernalillo" },
+      { name: "Southside WRP (76 MGD)", type: "water_treatment", county: "Bernalillo" },
+      { name: "ABQ Drinking Water TP", type: "water_treatment", county: "Bernalillo" },
+      { name: "Intel Rio Rancho", type: "industrial", county: "Sandoval" },
+      { name: "Cochiti Dam", type: "dam", county: "Sandoval" },
+      { name: "Elephant Butte Reservoir", type: "reservoir", county: "Sierra" },
+    ],
+    // San Juan basin — NM
+    "1408": [
+      { name: "Navajo Dam", type: "dam", county: "San Juan" },
+    ],
+    // Lower Columbia — Oregon/Washington
+    "1708": [
+      { name: "Bonneville Dam", type: "dam", county: "Skamania" },
+      { name: "The Dalles Dam", type: "dam", county: "Wasco" },
+      { name: "Google The Dalles DC", type: "data_center", county: "Wasco" },
+      { name: "Google Prineville DC", type: "data_center", county: "Crook" },
+      { name: "Facebook Prineville DC", type: "data_center", county: "Crook" },
+      { name: "Apple Prineville DC", type: "data_center", county: "Crook" },
+    ],
+    // Willamette — Oregon
+    "1709": [
+      { name: "Hillsboro Data Centers (Intel campus)", type: "data_center", county: "Washington" },
+      { name: "Flexential Hillsboro", type: "data_center", county: "Washington" },
+      { name: "Portland Water Bureau (Bull Run)", type: "water_intake", county: "Multnomah" },
+      { name: "Willamette Falls Dam", type: "dam", county: "Clackamas" },
+    ],
+    // Puget Sound — Washington
+    "1711": [
+      { name: "Microsoft Quincy DC", type: "data_center", county: "Grant" },
+      { name: "Yahoo Quincy DC", type: "data_center", county: "Grant" },
+      { name: "Sabey Quincy DC", type: "data_center", county: "Grant" },
+      { name: "Tolt River Dam", type: "dam", county: "King" },
+      { name: "Cedar River WTP", type: "water_treatment", county: "King" },
+      { name: "Tacoma Water (Green River)", type: "water_intake", county: "King" },
+    ],
+    // Lower Colorado — Arizona
+    "1501": [
+      { name: "CyrusOne Chandler DC", type: "data_center", county: "Maricopa" },
+      { name: "QTS Phoenix (Mesa)", type: "data_center", county: "Maricopa" },
+      { name: "EdgeCore Mesa DC", type: "data_center", county: "Maricopa" },
+      { name: "91st Ave WWTP", type: "water_treatment", county: "Maricopa" },
+      { name: "Granite Reef Diversion Dam", type: "dam", county: "Maricopa" },
+    ],
+    // Salt/Verde — Arizona
+    "1506": [
+      { name: "Roosevelt Dam", type: "dam", county: "Gila" },
+      { name: "Bartlett Dam", type: "dam", county: "Maricopa" },
+    ],
+    // South Florida — Southeast coast
+    "0309": [
+      { name: "Equinix MI1 (NAP of the Americas)", type: "data_center", county: "Miami-Dade" },
+      { name: "Digital Realty MIA10", type: "data_center", county: "Miami-Dade" },
+      { name: "QTS Miami", type: "data_center", county: "Miami-Dade" },
+      { name: "Alexander Orr WTP", type: "water_treatment", county: "Miami-Dade" },
+      { name: "Hialeah-Preston WTP", type: "water_treatment", county: "Miami-Dade" },
+      { name: "Herbert Hoover Dike", type: "dam", county: "Palm Beach" },
+    ],
+    // Tampa Bay / Withlacoochee — Florida west coast
+    "0310": [
+      { name: "Tampa Bay Desal Plant", type: "water_treatment", county: "Hillsborough" },
+    ],
+    // St. Johns River — Florida east
+    "0308": [
+      { name: "NextNRG Jacksonville", type: "data_center", county: "Duval" },
+      { name: "Silver Springs", type: "spring", county: "Marion" },
+      { name: "Rainbow Springs", type: "spring", county: "Marion" },
+    ],
+    // Suwannee — Florida panhandle
+    "0311": [
+      { name: "Ichetucknee Springs", type: "spring", county: "Columbia" },
+    ],
+    // Apalachicola-Chattahoochee — Georgia/Florida
+    "0312": [
+      { name: "Wakulla Springs", type: "spring", county: "Wakulla" },
+    ],
+    // San Francisco Bay — California
+    "1805": [
+      { name: "Equinix SV Campus (San Jose)", type: "data_center", county: "Santa Clara" },
+      { name: "CoreSite Santa Clara", type: "data_center", county: "Santa Clara" },
+      { name: "Vantage Santa Clara", type: "data_center", county: "Santa Clara" },
+      { name: "SVAWPC (Hetch Hetchy)", type: "water_intake", county: "San Francisco" },
+    ],
+    // Sacramento — California
+    "1802": [
+      { name: "Folsom Dam", type: "dam", county: "Sacramento" },
+      { name: "Oroville Dam", type: "dam", county: "Butte" },
+    ],
+    // South Platte — Colorado (Denver metro)
+    "1019": [
+      { name: "Flexential Englewood DC", type: "data_center", county: "Arapahoe" },
+      { name: "vXchnge Denver DC", type: "data_center", county: "Denver" },
+      { name: "Denver Water (Dillon Reservoir)", type: "water_intake", county: "Summit" },
+      { name: "Chatfield Reservoir", type: "dam", county: "Douglas" },
+    ],
+    // Upper Mississippi — Iowa/Minnesota
+    "0707": [
+      { name: "Meta Altoona DC", type: "data_center", county: "Polk" },
+      { name: "Microsoft West Des Moines DC", type: "data_center", county: "Dallas" },
+      { name: "Google Council Bluffs DC", type: "data_center", county: "Pottawattamie" },
+      { name: "Apple Waukee DC", type: "data_center", county: "Dallas" },
+    ],
+    // Des Moines — Iowa
+    "0710": [
+      { name: "Facebook Altoona DC", type: "data_center", county: "Polk" },
+    ],
+    // Middle Tennessee — Tennessee
+    "0512": [
+      { name: "Google Clarksville DC", type: "data_center", county: "Montgomery" },
+      { name: "Meta Gallatin DC", type: "data_center", county: "Sumner" },
+      { name: "NTT Nashville DC", type: "data_center", county: "Davidson" },
+    ],
+    // Susquehanna — Pennsylvania
+    "0205": [
+      { name: "Commonwealth Wind Gap DC", type: "data_center", county: "Northampton" },
+    ],
+    // Catawba — North/South Carolina
+    "0305": [
+      { name: "Apple Maiden DC", type: "data_center", county: "Catawba" },
+      { name: "Google Lenoir DC", type: "data_center", county: "Caldwell" },
+      { name: "Facebook Forest City DC", type: "data_center", county: "Rutherford" },
+    ],
+    // Great Salt Lake — Utah
+    "1602": [
+      { name: "Meta Eagle Mountain DC", type: "data_center", county: "Utah" },
+      { name: "Facebook Eagle Mountain DC", type: "data_center", county: "Utah" },
+      { name: "Aligned West Jordan DC", type: "data_center", county: "Salt Lake" },
+    ],
+    // Upper Snake — Idaho
+    "1704": [
+      { name: "Meta Kuna DC (planned)", type: "data_center", county: "Ada" },
+    ],
+    // Lower Snake — Washington
+    "1706": [
+      { name: "Lower Granite Dam", type: "dam", county: "Whitman" },
+      { name: "Ice Harbor Dam", type: "dam", county: "Walla Walla" },
+    ],
+    // Upper Columbia — Washington
+    "1701": [
+      { name: "Grand Coulee Dam", type: "dam", county: "Grant" },
+      { name: "Chief Joseph Dam", type: "dam", county: "Okanogan" },
+    ],
+    // Yakima — Washington
+    "1703": [
+      { name: "Roza Diversion Dam", type: "dam", county: "Yakima" },
+    ],
+    // South Texas — San Antonio area
+    "1210": [
+      { name: "CyrusOne San Antonio DC", type: "data_center", county: "Bexar" },
+      { name: "Rackspace (Windcrest)", type: "data_center", county: "Bexar" },
+    ],
+    // Trinity — Dallas-Fort Worth
+    "1203": [
+      { name: "QTS Dallas Fort Worth DC", type: "data_center", county: "Dallas" },
+      { name: "CyrusOne Carrollton DC", type: "data_center", county: "Dallas" },
+      { name: "T5 Dallas DC", type: "data_center", county: "Dallas" },
+    ],
+    // Neches — East Texas
+    "1202": [
+      { name: "Sam Rayburn Reservoir", type: "dam", county: "Jasper" },
+    ],
+    // Chattahoochee — Georgia
+    "0313": [
+      { name: "QTS Atlanta (Suwanee)", type: "data_center", county: "Gwinnett" },
+      { name: "Switch Atlanta DC", type: "data_center", county: "Douglas" },
+    ],
+    // Las Vegas Wash / Colorado
+    "1503": [
+      { name: "Switch SuperNAP LV", type: "data_center", county: "Clark" },
+      { name: "Hoover Dam", type: "dam", county: "Clark" },
+    ],
+  };
+
+  // ── Facility lookup by selection ─────────────────────────────────────────
+  function getFacilities() {
+    if (scope === "basin" && pickedBasin) {
+      return FACILITIES_BY_HUC4[pickedBasin] || [];
+    }
+    if (scope === "county" && pickedCounty && pickedState) {
+      // Search all HUC4s for this state, filter by county name
+      var stateObj = UX.STATES.find(function (s) { return s.id === pickedState; });
+      if (!stateObj || !stateObj.huc4) return [];
+      var results = [];
+      stateObj.huc4.forEach(function (h) {
+        var list = FACILITIES_BY_HUC4[h] || [];
+        list.forEach(function (f) {
+          if (f.county === pickedCounty) results.push(f);
+        });
+      });
+      return results;
+    }
+    if (scope === "state" && pickedState) {
+      // All facilities across all basins in this state
+      var stateObj2 = UX.STATES.find(function (s) { return s.id === pickedState; });
+      if (!stateObj2 || !stateObj2.huc4) return [];
+      var results2 = [];
+      stateObj2.huc4.forEach(function (h) {
+        (FACILITIES_BY_HUC4[h] || []).forEach(function (f) { results2.push(f); });
+      });
+      return results2;
+    }
+    return [];
+  }
+
   // ── Report renderer ───────────────────────────────────────────────────────
   function renderReport(doc) {
     renderHeader(doc);
     renderTiles(doc);
     renderCharts(doc);
+    renderFacilities();
     renderRegime(doc);
     renderAnalogs(doc);
     renderRecordBook(doc);
@@ -892,6 +1170,41 @@
     $("longNote").textContent = lr.years[0] + "\u2013" + lr.years[lr.years.length - 1] + " \u00b7 " + lr.years.length + " years";
     $("typicalSpark").innerHTML = UX.buildSparkline(doc.typicalYear.mean, { w: 380, h: 60, label: "typical year" });
     $("ensoSpark").innerHTML = UX.buildSparkline(doc.enso.map(function (e) { return e.oni; }), { w: 380, h: 60, label: "ONI" });
+  }
+
+  function renderFacilities() {
+    var facilities = getFacilities();
+    var body = $("facilitiesBody");
+    var card = $("facilitiesCard");
+    if (!facilities.length) {
+      body.innerHTML = '<p class="facility-empty">No known facilities cataloged in this watershed.</p>';
+      return;
+    }
+    // Group by type
+    var byType = {};
+    facilities.forEach(function (f) {
+      (byType[f.type] = byType[f.type] || []).push(f);
+    });
+    var html = '<ul class="facility-list">';
+    // Data centers first, then alpha by type
+    var typeOrder = ["data_center", "water_treatment", "water_intake", "water_reclamation",
+      "reservoir", "dam", "spring", "industrial", "power_plant"];
+    typeOrder.forEach(function (t) {
+      if (!byType[t]) return;
+      byType[t].forEach(function (f) {
+        html += '<li>' +
+          '<span class="facility-dot ' + f.type + '"></span>' +
+          '<span class="facility-name">' + f.name + '</span>' +
+          '<span class="facility-type">' + (TYPE_LABELS[f.type] || f.type) + '</span>' +
+          '</li>';
+      });
+    });
+    html += '</ul>';
+    var dcCount = (byType.data_center || []).length;
+    var totalCount = facilities.length;
+    var summary = totalCount + ' facilit' + (totalCount === 1 ? 'y' : 'ies');
+    if (dcCount > 0) summary += ' (' + dcCount + ' data center' + (dcCount === 1 ? '' : 's') + ')';
+    body.innerHTML = '<div class="section-note" style="margin:0 0 4px">' + summary + ' identified from public records.</div>' + html;
   }
 
   function renderRegime(doc) {
