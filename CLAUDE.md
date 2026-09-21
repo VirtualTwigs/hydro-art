@@ -19,6 +19,7 @@ python tools/coverage_report.py --fail-under 90    # offline coverage gate (scop
 python tools/release_gate.py                        # v1.0 release readiness (goldens + determinism)
 python tools/update_status.py                       # stamp HANDOFF.md + roadmap on epoch close
 python tools/detect_unfinished.py                   # report-only: open tasks, missing retros, dirty tree
+python serve.py                                      # dev server (http://127.0.0.1:8765); needs GIS stack
 
 # E2E (Playwright, opt-in — NOT part of the offline suite; needs Node 18+)
 cd tests/e2e && npm install && npx playwright install chromium

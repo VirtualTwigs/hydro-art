@@ -157,10 +157,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     console.print(
         f"[dim]email:[/] {'[green]configured[/]' if email_sender.configured else '[yellow]not configured[/] (set ' + APP_PASSWORD_ENV + ')'}"
     )
+    proof_secret = b"proof-secret"  # matches _update_order's hardcoded secret
     try:
         serve(runner, host=args.host, port=args.port, web_root=web_root,
               output_root=roots.output, order_store=order_store,
-              email_sender=email_sender)
+              email_sender=email_sender, proof_secret=proof_secret)
     except KeyboardInterrupt:
         console.print("\n[bold]Stopped.[/]")
     return 0

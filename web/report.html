@@ -12,6 +12,43 @@
 <link rel="stylesheet" href="shared/ux.css" />
 <style>
   body { max-width: 1080px; margin: 0 auto; padding: 20px 20px 60px; }
+
+  /* ── Location picker ────────────────────────────────────── */
+  .picker { max-width: 540px; margin: 60px auto; }
+  .picker h1 { font-size: 22px; margin: 0 0 6px; color: var(--ink); }
+  .picker .lede { color: var(--muted); font-size: 12px; margin: 0 0 24px; }
+
+  .scope-row { display: flex; gap: 6px; margin-bottom: 20px; }
+  .scope-row button {
+    flex: 1; background: var(--panel-3); color: var(--muted);
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 10px 4px; cursor: pointer; font: inherit; font-size: 12px;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .scope-row button:hover { color: var(--ink); }
+  .scope-row button.active {
+    color: var(--bg); background: var(--accent-light);
+    border-color: var(--accent-light); font-weight: 600;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+  .field-hint { color: var(--muted); font-size: 10.5px; margin: 4px 0 0; }
+
+  .btn-generate {
+    width: 100%; background: var(--accent-light); color: var(--bg);
+    border: 1px solid var(--accent-light); border-radius: var(--radius-sm);
+    padding: 12px; cursor: pointer; font: inherit; font-weight: 600;
+    font-size: 13px; letter-spacing: .04em; margin-top: 8px;
+    transition: opacity .15s, background .15s;
+  }
+  .btn-generate:hover { background: #35c4c8; }
+  .btn-generate:disabled { opacity: .4; cursor: not-allowed; }
+
+  .back-link { display: inline-block; margin-bottom: 18px; color: var(--muted); font-size: 11px; letter-spacing: .04em; }
+  .back-link:hover { color: var(--ink); }
+
+  /* ── Report view ────────────────────────────────────────── */
   header.report-head {
     display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
     border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 16px;
@@ -32,146 +69,481 @@
   .chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px;
     font-weight: 600; border: 1px solid var(--line); margin-right: 6px; }
   .chip.ok { color: #35e08b; } .chip.warn { color: #ffcf5a; } .chip.danger { color: #ff6b6b; }
+
+  .new-report { display: inline-block; color: var(--accent-light); font-size: 11px; cursor: pointer; border: none; background: none; font: inherit; padding: 0; letter-spacing: .04em; }
+  .new-report:hover { color: var(--ink); }
+
+  /* ── Example banner ─────────────────────────────────────── */
+  .example-banner {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 14px 18px; margin-bottom: 18px;
+  }
+  .example-banner .label { color: var(--muted); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; flex: none; }
+  .example-banner .msg { color: var(--ink); font-size: 12px; flex: 1; }
+  .example-banner .btn-own {
+    background: var(--accent-light); color: var(--bg); border: none; border-radius: var(--radius-sm);
+    padding: 8px 16px; cursor: pointer; font: inherit; font-weight: 600; font-size: 12px;
+    letter-spacing: .04em; transition: background .15s;
+  }
+  .example-banner .btn-own:hover { background: #35c4c8; }
 </style>
 </head>
 <body>
-<header class="report-head">
-  <h1 class="brand">Riverglyph</h1>
-  <div>
-    <div id="wsName" style="font-size:15px"></div>
-    <div class="place" id="wsPlace"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     LOCATION PICKER — hidden by default; shown when "Build your own" is clicked
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="picker" class="picker" hidden>
+  <a class="back-link" href="start.html">&larr; Back to Riverglyph</a>
+  <h1>Build a watershed report</h1>
+  <p class="lede">Choose a scope and location. The report covers peak flow, seasonal trends, drought/flood history, and climate drivers for the watershed network in your chosen area.</p>
+
+  <div class="scope-row" id="scopeRow">
+    <button data-scope="state">State</button>
+    <button data-scope="county" class="active">County</button>
+    <button data-scope="basin">Water basin</button>
   </div>
-  <div class="spacer"></div>
-  <label class="row" style="margin:0 6px 0 0">Range</label>
-  <select id="rangeSel" aria-label="Report range"></select>
-</header>
 
-<!-- Headline metric tiles + validation badge -->
-<div class="report-grid" id="tiles"></div>
+  <div class="field">
+    <label for="pk-state">State</label>
+    <select id="pk-state"><option value="">Select a state&hellip;</option></select>
+  </div>
 
-<!-- The credibility anchor: model-vs-gauge honesty, restated in prose -->
-<div class="warn ok" id="honesty" style="margin:-6px 0 14px"></div>
+  <div class="field" id="county-field">
+    <label for="pk-county">County</label>
+    <select id="pk-county" disabled><option value="">Select a county&hellip;</option></select>
+    <p class="field-hint">Counties populate after you choose a state.</p>
+  </div>
 
-<!-- Long record -->
-<div class="chart-card">
-  <h3>The long record — annual peak</h3>
-  <div class="section-note" id="longNote"></div>
-  <div id="longSpark"></div>
+  <div class="field" id="basin-field" hidden>
+    <label for="pk-basin">Water basin (HUC4)</label>
+    <select id="pk-basin" disabled><option value="">Select a basin&hellip;</option></select>
+    <p class="field-hint">Major drainage basins (HUC4) for the selected state.</p>
+  </div>
+
+  <button class="btn-generate" id="btnGenerate" disabled>Generate report</button>
 </div>
 
-<div class="chart-row">
-  <div class="chart-card">
-    <h3>Typical year — mean monthly flow</h3>
-    <div class="section-note">Fixed-span monthly climatology (cfs).</div>
-    <div id="typicalSpark"></div>
+<!-- ═══════════════════════════════════════════════════════════════════
+     REPORT VIEW — hidden until generated
+     ═══════════════════════════════════════════════════════════════════ -->
+<div id="reportView">
+  <div class="example-banner" id="exampleBanner">
+    <span class="label">Example</span>
+    <span class="msg">This is a sample report for Salmon Creek, Clark County WA. Build one for your own watershed.</span>
+    <button class="btn-own" id="btnBuildOwn">Build your own report &rarr;</button>
   </div>
-  <div class="chart-card" id="ensoCard">
-    <h3>Climate drivers — ENSO (ONI)
-      <label style="float:right;font-size:10px;text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="ensoToggle" checked style="width:auto;vertical-align:middle" /> show
-      </label>
-    </h3>
-    <div class="section-note">Annual peak vs. ocean state; ● wet · ● dry.</div>
-    <div id="ensoSpark"></div>
-  </div>
-</div>
+  <header class="report-head">
+    <h1 class="brand">Riverglyph</h1>
+    <div>
+      <div id="wsName" style="font-size:15px"></div>
+      <div class="place" id="wsPlace"></div>
+    </div>
+    <div class="spacer"></div>
+    <button class="new-report" id="btnNewReport">&larr; New report</button>
+    <label class="row" style="margin:0 6px 0 12px">Range</label>
+    <select id="rangeSel" aria-label="Report range"></select>
+  </header>
 
-<div class="chart-row">
-  <div class="chart-card" id="regimeCard">
-    <h3>Snow-vs-rain regime</h3>
-    <div class="section-note">Is this a snowmelt or a rain river — and is that shifting?</div>
-    <div id="regimeBody"></div>
-  </div>
-  <div class="chart-card">
-    <h3>Analog years — most like <span id="analogTarget"></span></h3>
-    <div class="section-note">Ranked by monthly-shape correlation (magnitude removed).</div>
-    <ol class="mini-list" id="analogList"></ol>
-  </div>
-</div>
+  <!-- Headline metric tiles + validation badge -->
+  <div class="report-grid" id="tiles"></div>
 
-<div class="chart-row">
-  <div class="chart-card">
-    <h3>Record book — driest summers</h3>
-    <div class="section-note">Lowest Jun–Aug flow on record.</div>
-    <ol class="mini-list" id="driestList"></ol>
-  </div>
-  <div class="chart-card">
-    <h3>Record book — wettest years</h3>
-    <div class="section-note">Highest annual peak on record.</div>
-    <ol class="mini-list" id="wettestList"></ol>
-  </div>
-</div>
+  <!-- The credibility anchor: model-vs-gauge honesty, restated in prose -->
+  <div class="warn ok" id="honesty" style="margin:-6px 0 14px"></div>
 
-<div class="chart-row">
+  <!-- Long record -->
   <div class="chart-card">
-    <h3>Flow-duration curves — decade overlays</h3>
-    <div class="section-note" id="fdcNote"></div>
-    <div id="fdcSpark"></div>
+    <h3>The long record — annual peak</h3>
+    <div class="section-note" id="longNote"></div>
+    <div id="longSpark"></div>
   </div>
-  <div class="chart-card">
-    <h3>Climate composites — mean hydrograph by phase</h3>
-    <div class="section-note">Warm (El Niño) · neutral · cool (La Niña), ONI ±0.5.</div>
-    <div id="compositeSpark"></div>
-  </div>
-</div>
 
-<div class="hint">
-  Static, file://-safe report over the shared foundation. Metrics come from the
-  offline <code>src/flow_metrics.py</code> layer (here, a deterministic sample
-  document); real reports are exported by
-  <code>tools/build_watershed_report.py</code> (#54, #76).
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>Typical year — mean monthly flow</h3>
+      <div class="section-note">Fixed-span monthly climatology (cfs).</div>
+      <div id="typicalSpark"></div>
+    </div>
+    <div class="chart-card" id="ensoCard">
+      <h3>Climate drivers — ENSO (ONI)
+        <label style="float:right;font-size:10px;text-transform:none;letter-spacing:0">
+          <input type="checkbox" id="ensoToggle" checked style="width:auto;vertical-align:middle" /> show
+        </label>
+      </h3>
+      <div class="section-note">Annual peak vs. ocean state; &bull; wet &middot; &bull; dry.</div>
+      <div id="ensoSpark"></div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card" id="regimeCard">
+      <h3>Snow-vs-rain regime</h3>
+      <div class="section-note">Is this a snowmelt or a rain river — and is that shifting?</div>
+      <div id="regimeBody"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Analog years — most like <span id="analogTarget"></span></h3>
+      <div class="section-note">Ranked by monthly-shape correlation (magnitude removed).</div>
+      <ol class="mini-list" id="analogList"></ol>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>Record book — driest summers</h3>
+      <div class="section-note">Lowest Jun&ndash;Aug flow on record.</div>
+      <ol class="mini-list" id="driestList"></ol>
+    </div>
+    <div class="chart-card">
+      <h3>Record book — wettest years</h3>
+      <div class="section-note">Highest annual peak on record.</div>
+      <ol class="mini-list" id="wettestList"></ol>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <h3>Flow-duration curves — decade overlays</h3>
+      <div class="section-note" id="fdcNote"></div>
+      <div id="fdcSpark"></div>
+    </div>
+    <div class="chart-card">
+      <h3>Climate composites — mean hydrograph by phase</h3>
+      <div class="section-note">Warm (El Ni&ntilde;o) &middot; neutral &middot; cool (La Ni&ntilde;a), ONI &plusmn;0.5.</div>
+      <div id="compositeSpark"></div>
+    </div>
+  </div>
+
+  <div class="hint">
+    Report generated from the offline <code>src/flow_metrics.py</code> layer
+    (currently a deterministic sample document seeded by your selection);
+    real reports are exported by <code>tools/build_watershed_report.py</code>.
+  </div>
 </div>
 
 <script src="shared/hydro-ux.js"></script>
 <script>
 "use strict";
 (function () {
-  const UX = window.HydroUX;
-  const $ = (id) => document.getElementById(id);
+  var UX = window.HydroUX;
+  var $ = function (id) { return document.getElementById(id); };
 
-  // The report document (delivery.py-style export). Standalone: the sample doc.
-  const doc = UX.REPORT_SAMPLE;
-  const state = { showEnso: true, range: doc.range.slice() };
+  // ── Picker state ──────────────────────────────────────────────────────────
+  var scope = "county";
+  var pickedState = "";
+  var pickedCounty = "";
+  var pickedBasin = "";
 
-  function tile(eyebrow, valueHtml, deltaHtml, deltaCls) {
-    return `<div class="metric-tile">
-      <div class="eyebrow">${eyebrow}</div>
-      <div class="value">${valueHtml}</div>
-      <div class="delta ${deltaCls || ""}">${deltaHtml}</div>
-    </div>`;
+  var selState  = $("pk-state");
+  var selCounty = $("pk-county");
+  var selBasin  = $("pk-basin");
+  var btnGen    = $("btnGenerate");
+  var countyField = $("county-field");
+  var basinField  = $("basin-field");
+
+  // Populate states
+  UX.STATES.forEach(function (s) {
+    var opt = document.createElement("option");
+    opt.value = s.id; opt.textContent = s.label;
+    selState.appendChild(opt);
+  });
+
+  // Scope buttons
+  var scopeBtns = document.querySelectorAll("#scopeRow button");
+  scopeBtns.forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      scopeBtns.forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      scope = btn.getAttribute("data-scope");
+
+      countyField.hidden = scope !== "county";
+      basinField.hidden  = scope !== "basin";
+
+      // Reset dependent selections
+      pickedCounty = ""; pickedBasin = "";
+      selCounty.value = ""; selBasin.value = "";
+      updateGenBtn();
+    });
+  });
+
+  selState.addEventListener("change", function () {
+    pickedState = selState.value;
+
+    // Populate counties
+    selCounty.innerHTML = '<option value="">Select a county&hellip;</option>';
+    selCounty.disabled = !pickedState;
+    pickedCounty = "";
+
+    // Populate basins (HUC4s for this state)
+    selBasin.innerHTML = '<option value="">Select a basin&hellip;</option>';
+    selBasin.disabled = !pickedState;
+    pickedBasin = "";
+
+    if (pickedState) {
+      var counties = UX.COUNTIES[pickedState] || [];
+      counties.forEach(function (c) {
+        var opt = document.createElement("option");
+        opt.value = c; opt.textContent = c;
+        selCounty.appendChild(opt);
+      });
+
+      var stateObj = UX.STATES.find(function (s) { return s.id === pickedState; });
+      if (stateObj && stateObj.huc4) {
+        stateObj.huc4.forEach(function (h) {
+          var opt = document.createElement("option");
+          opt.value = h; opt.textContent = "HUC4 " + h;
+          selBasin.appendChild(opt);
+        });
+      }
+    }
+    updateGenBtn();
+  });
+
+  selCounty.addEventListener("change", function () {
+    pickedCounty = selCounty.value;
+    updateGenBtn();
+  });
+
+  selBasin.addEventListener("change", function () {
+    pickedBasin = selBasin.value;
+    updateGenBtn();
+  });
+
+  function updateGenBtn() {
+    var ready = false;
+    if (scope === "state")  ready = !!pickedState;
+    if (scope === "county") ready = !!pickedState && !!pickedCounty;
+    if (scope === "basin")  ready = !!pickedState && !!pickedBasin;
+    btnGen.disabled = !ready;
   }
 
-  function renderTiles() {
-    const m = doc.metrics;
-    const peakDelta = m.peak.trendPerDecade;
-    const lowDelta = m.summerLow.trendPerDecade;
-    const cot = m.centerOfTiming;
-    const v = doc.validation;
-    const vc = UX.verdictClass(v.verdict);
+  // ── Generate ──────────────────────────────────────────────────────────────
+  btnGen.addEventListener("click", function () {
+    generateReport();
+  });
+
+  $("btnNewReport").addEventListener("click", function () {
+    $("picker").hidden = false;
+    $("reportView").hidden = true;
+    $("exampleBanner").hidden = false;
+  });
+
+  function locationLabel() {
+    if (scope === "state")  return pickedState;
+    if (scope === "county") return pickedCounty + " County, " + UX.stateAbbr(pickedState);
+    if (scope === "basin")  return "HUC4 " + pickedBasin + ", " + UX.stateAbbr(pickedState);
+    return "";
+  }
+
+  function watershedName() {
+    // Produce a representative watershed name seeded by the selection.
+    // For a real backend this would come from the metrics payload.
+    if (scope === "county") return pickedCounty + " Creek";
+    if (scope === "basin")  return "Basin " + pickedBasin;
+    return pickedState + " rivers";
+  }
+
+  function generateReport() {
+    // Build a seeded sample report using the location as the PRNG seed
+    // so the same selection always produces the same (deterministic) report.
+    var seed = UX.hash(pickedState + scope + (pickedCounty || pickedBasin));
+    var doc = buildSeededReport(seed, watershedName(), locationLabel());
+
+    $("picker").hidden = true;
+    $("reportView").hidden = false;
+    $("exampleBanner").hidden = true;
+    renderReport(doc);
+  }
+
+  // ── Seeded report builder (same shape as sampleReport, different seed) ────
+  function buildSeededReport(seed, wsName, place) {
+    var rnd = UX.mulberry32(seed);
+    var years = [], peak = [], summerLow = [];
+    var startYear = 1985 + Math.floor(rnd() * 10);
+    var endYear = 2023;
+    for (var y = startYear; y <= endYear; y++) {
+      years.push(y);
+      peak.push(Math.round(300 + rnd() * 400 + (y - startYear) * (rnd() * 6 - 2)));
+      summerLow.push(Number((0.5 + rnd() * 1.2 - (y - startYear) * 0.008).toFixed(2)));
+    }
+
+    var MONTH_ABBR = UX.MONTH_ABBR;
+    var phaseShift = rnd() * 4;
+    var meanScale = 3 + rnd() * 8;
+    var mean = MONTH_ABBR.map(function (_, i) {
+      return Number((meanScale + (meanScale * 0.8) * Math.cos((i - phaseShift) / 12 * 2 * Math.PI)).toFixed(2));
+    });
+    var lo = mean.map(function (v) { return Number((v * (0.5 + rnd() * 0.2)).toFixed(2)); });
+    var hi = mean.map(function (v) { return Number((v * (1.3 + rnd() * 0.3)).toFixed(2)); });
+
+    var enso = years.map(function (y, i) {
+      var oni = Number((Math.sin(i * (1.1 + rnd() * 0.5)) * 1.4).toFixed(2));
+      return { year: y, oni: oni, peak: peak[i], phase: oni >= 0 ? "wet" : "dry" };
+    });
+
+    // Per-year hydrographs
+    var perYear = years.map(function (y, i) {
+      var shift = phaseShift + (rnd() - 0.5) * 2.2;
+      var scale = peak[i] / (peak[0] || 1);
+      return MONTH_ABBR.map(function (_, m) {
+        return Number(Math.max(0, scale * (meanScale + (meanScale * 0.8) * Math.cos((m - shift) / 12 * 2 * Math.PI))).toFixed(2));
+      });
+    });
+
+    // Analogs
+    function pearson(a, b) {
+      var n = a.length, sa = 0, sb = 0, sa2 = 0, sb2 = 0, sab = 0;
+      for (var i = 0; i < n; i++) { sa += a[i]; sb += b[i]; sa2 += a[i]*a[i]; sb2 += b[i]*b[i]; sab += a[i]*b[i]; }
+      var d = Math.sqrt((n*sa2-sa*sa)*(n*sb2-sb*sb));
+      return d === 0 ? 0 : (n*sab-sa*sb)/d;
+    }
+    var target = perYear[perYear.length - 1];
+    var analogs = years.slice(0, -1)
+      .map(function (y, i) { return { year: y, similarity: Number(pearson(perYear[i], target).toFixed(3)) }; })
+      .filter(function (a) { return isFinite(a.similarity); })
+      .sort(function (a, b) { return b.similarity - a.similarity || a.year - b.year; })
+      .slice(0, 6);
+
+    // Record book
+    function rankBy(vals, ascending) {
+      return years.map(function (y, i) { return { year: y, value: vals[i] }; })
+        .sort(function (a, b) { return (ascending ? a.value - b.value : b.value - a.value) || a.year - b.year; })
+        .slice(0, 5)
+        .map(function (r, i) { return { year: r.year, value: r.value, rank: i + 1 }; });
+    }
+    var recordBook = { driest: rankBy(summerLow, true), wettest: rankBy(peak, false) };
+
+    // FDC
+    var fdcQuantiles = [0, 10, 25, 50, 75, 90, 100];
+    var byDecade = {};
+    years.forEach(function (y, i) {
+      var d = Math.floor(y / 10) * 10;
+      (byDecade[d] = byDecade[d] || []).push.apply(byDecade[d], perYear[i]);
+    });
+    function exceedance(sorted, q) {
+      if (!sorted.length) return NaN;
+      var pos = (1 - q / 100) * (sorted.length - 1);
+      var lo = Math.floor(pos), hi = Math.ceil(pos);
+      return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+    }
+    var fdc = Object.keys(byDecade).sort(function (a, b) { return a - b; }).map(function (d) {
+      var sorted = byDecade[d].slice().sort(function (a, b) { return a - b; });
+      return { decade: Number(d), flows: fdcQuantiles.map(function (q) { return Number(exceedance(sorted, q).toFixed(2)); }) };
+    });
+
+    // Composites
+    function phaseMean(pred) {
+      var rows = perYear.filter(function (_, i) { return pred(enso[i].oni); });
+      if (!rows.length) return new Array(12).fill(0);
+      return MONTH_ABBR.map(function (_, m) {
+        return Number((rows.reduce(function (s, v) { return s + v[m]; }, 0) / rows.length).toFixed(2));
+      });
+    }
+    var composites = {
+      warm:    phaseMean(function (o) { return o >= 0.5; }),
+      neutral: phaseMean(function (o) { return o > -0.5 && o < 0.5; }),
+      cool:    phaseMean(function (o) { return o <= -0.5; }),
+    };
+
+    // Regime
+    var snowFrac = Number((0.2 + rnd() * 0.6).toFixed(2));
+    var regimeLabel = snowFrac >= 0.6 ? "snowmelt" : snowFrac >= 0.3 ? "mixed" : "rain";
+    var regime = {
+      fraction: snowFrac,
+      label: regimeLabel,
+      meltCenterMonth: Number((3 + rnd() * 3).toFixed(1)),
+      driftDaysPerDecade: Number((-4 + rnd() * 6).toFixed(1)),
+    };
+
+    // Validation
+    var verdicts = ["good", "moderate", "poor"];
+    var verdict = verdicts[Math.floor(rnd() * 2.4)]; // bias toward good/moderate
+    var r = Number((0.5 + rnd() * 0.45).toFixed(2));
+    var nse = Number((0.3 + rnd() * 0.55).toFixed(2));
+    var bias = Number((-8 + rnd() * 16).toFixed(1));
+
+    var peakTrend = Number(((peak[peak.length-1] - peak[0]) / ((endYear - startYear) / 10)).toFixed(0));
+    var lowTrend = Number(((summerLow[summerLow.length-1] - summerLow[0]) / ((endYear - startYear) / 10)).toFixed(2));
+    var cotIdx = Math.floor(rnd() * 5) + 1;
+
+    return {
+      watershed: wsName,
+      place: place,
+      range: [startYear, endYear],
+      metrics: {
+        peak: { value: peak[peak.length - 1], unit: "cfs", pct: Number((0.3 + rnd() * 0.65).toFixed(2)), trendPerDecade: peakTrend },
+        summerLow: { value: summerLow[summerLow.length - 1], unit: "cfs", pct: Number((rnd() * 0.3).toFixed(2)), trendPerDecade: lowTrend },
+        centerOfTiming: { monthIndex: cotIdx, trendPerDecade: Number((-0.5 + rnd() * 0.4).toFixed(1)) },
+      },
+      validation: { verdict: verdict, r: r, nse: nse, bias: bias },
+      longRecord: { years: years, peak: peak, summerLow: summerLow },
+      typicalYear: { months: MONTH_ABBR.slice(), mean: mean, lo: lo, hi: hi },
+      enso: enso,
+      regime: regime,
+      analogs: analogs,
+      recordBook: recordBook,
+      fdc: fdc,
+      fdcQuantiles: fdcQuantiles,
+      composites: composites,
+    };
+  }
+
+  // ── Report renderer (same as the original, parameterized on doc) ──────────
+  var reportState = { showEnso: true };
+
+  function renderReport(doc) {
+    reportState.doc = doc;
+    renderHeader(doc);
+    buildRangeOptions(doc);
+    renderTiles(doc);
+    renderCharts(doc);
+    renderRegime(doc);
+    renderAnalogs(doc);
+    renderRecordBook(doc);
+    renderFdc(doc);
+    renderComposites(doc);
+  }
+
+  function tile(eyebrow, valueHtml, deltaHtml, deltaCls) {
+    return '<div class="metric-tile">' +
+      '<div class="eyebrow">' + eyebrow + '</div>' +
+      '<div class="value">' + valueHtml + '</div>' +
+      '<div class="delta ' + (deltaCls || "") + '">' + deltaHtml + '</div>' +
+    '</div>';
+  }
+
+  function renderTiles(doc) {
+    var m = doc.metrics;
+    var peakDelta = m.peak.trendPerDecade;
+    var lowDelta = m.summerLow.trendPerDecade;
+    var cot = m.centerOfTiming;
+    var v = doc.validation;
+    var vc = UX.verdictClass(v.verdict);
     $("tiles").innerHTML =
       tile("Peak",
-        `${UX.fmtNum(m.peak.value)}<span class="unit">${m.peak.unit}</span>`,
-        `${UX.ordinal(Math.round(m.peak.pct * 100))} pct ${UX.trendArrow(peakDelta)} ${UX.fmtNum(peakDelta)}/dec`,
+        UX.fmtNum(m.peak.value) + '<span class="unit">' + m.peak.unit + '</span>',
+        UX.ordinal(Math.round(m.peak.pct * 100)) + ' pct ' + UX.trendArrow(peakDelta) + ' ' + UX.fmtNum(peakDelta) + '/dec',
         peakDelta >= 0 ? "ok" : "warn") +
       tile("Summer low",
-        `${UX.fmtNum(m.summerLow.value)}<span class="unit">${m.summerLow.unit}</span>`,
-        `${UX.ordinal(Math.round(m.summerLow.pct * 100))} pct ${UX.trendArrow(lowDelta)} ${UX.fmtNum(lowDelta)}/dec`,
+        UX.fmtNum(m.summerLow.value) + '<span class="unit">' + m.summerLow.unit + '</span>',
+        UX.ordinal(Math.round(m.summerLow.pct * 100)) + ' pct ' + UX.trendArrow(lowDelta) + ' ' + UX.fmtNum(lowDelta) + '/dec',
         lowDelta >= 0 ? "ok" : "danger") +
       tile("Center of timing",
-        `${UX.MONTH_ABBR[cot.monthIndex]}`,
-        `${UX.trendArrow(cot.trendPerDecade)} ${UX.fmtNum(cot.trendPerDecade)} mo/dec`,
+        UX.MONTH_ABBR[cot.monthIndex],
+        UX.trendArrow(cot.trendPerDecade) + ' ' + UX.fmtNum(cot.trendPerDecade) + ' mo/dec',
         cot.trendPerDecade < 0 ? "warn" : "muted") +
-      `<div class="validation-badge ${vc}">
-         <div class="eyebrow">vs. gauge</div>
-         <div class="verdict">${UX.verdictLabel(v.verdict)}</div>
-         <div class="vmetrics">
-           <span>r <b>${UX.fmtNum(v.r, 2)}</b></span>
-           <span>NSE <b>${UX.fmtNum(v.nse, 2)}</b></span>
-           <span>bias <b>${UX.fmtNum(v.bias)}</b></span>
-         </div>
-       </div>`;
+      '<div class="validation-badge ' + vc + '">' +
+        '<div class="eyebrow">vs. gauge</div>' +
+        '<div class="verdict">' + UX.verdictLabel(v.verdict) + '</div>' +
+        '<div class="vmetrics">' +
+          '<span>r <b>' + UX.fmtNum(v.r, 2) + '</b></span>' +
+          '<span>NSE <b>' + UX.fmtNum(v.nse, 2) + '</b></span>' +
+          '<span>bias <b>' + UX.fmtNum(v.bias) + '</b></span>' +
+        '</div>' +
+      '</div>';
 
-    const honest = v.verdict === "good"
+    var honest = v.verdict === "good"
       ? "Model tracks the gauge well — treat these numbers as gauge-accurate."
       : v.verdict === "moderate"
       ? "Model is climatology-consistent and directionally reliable, but not gauge-accurate — read trends, not exact values."
@@ -180,101 +552,104 @@
     $("honesty").textContent = honest;
   }
 
-  function renderCharts() {
-    const lr = doc.longRecord;
+  function renderCharts(doc) {
+    var lr = doc.longRecord;
     $("longSpark").innerHTML = UX.buildSparkline(lr.peak, { w: 1000, h: 60, label: "annual peak" });
     $("longNote").textContent =
-      `${lr.years[0]}\u2013${lr.years[lr.years.length - 1]} · ${lr.years.length} years`;
+      lr.years[0] + "\u2013" + lr.years[lr.years.length - 1] + " \u00b7 " + lr.years.length + " years";
     $("typicalSpark").innerHTML = UX.buildSparkline(doc.typicalYear.mean, { w: 480, h: 60, label: "typical year" });
 
-    if (state.showEnso) {
-      $("ensoSpark").innerHTML = UX.buildSparkline(doc.enso.map((e) => e.oni), { w: 480, h: 60, label: "ONI" });
+    if (reportState.showEnso) {
+      $("ensoSpark").innerHTML = UX.buildSparkline(doc.enso.map(function (e) { return e.oni; }), { w: 480, h: 60, label: "ONI" });
       $("ensoSpark").hidden = false;
     } else {
       $("ensoSpark").hidden = true;
     }
   }
 
-  function renderRegime() {
-    const r = doc.regime;
-    const cls = r.label === "snowmelt" ? "ok" : r.label === "rain" ? "danger" : "warn";
-    const drift = r.driftDaysPerDecade;
+  function renderRegime(doc) {
+    var r = doc.regime;
+    var cls = r.label === "snowmelt" ? "ok" : r.label === "rain" ? "danger" : "warn";
+    var drift = r.driftDaysPerDecade;
     $("regimeBody").innerHTML =
-      `<div style="font-size:15px;margin-bottom:4px">` +
-      `<span class="chip ${cls}">${r.label.toUpperCase()}</span>` +
-      `snowmelt fraction <b>${UX.fmtNum(r.fraction, 2)}</b></div>` +
-      `<div class="section-note" style="margin:0">melt pulse centered on ` +
-      `<b>${UX.MONTH_ABBR[Math.round(r.meltCenterMonth)]}</b>, arriving ` +
-      `${UX.trendArrow(drift)} ${UX.fmtNum(Math.abs(drift))} days/decade ` +
-      `${drift < 0 ? "earlier" : "later"}.</div>`;
+      '<div style="font-size:15px;margin-bottom:4px">' +
+      '<span class="chip ' + cls + '">' + r.label.toUpperCase() + '</span>' +
+      'snowmelt fraction <b>' + UX.fmtNum(r.fraction, 2) + '</b></div>' +
+      '<div class="section-note" style="margin:0">melt pulse centered on ' +
+      '<b>' + UX.MONTH_ABBR[Math.round(r.meltCenterMonth)] + '</b>, arriving ' +
+      UX.trendArrow(drift) + ' ' + UX.fmtNum(Math.abs(drift)) + ' days/decade ' +
+      (drift < 0 ? 'earlier' : 'later') + '.</div>';
   }
 
-  function renderAnalogs() {
+  function renderAnalogs(doc) {
     $("analogTarget").textContent = doc.range[1];
     $("analogList").innerHTML = doc.analogs
-      .map((a) => `<li><b>${a.year}</b><span class="muted">r ${UX.fmtNum(a.similarity, 2)}</span></li>`)
+      .map(function (a) { return '<li><b>' + a.year + '</b><span class="muted">r ' + UX.fmtNum(a.similarity, 2) + '</span></li>'; })
       .join("");
   }
 
-  function renderRecordBook() {
-    const row = (e) => `<li><span class="muted">#${e.rank}</span><b>${e.year}</b>` +
-      `<span class="muted">${UX.fmtNum(e.value)} cfs</span></li>`;
+  function renderRecordBook(doc) {
+    function row(e) {
+      return '<li><span class="muted">#' + e.rank + '</span><b>' + e.year + '</b>' +
+        '<span class="muted">' + UX.fmtNum(e.value) + ' cfs</span></li>';
+    }
     $("driestList").innerHTML = doc.recordBook.driest.map(row).join("");
     $("wettestList").innerHTML = doc.recordBook.wettest.map(row).join("");
   }
 
-  function renderFdc() {
+  function renderFdc(doc) {
     $("fdcNote").textContent =
-      `Exceedance quantiles ${doc.fdcQuantiles.join(", ")}% · pooled monthly flow (cfs).`;
+      "Exceedance quantiles " + doc.fdcQuantiles.join(", ") + "% \u00b7 pooled monthly flow (cfs).";
     $("fdcSpark").innerHTML = doc.fdc
-      .map((d) => `<div class="spark-row"><span>${d.decade}s</span>` +
-        UX.buildSparkline(d.flows, { w: 340, h: 40, label: d.decade + "s FDC" }) + `</div>`)
-      .join("");
+      .map(function (d) {
+        return '<div class="spark-row"><span>' + d.decade + 's</span>' +
+          UX.buildSparkline(d.flows, { w: 340, h: 40, label: d.decade + "s FDC" }) + '</div>';
+      }).join("");
   }
 
-  function renderComposites() {
-    const c = doc.composites;
+  function renderComposites(doc) {
+    var c = doc.composites;
     $("compositeSpark").innerHTML = [["warm", c.warm], ["neutral", c.neutral], ["cool", c.cool]]
-      .map(([name, v]) => `<div class="spark-row"><span>${name}</span>` +
-        UX.buildSparkline(v, { w: 340, h: 40, label: name + " composite" }) + `</div>`)
-      .join("");
+      .map(function (pair) {
+        return '<div class="spark-row"><span>' + pair[0] + '</span>' +
+          UX.buildSparkline(pair[1], { w: 340, h: 40, label: pair[0] + " composite" }) + '</div>';
+      }).join("");
   }
 
-  function renderHeader() {
+  function renderHeader(doc) {
     $("wsName").textContent = doc.watershed;
     $("wsPlace").textContent = doc.place;
   }
 
-  function buildRangeOptions() {
-    // Minimal range selector: whole record, plus a couple of trailing windows.
-    const y0 = doc.range[0], y1 = doc.range[1];
-    const ranges = [[y0, y1], [y1 - 20, y1], [y1 - 10, y1]];
+  function buildRangeOptions(doc) {
+    var y0 = doc.range[0], y1 = doc.range[1];
+    var ranges = [[y0, y1], [y1 - 20, y1], [y1 - 10, y1]];
     $("rangeSel").innerHTML = ranges
-      .map(([a, b]) => `<option value="${a}-${b}">${a}\u2013${b}</option>`)
+      .map(function (r) { return '<option value="' + r[0] + '-' + r[1] + '">' + r[0] + '\u2013' + r[1] + '</option>'; })
       .join("");
   }
 
-  // ---- boot + wiring ----
-  renderHeader();
-  buildRangeOptions();
-  renderTiles();
-  renderCharts();
-  renderRegime();
-  renderAnalogs();
-  renderRecordBook();
-  renderFdc();
-  renderComposites();
+  // ── Event wiring ──────────────────────────────────────────────────────────
+  $("ensoToggle").addEventListener("change", function (e) {
+    reportState.showEnso = e.target.checked;
+    if (reportState.doc) renderCharts(reportState.doc);
+  });
 
-  $("ensoToggle").addEventListener("change", (e) => {
-    state.showEnso = e.target.checked;
-    renderCharts();
+  $("rangeSel").addEventListener("change", function (e) {
+    var parts = e.target.value.split("-");
+    if (reportState.doc) {
+      $("wsPlace").textContent = reportState.doc.place + " \u00b7 " + parts[0] + "\u2013" + parts[1];
+    }
   });
-  // Range selector re-labels the header window (data is a static export, so the
-  // metrics don't recompute client-side — a served mode would refetch, #54).
-  $("rangeSel").addEventListener("change", (e) => {
-    const [a, b] = e.target.value.split("-");
-    $("wsPlace").textContent = `${doc.place} · ${a}\u2013${b}`;
+
+  // "Build your own" opens the picker
+  $("btnBuildOwn").addEventListener("click", function () {
+    $("reportView").hidden = true;
+    $("picker").hidden = false;
   });
+
+  // ── Boot: show the sample report immediately ─────────────────────────────
+  renderReport(UX.REPORT_SAMPLE);
 })();
 </script>
 </body>
