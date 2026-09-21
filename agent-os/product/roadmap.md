@@ -594,11 +594,16 @@ on lower sections with "Unlock the full report" CTA linking to the order form. P
 uses deterministic sample data; real gauge-calibrated reports require purchase.
 
 142. [x] Report builder prototype — two-panel layout, location picker (state/county/basin),
-report options (year range, title, 9 section toggles, delivery format), live preview with
-`buildSeededReport`, paywall fade + order CTA, deep-link support, responsive breakpoint. `M`
+report options (year range, title, 10 section toggles incl. facilities, delivery format),
+live preview with `buildSeededReport`, paywall fade + order CTA, deep-link support,
+responsive breakpoint. Facility listing by HUC4 basin (~30 basins, data centers + water
+infrastructure). `M`
 
-143. [ ] Order form pre-fill — `order.html` reads URL params from report builder handoff,
-auto-advances past product/location steps. `S`
+143. [x] Order form pre-fill — `order.html` reads URL params from report builder handoff,
+auto-advances past product+location+style steps when all provided. Product alias
+normalization (`print`→`fine-art-print`, etc.) for `start.html` links. Email/title
+pre-fill from proof return and report builder. Shipping validation for print orders.
+12-issue UX audit fix. `S`
 
 144. [ ] E2E test coverage — report builder navigation, picker/preview/paywall flow,
 deep-link auto-populate. `S`
