@@ -143,11 +143,12 @@ test.describe('Section toggles (#142)', () => {
     // Long record should be visible by default
     const longCard = page.locator('[data-section-id="long"]');
     await expect(longCard).toBeVisible();
-    // Toggle it off
-    await page.click('[data-section="long"]');
+    // Toggle it off — click the visible slider span, not the hidden checkbox
+    const toggle = page.locator('[data-section="long"]');
+    await toggle.evaluate((el) => el.click());
     await expect(longCard).toBeHidden();
     // Toggle it back on
-    await page.click('[data-section="long"]');
+    await toggle.evaluate((el) => el.click());
     await expect(longCard).toBeVisible();
   });
 
