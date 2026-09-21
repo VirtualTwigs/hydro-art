@@ -17,6 +17,8 @@
 | 99–106 | 25 | Operations library & ledger | Proposed | — |
 | 137–141 | 31 | Riverglyph brand transition | **Done** (2026-09-18) | Business clearance deferred |
 
+| 142–145 | 32 | Report builder with paywall preview | In progress | — |
+
 **Revenue gate timing:** measure #59 for 60 days from the actual listing go-live date. The
 2026-08-30 planning window did not start the measurement clock; record the launch date in the
 revenue ledger and calculate the decision date from it.
@@ -581,6 +583,32 @@ workspace, proof/revision loop, and asset-library model are documented in
 cradle-to-grave flowchart is `workflow.mmd` in that directory. This is an
 **experimental UX and operations design brief**, not authorization to bypass the
 Epoch 11.5 revenue gate for catalog/POD, self-serve, or commercial expansion.
+
+---
+
+### Epoch 32 — Report builder with paywall preview · in progress
+
+Two-panel report builder (`web/report.html`): location picker + custom options in a
+config sidebar, live-updating sample preview in the main panel, paywall gradient fade
+on lower sections with "Unlock the full report" CTA linking to the order form. Preview
+uses deterministic sample data; real gauge-calibrated reports require purchase.
+
+142. [x] Report builder prototype — two-panel layout, location picker (state/county/basin),
+report options (year range, title, 9 section toggles, delivery format), live preview with
+`buildSeededReport`, paywall fade + order CTA, deep-link support, responsive breakpoint. `M`
+
+143. [ ] Order form pre-fill — `order.html` reads URL params from report builder handoff,
+auto-advances past product/location steps. `S`
+
+144. [ ] E2E test coverage — report builder navigation, picker/preview/paywall flow,
+deep-link auto-populate. `S`
+
+145. [ ] Report builder close — full suite green, recipe roundtrip green, implementation
+report. `XS`
+
+Epoch gate: a potential buyer can configure a watershed report, see a convincing preview
+with sample data, hit the paywall boundary, and follow the CTA into the order form with
+location pre-filled.
 
 ---
 
