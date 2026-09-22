@@ -892,7 +892,8 @@
   // ── Step 6: Review ────────────────────────────────────────────────────────
   function populateReview() {
     setText("rev-product",  PRODUCT_LABELS[S.product] || S.product);
-    setText("rev-location", S.county + " County, " + S.region);
+    var loc = S.county ? (S.county + " County, " + S.region) : S.region;
+    setText("rev-location", loc || "—");
     setText("rev-style",    STYLE_LABELS[S.style] || S.style);
     setText("rev-size",     S.size + " in");
     setText("rev-email",    S.email);
@@ -1018,6 +1019,7 @@
   if (prefillRegion && startStep !== "step-1") {
     selState.value = prefillRegion;
     selState.dispatchEvent(new Event("change"));
+    S.region = prefillRegion;
     if (prefillCounty) {
       setTimeout(function () {
         selCounty.value = prefillCounty;

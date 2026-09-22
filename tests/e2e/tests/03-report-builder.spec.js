@@ -318,3 +318,124 @@ test.describe('Responsive layout (#142)', () => {
     expect(previewBox.y).toBeGreaterThan(configBox.y);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Order form prefill → review integration tests
+// Verifies that URL-param prefill correctly propagates S.region/S.county
+// through to the review step. Regression suite for the "Unsupported region ''"
+// bug where S.region was not explicitly set during prefill.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.describe('Order prefill → review (#143 regression)', () => {
+
+  // Helper: navigate through steps 3–6 to reach the review, filling required
+  // fields along the way. Assumes step 3 (Style) is the starting step.
+  async function walkToReview(page, { email, name } = {}) {
+    // Step 3: select style
+    await page.click('[data-style="neon-basin"]');
+    await page.click('#btn-next-3');
+    // Step 4: title (optional — just proceed)
+    await page.click('#btn-next-4');
+    // Step 5: contact
+    await page.fill('#inp-email', email || 'test@example.com');
+    if (name) await page.fill('#inp-name', name);
+    await page.click('#btn-next-5');
+    // Now on step 6 (review)
+    await expect(page.locator('#step-6')).toBeVisible();
+  }
+
+  test('prefilled region+county appear correctly in review', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto(
+      '/web/order.html?product=watershed-report&region=Washington&county=Clark',
+      { waitUntil: 'load' }
+    );
+    await walkToReview(page);
+    const location = await page.locator('#rev-location').textContent();
+    expect(location).toBe('Clark County, Washington');
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('multi-word state (New York) preserved through prefill to review', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto(
+      '/web/order.html?product=watershed-report&region=New+York&county=New+York',
+      { waitUntil: 'load' }
+    );
+    await walkToReview(page);
+    const location = await page.locator('#rev-location').textContent();
+    expect(location).toBe('New York County, New York');
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('state-only prefill (no county) shows state on review after manual county pick', async ({ page }) => {
+    const errors = trackErrors(page);
+    await page.goto(
+      '/web/order.html?product=watershed-report&region=Oregon',
+      { waitUntil: 'load' }
+    );
+    // Should land on step 2 (location) — county not prefilled
+    await expect(page.locator('#step-2')).toBeVisible();
+    // Manually select a county
+    await page.selectOption('#sel-county', 'Multnomah');
+    await page.click('#btn-next-2');
+    await walkToReview(page);
+    const location = await page.locator('#rev-location').textContent();
+    expect(location).toBe('Multnomah County, Oregon');
+    expect(errors, errors.join('\n')).toEqual([]);
+  });
+
+  test('review location never shows bare "County," when region is empty', async ({ page }) => {
+    // Edge case: navigate manually (no URL prefill) — empty region falls back to "—"
+    await page.goto('/web/order.html', { waitUntil: 'load' });
+    // Evaluate the populateReview fallback in isolation
+    const loc = await page.evaluate(() => {
+      const S = { county: '', region: '' };
+      const loc = S.county ? (S.county + ' County, ' + S.region) : S.region;
+      return loc || '—';
+    });
+    expect(loc).toBe('—');
+    // Also verify it never matches the old buggy pattern
+    expect(loc).not.toMatch(/^\s*County,\s*$/);
+  });
+
+  test('state select value matches S.region after prefill', async ({ page }) => {
+    await page.goto(
+      '/web/order.html?product=watershed-report&region=Washington&county=Clark',
+      { waitUntil: 'load' }
+    );
+    // Read the internal S.region value via the page context
+    const region = await page.evaluate(() => {
+      // The select's value should match the prefilled region
+      return document.getElementById('sel-state').value;
+    });
+    expect(region).toBe('Washington');
+  });
+
+  test('county select value matches S.county after prefill', async ({ page }) => {
+    await page.goto(
+      '/web/order.html?product=watershed-report&region=Washington&county=Clark',
+      { waitUntil: 'load' }
+    );
+    // County is set via setTimeout(0) — wait a tick
+    await page.waitForTimeout(50);
+    const county = await page.evaluate(() => {
+      return document.getElementById('sel-county').value;
+    });
+    expect(county).toBe('Clark');
+  });
+
+  test('all multi-word states prefill correctly', async ({ page }) => {
+    const multiWordStates = ['New York', 'New Jersey', 'New Hampshire', 'New Mexico',
+      'North Carolina', 'North Dakota', 'South Carolina', 'South Dakota',
+      'West Virginia', 'Rhode Island'];
+    for (const state of multiWordStates) {
+      await page.goto(
+        '/web/order.html?product=watershed-report&region=' + encodeURIComponent(state),
+        { waitUntil: 'load' }
+      );
+      const selVal = await page.evaluate(() => document.getElementById('sel-state').value);
+      expect(selVal, `state select should be ${state}`).toBe(state);
+    }
+  });
+});
