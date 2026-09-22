@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Riverglyph · Marketing Gallery</title>
+<title>Riverglyph · Gallery</title>
 <link rel="icon" href="brand/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.ico" sizes="any">
-<meta property="og:title" content="Riverglyph · Marketing Gallery">
+<meta property="og:title" content="Riverglyph · Gallery">
 <meta property="og:description" content="Cartographic art shaped by the rivers beneath a place.">
 <meta property="og:image" content="brand/social-preview.png">
 <link rel="stylesheet" href="shared/ux.css" />
@@ -17,222 +17,404 @@
     border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 6px;
   }
   header.gallery-head .spacer { flex: 1; }
-  .attribution { color: var(--muted); font-size: 11px; margin: 0 0 18px; }
-  .attribution b { color: var(--ink); }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 0 0 14px; padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .toolbar .sel-count { color: var(--muted); font-size: 11px; }
+  .toolbar .btn { width: auto; padding: 7px 16px; margin: 0; }
+  .filter-group { display: flex; gap: 6px; align-items: center; }
+  .filter-group label { color: var(--muted); font-size: 11px; }
+  .filter-group select { width: auto; min-width: 100px; padding: 5px 8px; font-size: 11px; }
+
+  /* ---------- Grid ---------- */
   .grid {
     display: grid; gap: 16px;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
   .card {
     border: 1px solid var(--line); border-radius: var(--radius);
-    background: var(--panel-2); padding: 14px 14px 12px; display: flex;
-    flex-direction: column; gap: 8px;
+    background: var(--panel-2); display: flex;
+    flex-direction: column; overflow: hidden;
+    transition: border-color .15s;
   }
-  .card .meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .card .place { font-size: 14px; color: var(--ink); font-weight: 600; }
-  .card .tag {
-    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--accent); border: 1px solid var(--accent-dim);
-    border-radius: var(--radius-sm); padding: 1px 6px;
+  .card.selected { border-color: var(--accent-light); }
+  .card .thumb {
+    position: relative; background: var(--bg);
+    display: grid; place-items: center;
+    min-height: 200px; cursor: pointer;
+    overflow: hidden;
   }
-  .card .endpoint {
-    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--accent); border: 1px solid var(--accent);
-    border-radius: var(--radius-sm); padding: 1px 6px;
+  .card .thumb img, .card .thumb object {
+    max-width: 100%; max-height: 280px; object-fit: contain;
+    display: block;
   }
-  .card .sellable {
-    font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-    color: var(--bg); background: var(--accent-dim);
-    border-radius: var(--radius-sm); padding: 1px 6px; margin-left: auto;
+  .card .thumb .no-preview {
+    color: var(--muted); font-size: 11px; padding: 40px 20px;
+    text-align: center;
   }
-  .card .rationale { color: var(--muted); font-size: 12px; line-height: 1.45; }
-  .card .deliverables {
-    list-style: none; margin: 4px 0 0; padding: 8px 0 0; font-size: 11px;
-    border-top: 1px solid var(--line);
+  .card .thumb .fmt-badge {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--ink); background: rgba(0,0,0,.65);
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 2px 7px;
   }
-  .card .deliverables li {
-    display: flex; justify-content: space-between; gap: 10px; padding: 2px 0;
-    color: var(--muted);
+  .card .info {
+    padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 4px;
   }
-  .card .deliverables .fname { color: var(--ink); font-family: var(--mono, monospace); word-break: break-all; }
-  .card .deliverables .dims { white-space: nowrap; }
-  .empty { color: var(--warn); padding: 20px 0; }
+  .card .info .row-top { display: flex; align-items: center; gap: 8px; }
+  .card .fname {
+    font-size: 12px; color: var(--ink); font-weight: 600;
+    word-break: break-all; flex: 1;
+  }
+  .card .fsize { color: var(--muted); font-size: 10px; white-space: nowrap; }
+  .card .actions { display: flex; gap: 6px; margin-top: 4px; }
+  .card .actions .btn { padding: 5px 10px; font-size: 10px; width: auto; margin: 0; }
+
+  .empty { color: var(--warn); padding: 40px 0; text-align: center; }
+
+  /* ---------- Lightbox ---------- */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.88); display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox .lb-close {
+    position: absolute; top: 16px; right: 20px;
+    background: none; border: none; color: var(--ink);
+    font-size: 28px; cursor: pointer; z-index: 1001;
+    line-height: 1;
+  }
+  .lightbox .lb-close:hover { color: var(--accent-light); }
+  .lightbox .lb-img {
+    max-width: 92vw; max-height: 82vh; object-fit: contain;
+  }
+  .lightbox .lb-fname {
+    color: var(--muted); font-size: 12px; margin-top: 12px;
+  }
+  .lightbox .lb-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .lightbox .lb-actions .btn { width: auto; padding: 7px 18px; margin: 0; }
+  .lightbox .lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(0,0,0,.5); border: 1px solid var(--line);
+    color: var(--ink); font-size: 24px; padding: 12px 14px;
+    cursor: pointer; border-radius: var(--radius-sm); line-height: 1;
+  }
+  .lightbox .lb-nav:hover { background: rgba(255,255,255,.08); color: var(--accent-light); }
+  .lightbox .lb-prev { left: 12px; }
+  .lightbox .lb-next { right: 12px; }
 </style>
 </head>
 <body>
 <header class="gallery-head">
   <h1 class="brand">Riverglyph</h1>
-  <div class="sub" id="subtitle">Curated marketing gallery · rights-clean, public-domain sources</div>
+  <div class="sub" id="subtitle">Output gallery</div>
   <div class="spacer"></div>
   <div class="sub" id="count"></div>
 </header>
-<p class="attribution" id="attribution"></p>
+
+<div class="toolbar" id="toolbar">
+  <div class="filter-group">
+    <label>Format:</label>
+    <select id="filterFmt">
+      <option value="">All</option>
+      <option value="png">PNG</option>
+      <option value="svg">SVG</option>
+      <option value="pdf">PDF</option>
+    </select>
+  </div>
+  <div class="spacer"></div>
+  <span class="sel-count" id="selCount"></span>
+  <button class="btn" id="btnSelectAll">Select all</button>
+  <button class="btn" id="btnClearSel">Clear</button>
+  <button class="btn solid" id="btnDownload" disabled>Download selected</button>
+</div>
 
 <div class="grid" id="grid"></div>
 
-<!-- Embedded sample ledger: the render-independent skeleton produced by
-     src.gallery.gallery_ledger() (schema hydro-art/gallery-ledger@1). Over http(s)
-     a ?ledger=<url> query param can point at a real stamped ledger sidecar. -->
-<script id="sample-ledger" type="application/json">
-{
-  "schema": "hydro-art/gallery-ledger@1",
-  "attribution": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
-  "sources": [
-    {"name": "USGS NHDPlus HR", "version": null},
-    {"name": "USGS NHD", "version": null},
-    {"name": "USGS WBD", "version": null}
-  ],
-  "assets": [
-    {
-      "item_id": "or-neon-digital", "region": "Oregon", "county": "Deschutes",
-      "style": "neon-basin", "endpoint": "digital_image", "sellable": true,
-      "rationale": "Flagship neon-basin river art (SVG + PNG) \u2014 the signature look.",
-      "deliverables": [
-        {"filename": "or-neon-digital_oregon-deschutes_neon-basin_digital.svg", "kind": "vector", "fmt": "svg", "width_px": null, "height_px": null, "sha256": null},
-        {"filename": "or-neon-digital_oregon-deschutes_neon-basin_digital.png", "kind": "raster", "fmt": "png", "width_px": null, "height_px": null, "sha256": null}
-      ]
-    },
-    {
-      "item_id": "wa-elev-print", "region": "Washington", "county": "Wahkiakum",
-      "style": "elevation-tint", "endpoint": "print_image", "sellable": true,
-      "rationale": "Archival hypsometric terrain print at gallery size (24x36).",
-      "deliverables": [
-        {"filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.png", "kind": "raster", "fmt": "png", "width_px": 7200, "height_px": 10800, "sha256": null},
-        {"filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.pdf", "kind": "raster", "fmt": "pdf", "width_px": 7200, "height_px": 10800, "sha256": null},
-        {"filename": "wa-elev-print_washington-wahkiakum_elevation-tint_print.tiff", "kind": "raster", "fmt": "tiff", "width_px": 7200, "height_px": 10800, "sha256": null}
-      ]
-    },
-    {
-      "item_id": "ca-neon-animation", "region": "California", "county": "Shasta",
-      "style": "neon-basin", "endpoint": "animation", "sellable": true,
-      "rationale": "Year-in-motion seasonality \u2014 flow disaggregated across the calendar year.",
-      "deliverables": [
-        {"filename": "ca-neon-animation_california-shasta_neon-basin_motion.gif", "kind": "motion", "fmt": "gif", "width_px": null, "height_px": null, "sha256": null},
-        {"filename": "ca-neon-animation_california-shasta_neon-basin_motion.mp4", "kind": "motion", "fmt": "mp4", "width_px": null, "height_px": null, "sha256": null}
-      ]
-    },
-    {
-      "item_id": "id-elev-digital", "region": "Idaho", "county": "Blaine",
-      "style": "elevation-tint", "endpoint": "digital_image", "sellable": true,
-      "rationale": "Elevation-mono treatment carried to a fourth region \u2014 range across styles.",
-      "deliverables": [
-        {"filename": "id-elev-digital_idaho-blaine_elevation-tint_digital.svg", "kind": "vector", "fmt": "svg", "width_px": null, "height_px": null, "sha256": null},
-        {"filename": "id-elev-digital_idaho-blaine_elevation-tint_digital.png", "kind": "raster", "fmt": "png", "width_px": null, "height_px": null, "sha256": null}
-      ]
-    },
-    {
-      "item_id": "wa-neon-report", "region": "Washington", "county": "Wahkiakum",
-      "style": "neon-basin", "endpoint": "report", "sellable": true,
-      "rationale": "Watershed analytics report \u2014 the data-story deliverable.",
-      "deliverables": [
-        {"filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.html", "kind": "document", "fmt": "html", "width_px": null, "height_px": null, "sha256": null},
-        {"filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.png", "kind": "figures", "fmt": "png", "width_px": null, "height_px": null, "sha256": null}
-      ]
-    }
-  ]
-}
-</script>
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lbClose">&times;</button>
+  <button class="lb-nav lb-prev" id="lbPrev">&#8249;</button>
+  <button class="lb-nav lb-next" id="lbNext">&#8250;</button>
+  <img class="lb-img" id="lbImg" alt="" />
+  <div class="lb-fname" id="lbFname"></div>
+  <div class="lb-actions">
+    <a class="btn solid" id="lbDownload" href="#" download>Download</a>
+  </div>
+</div>
 
 <script>
-  function $(id) { return document.getElementById(id); }
+(function () {
+  "use strict";
 
-  function embeddedLedger() {
-    return JSON.parse($("sample-ledger").textContent);
+  var $ = function (id) { return document.getElementById(id); };
+  var allFiles = [];          // full API response
+  var filtered = [];          // after format filter
+  var selected = new Set();   // set of filenames
+  var lbIndex = -1;           // current lightbox index in filtered[]
+
+  // ---- Data fetching ----
+
+  function fetchOutputs() {
+    fetch("/api/gallery/outputs")
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        allFiles = data.files || [];
+        applyFilter();
+      })
+      .catch(function () {
+        $("grid").innerHTML = '<div class="empty">Could not load outputs. Is the dev server running?</div>';
+      });
   }
 
-  function dims(d) {
-    if (d.width_px && d.height_px) return d.width_px + "\u00d7" + d.height_px + " px";
-    return d.fmt.toUpperCase();
+  // ---- Filtering ----
+
+  function applyFilter() {
+    var fmt = $("filterFmt").value;
+    filtered = fmt
+      ? allFiles.filter(function (f) { return f.fmt === fmt; })
+      : allFiles.slice();
+    renderGrid();
+    updateSelectionUI();
   }
 
-  function assetCard(asset) {
+  // ---- Rendering ----
+
+  function fmtSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function makeCard(file, idx) {
     var card = document.createElement("div");
-    card.className = "card";
+    card.className = "card" + (selected.has(file.name) ? " selected" : "");
+    card.dataset.name = file.name;
 
-    var meta = document.createElement("div");
-    meta.className = "meta";
-    var place = document.createElement("span");
-    place.className = "place";
-    place.textContent = asset.region + " \u00b7 " + asset.county;
-    var style = document.createElement("span");
-    style.className = "tag";
-    style.textContent = asset.style;
-    var endpoint = document.createElement("span");
-    endpoint.className = "endpoint";
-    endpoint.textContent = asset.endpoint.replace(/_/g, " ");
-    meta.appendChild(place);
-    meta.appendChild(style);
-    meta.appendChild(endpoint);
-    if (asset.sellable) {
-      var badge = document.createElement("span");
-      badge.className = "sellable";
-      badge.textContent = "sellable";
-      meta.appendChild(badge);
+    // Thumbnail area
+    var thumb = document.createElement("div");
+    thumb.className = "thumb";
+    if (file.preview) {
+      if (file.fmt === "svg") {
+        var obj = document.createElement("img");
+        obj.src = file.preview;
+        obj.alt = file.name;
+        obj.loading = "lazy";
+        thumb.appendChild(obj);
+      } else {
+        var img = document.createElement("img");
+        img.src = file.preview;
+        img.alt = file.name;
+        img.loading = "lazy";
+        thumb.appendChild(img);
+      }
+    } else {
+      var noP = document.createElement("div");
+      noP.className = "no-preview";
+      noP.textContent = file.fmt.toUpperCase() + " — no preview available";
+      thumb.appendChild(noP);
     }
-    card.appendChild(meta);
 
-    var rationale = document.createElement("div");
-    rationale.className = "rationale";
-    rationale.textContent = asset.rationale;
-    card.appendChild(rationale);
+    var badge = document.createElement("span");
+    badge.className = "fmt-badge";
+    badge.textContent = file.fmt.toUpperCase();
+    thumb.appendChild(badge);
 
-    var list = document.createElement("ul");
-    list.className = "deliverables";
-    (asset.deliverables || []).forEach(function (d) {
-      var li = document.createElement("li");
-      var fname = document.createElement("span");
-      fname.className = "fname";
-      fname.textContent = d.filename;
-      var meta2 = document.createElement("span");
-      meta2.className = "dims";
-      meta2.textContent = dims(d);
-      li.appendChild(fname);
-      li.appendChild(meta2);
-      list.appendChild(li);
+    thumb.addEventListener("click", function () {
+      if (file.preview) openLightbox(idx);
     });
-    card.appendChild(list);
+    card.appendChild(thumb);
+
+    // Info area
+    var info = document.createElement("div");
+    info.className = "info";
+
+    var rowTop = document.createElement("div");
+    rowTop.className = "row-top";
+
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selected.has(file.name);
+    cb.style.cssText = "accent-color: var(--accent-light); cursor: pointer;";
+    cb.addEventListener("change", function () {
+      toggleSelect(file.name, cb.checked);
+    });
+    rowTop.appendChild(cb);
+
+    var fname = document.createElement("span");
+    fname.className = "fname";
+    fname.textContent = file.name;
+    rowTop.appendChild(fname);
+
+    var fsize = document.createElement("span");
+    fsize.className = "fsize";
+    fsize.textContent = fmtSize(file.size);
+    rowTop.appendChild(fsize);
+
+    info.appendChild(rowTop);
+
+    var actions = document.createElement("div");
+    actions.className = "actions";
+
+    if (file.preview) {
+      var viewBtn = document.createElement("button");
+      viewBtn.className = "btn ghost";
+      viewBtn.textContent = "Preview";
+      viewBtn.addEventListener("click", function () { openLightbox(idx); });
+      actions.appendChild(viewBtn);
+    }
+
+    var dlBtn = document.createElement("a");
+    dlBtn.className = "btn";
+    dlBtn.textContent = "Download";
+    dlBtn.href = file.url;
+    dlBtn.download = file.name;
+    actions.appendChild(dlBtn);
+
+    info.appendChild(actions);
+    card.appendChild(info);
+
     return card;
   }
 
-  function render(ledger) {
-    $("attribution").innerHTML = "";
-    var strong = document.createElement("b");
-    strong.textContent = "Attribution: ";
-    $("attribution").appendChild(strong);
-    $("attribution").appendChild(
-      document.createTextNode(ledger.attribution + "  \u00b7  schema " + ledger.schema)
-    );
-
-    var assets = ledger.assets || [];
-    $("count").textContent = assets.length + " curated asset(s)";
+  function renderGrid() {
     var grid = $("grid");
     grid.innerHTML = "";
-    if (!assets.length) {
+    $("count").textContent = filtered.length + " file(s)";
+    if (!filtered.length) {
       var empty = document.createElement("div");
       empty.className = "empty";
-      empty.textContent = "No assets in this ledger.";
+      empty.textContent = allFiles.length
+        ? "No files match this filter."
+        : "No rendered outputs found in output/.";
       grid.appendChild(empty);
       return;
     }
-    assets.forEach(function (asset) {
-      grid.appendChild(assetCard(asset));
+    filtered.forEach(function (file, idx) {
+      grid.appendChild(makeCard(file, idx));
     });
   }
 
-  function boot() {
-    var params = new URLSearchParams(window.location.search);
-    var url = params.get("ledger");
-    if (url && window.location.protocol !== "file:") {
-      fetch(url)
-        .then(function (r) { return r.json(); })
-        .then(render)
-        .catch(function () { render(embeddedLedger()); });
-    } else {
-      render(embeddedLedger());
+  // ---- Selection ----
+
+  function toggleSelect(name, on) {
+    if (on) selected.add(name); else selected.delete(name);
+    // Update card visual
+    var cards = document.querySelectorAll(".card");
+    cards.forEach(function (c) {
+      if (c.dataset.name === name) {
+        c.classList.toggle("selected", on);
+        var cb = c.querySelector("input[type=checkbox]");
+        if (cb) cb.checked = on;
+      }
+    });
+    updateSelectionUI();
+  }
+
+  function updateSelectionUI() {
+    var n = selected.size;
+    $("selCount").textContent = n ? n + " selected" : "";
+    $("btnDownload").disabled = n === 0;
+  }
+
+  function selectAll() {
+    filtered.forEach(function (f) { selected.add(f.name); });
+    renderGrid();
+    updateSelectionUI();
+  }
+
+  function clearSelection() {
+    selected.clear();
+    renderGrid();
+    updateSelectionUI();
+  }
+
+  function downloadSelected() {
+    // Download each selected file by creating temporary links
+    var toDownload = allFiles.filter(function (f) { return selected.has(f.name); });
+    toDownload.forEach(function (f, i) {
+      setTimeout(function () {
+        var a = document.createElement("a");
+        a.href = f.url;
+        a.download = f.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }, i * 200); // stagger to avoid browser throttling
+    });
+  }
+
+  // ---- Lightbox ----
+
+  function openLightbox(idx) {
+    lbIndex = idx;
+    showLightboxImage();
+    $("lightbox").classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeLightbox() {
+    $("lightbox").classList.remove("open");
+    document.body.style.overflow = "";
+    lbIndex = -1;
+  }
+
+  function showLightboxImage() {
+    var file = filtered[lbIndex];
+    if (!file) return;
+    $("lbImg").src = file.preview || "";
+    $("lbFname").textContent = file.name + "  ·  " + fmtSize(file.size);
+    $("lbDownload").href = file.url;
+    $("lbDownload").download = file.name;
+    // Nav visibility
+    $("lbPrev").style.display = lbIndex > 0 ? "" : "none";
+    $("lbNext").style.display = lbIndex < filtered.length - 1 ? "" : "none";
+  }
+
+  function lbNav(delta) {
+    // Only navigate to items with previews
+    var next = lbIndex + delta;
+    while (next >= 0 && next < filtered.length && !filtered[next].preview) {
+      next += delta;
+    }
+    if (next >= 0 && next < filtered.length) {
+      lbIndex = next;
+      showLightboxImage();
     }
   }
 
-  document.addEventListener("DOMContentLoaded", boot);
+  // ---- Event wiring ----
+
+  $("filterFmt").addEventListener("change", applyFilter);
+  $("btnSelectAll").addEventListener("click", selectAll);
+  $("btnClearSel").addEventListener("click", clearSelection);
+  $("btnDownload").addEventListener("click", downloadSelected);
+  $("lbClose").addEventListener("click", closeLightbox);
+  $("lbPrev").addEventListener("click", function () { lbNav(-1); });
+  $("lbNext").addEventListener("click", function () { lbNav(1); });
+
+  // Close lightbox on backdrop click
+  $("lightbox").addEventListener("click", function (e) {
+    if (e.target === $("lightbox")) closeLightbox();
+  });
+
+  // Keyboard nav in lightbox
+  document.addEventListener("keydown", function (e) {
+    if (!$("lightbox").classList.contains("open")) return;
+    if (e.key === "Escape") closeLightbox();
+    if (e.key === "ArrowLeft") lbNav(-1);
+    if (e.key === "ArrowRight") lbNav(1);
+  });
+
+  // ---- Boot ----
+  fetchOutputs();
+})();
 </script>
 </body>
 </html>

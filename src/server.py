@@ -130,6 +130,10 @@ def handle_request(
     if order_store is not None and route.startswith("/api/orders"):
         return _order_dispatch(order_store, runner, method, route, body, email_sender)
 
+    # --- Gallery output listing ---------------------------------------------
+    if method == "GET" and route == "/api/gallery/outputs" and output_root:
+        return _list_gallery_outputs(output_root)
+
     if method == "GET":
         # Serve /output/ paths from the output directory when configured.
         if output_root and route.startswith("/output/"):
@@ -468,6 +472,34 @@ def _proof_dispatch(
         return _json(202, req.to_dict())
 
     return _json(404, {"error": "Not found."})
+
+
+_GALLERY_EXTS = {".png", ".svg", ".pdf", ".tiff", ".eps"}
+
+
+def _list_gallery_outputs(output_root: str) -> Response:
+    """Return a JSON list of viewable/downloadable files under ``output/``."""
+    root = Path(output_root).resolve()
+    if not root.is_dir():
+        return _json(200, {"files": []})
+    files = []
+    for p in sorted(root.iterdir()):
+        if p.suffix.lower() not in _GALLERY_EXTS or not p.is_file():
+            continue
+        # Skip internal cache/log artefacts (leading underscore).
+        if p.name.startswith("_"):
+            continue
+        entry: dict[str, Any] = {
+            "name": p.name,
+            "fmt": p.suffix.lstrip(".").lower(),
+            "size": p.stat().st_size,
+            "url": f"/output/{p.name}",
+        }
+        # Provide a preview URL — PNGs and SVGs are directly viewable.
+        if p.suffix.lower() in {".png", ".svg"}:
+            entry["preview"] = entry["url"]
+        files.append(entry)
+    return _json(200, {"files": files})
 
 
 def _static(route: str, web_root: str) -> Response:
