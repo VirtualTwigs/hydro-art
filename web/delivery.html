@@ -105,8 +105,9 @@
     var order = req.order || {};
     var isFulfilled = req.status === "fulfilled" || req.status === "approved";
     var hasJob = !!req.job_id;
-    var countyLabel = (order.county || "") + " County";
-    var regionLabel = order.region || "";
+    var locationLabel = order.county
+      ? (order.county + " County, " + (order.region || ""))
+      : (order.region || "—");
     var sizeLabels = { "12x16": "12 x 16 in", "18x24": "18 x 24 in", "24x36": "24 x 36 in" };
     var styleLabels = { "neon-basin": "Neon Basin", "elevation-tint": "Elevation Tint" };
 
@@ -127,7 +128,7 @@
 
     content.innerHTML =
       '<p class="eyebrow">Order ' + req.request_id + '</p>' +
-      '<h1>' + countyLabel + ', ' + regionLabel + '</h1>' +
+      '<h1>' + locationLabel + '</h1>' +
       '<p class="subtitle">' + (req.product || "Hydrographic artwork") + ' &middot; ' + (styleLabels[order.style] || order.style || "") + '</p>' +
       '<div class="status-banner ' + statusClass + '">' + statusText + '</div>' +
 
@@ -143,7 +144,7 @@
           '<dl>' +
             '<div class="info-row"><dt>Order</dt><dd>' + req.request_id + '</dd></div>' +
             '<div class="info-row"><dt>Product</dt><dd>' + (req.product || "—") + '</dd></div>' +
-            '<div class="info-row"><dt>Location</dt><dd>' + countyLabel + ', ' + regionLabel + '</dd></div>' +
+            '<div class="info-row"><dt>Location</dt><dd>' + locationLabel + '</dd></div>' +
             '<div class="info-row"><dt>Style</dt><dd>' + (styleLabels[order.style] || order.style || "—") + '</dd></div>' +
             '<div class="info-row"><dt>Size</dt><dd>' + (sizeLabels[order.size] || order.size || "—") + '</dd></div>' +
           '</dl>' +

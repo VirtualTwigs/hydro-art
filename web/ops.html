@@ -223,7 +223,7 @@
     document.getElementById("detail-id").textContent = o.request_id;
     document.getElementById("detail-status").innerHTML = '<span class="status status-' + o.status + '">' + o.status.replace("_"," ") + '</span>';
     document.getElementById("detail-product").textContent = o.product || "—";
-    document.getElementById("detail-location").textContent = o.order ? o.order.county + " County, " + o.order.region : "—";
+    document.getElementById("detail-location").textContent = o.order ? (o.order.county ? o.order.county + " County, " + o.order.region : o.order.region || "—") : "—";
     document.getElementById("detail-style").textContent = o.order ? o.order.style : "—";
     document.getElementById("detail-size").textContent = o.order ? o.order.size : "—";
     document.getElementById("detail-email").textContent = o.email || "—";
