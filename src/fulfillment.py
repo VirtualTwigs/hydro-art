@@ -141,6 +141,26 @@ ORDER_STYLES: dict[str, StyleSpec] = {
         color_by="elevation", width_by="flow", glow=True,
         renderer="mono", uses_prism=False,
     ),
+    "museum-specimen": StyleSpec(
+        color_by="elevation", width_by="flow", glow=False,
+        renderer="museum_specimen", uses_prism=False,
+    ),
+    "museum-compass": StyleSpec(
+        color_by="watershed", width_by="flow", glow=False,
+        renderer="museum_compass", uses_prism=False,
+    ),
+    "museum-almanac": StyleSpec(
+        color_by="elevation", width_by="flow", glow=False,
+        renderer="museum_almanac", uses_prism=False,
+    ),
+    "museum-divide": StyleSpec(
+        color_by="watershed", width_by="flow", glow=False,
+        renderer="museum_divide", uses_prism=False,
+    ),
+    "museum-index": StyleSpec(
+        color_by="elevation", width_by="flow", glow=False,
+        renderer="museum_index", uses_prism=False,
+    ),
 }
 
 SIZES: dict[str, Size] = {

@@ -209,6 +209,28 @@
     font-family: var(--mono); font-size: 11px; letter-spacing: .06em;
     color: var(--spring);
   }
+  .choice-preview {
+    width: 100%; border-radius: 3px; margin-top: 12px;
+    display: none; box-shadow: 0 4px 16px rgba(0,0,0,.5);
+  }
+  .choice.selected .choice-preview { display: block; }
+  #style-preview-panel {
+    margin-bottom: 28px; border-radius: 6px; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    border: 1px solid rgba(0,255,255,.15);
+    display: none;
+  }
+  #style-preview-panel.visible { display: block; }
+  #style-preview-panel img {
+    width: 100%; display: block;
+  }
+  #style-preview-panel .preview-caption {
+    padding: 10px 14px;
+    background: var(--panel);
+    font-family: var(--mono); font-size: 10px;
+    letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted);
+  }
 
   /* ---- Form fields ---- */
   .field { margin-bottom: 22px; }
@@ -510,8 +532,14 @@
   <div class="step" id="step-3">
     <p class="step-eyebrow">Step 3 of 6 &nbsp;·&nbsp; Style</p>
     <h1>Art direction</h1>
-    <p class="step-lede">Choose how the river network is colored. Both styles use the same underlying USGS data.</p>
+    <p class="step-lede">Choose how the river network is rendered. All styles use the same underlying USGS data.</p>
 
+    <div id="style-preview-panel">
+      <img id="style-preview-img" src="" alt="Style preview">
+      <div class="preview-caption"><span id="style-preview-label">Clark County, WA</span> &nbsp;·&nbsp; preview</div>
+    </div>
+
+    <p style="font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 10px">Data-driven</p>
     <div class="choice-grid" id="style-grid">
       <button class="choice" data-style="neon-basin">
         <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -524,6 +552,40 @@
         <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 28L10 16l5 6 4-10 5 8 5-12"/><line x1="3" y1="28" x2="29" y2="28"/></svg>
         <b>Elevation Tint</b>
         <small>Rivers shaded by terrain height — summit white to valley blue. A quieter, topographic read.</small>
+      </button>
+    </div>
+
+    <p style="font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:24px 0 10px">Museum print collection</p>
+    <div class="choice-grid" id="style-grid-museum">
+      <button class="choice" data-style="museum-specimen">
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="24" height="24" rx="1" stroke="var(--muted)"/><path d="M10 14c4-6 8-4 12 0s4 10 0 12-8-2-12 0" stroke="#578b8b" stroke-width="2"/><path d="M14 13v-2M18 13v-2" stroke="#578b8b" opacity=".5"/></svg>
+        <b>The Specimen</b>
+        <small>Terrain as a quiet field note. A near-monochrome elevation study with the watershed held like a specimen inside a generous museum mat.</small>
+      </button>
+      <button class="choice" data-style="museum-compass">
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="11" stroke="var(--muted)"/><path d="M16 5v22M5 16h22M9 9l14 14M23 9L9 23" stroke="var(--muted)" opacity=".4"/><path d="M12 8c2 5 0 10 4 16" stroke="#d89958" stroke-width="2"/></svg>
+        <b>The Compass</b>
+        <small>One river, all bearings. An old-world survey sheet reimagined — the river drawn in copper on a near-black ground inside a radial grid.</small>
+      </button>
+      <button class="choice" data-style="museum-almanac">
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="12" height="12" rx="1" stroke="#367a88"/><rect x="17" y="3" width="12" height="12" rx="1" stroke="#b67c36"/><rect x="3" y="17" width="12" height="12" rx="1" stroke="#607d4d"/><rect x="17" y="17" width="12" height="12" rx="1" stroke="#aa573f"/></svg>
+        <b>The Almanac</b>
+        <small>A watershed across four seasons. The same river skeleton drawn four times — winter, spring, summer, autumn — each shaped by seasonal flow.</small>
+      </button>
+      <button class="choice" data-style="museum-divide">
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke-width="1.5"><path d="M4 4h10v24H4z" fill="#e76f51" opacity=".6"/><path d="M14 4h14v12H14z" fill="#3c8d99" opacity=".6"/><path d="M14 16h14v12H14z" fill="#e9c46a" opacity=".6"/><path d="M4 4h24v24H4z" stroke="var(--muted)"/><path d="M14 4v24M14 16h14" stroke="#f1efe4" opacity=".7"/></svg>
+        <b>The Divide</b>
+        <small>Watersheds as a color choir. Basin boundaries become the composition — a modern color-field painting that rewards distance and close inspection.</small>
+      </button>
+      <button class="choice" data-style="museum-index">
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="24" height="24" stroke="var(--muted)"/><path d="M10 10c4 6 4 10 6 14" stroke="#23686b" stroke-width="2"/><path d="M18 8v10" stroke="#589496"/><circle cx="10" cy="24" r="2" fill="#d26c4d"/><circle cx="16" cy="10" r="2" fill="#d26c4d"/></svg>
+        <b>The Index</b>
+        <small>Field-guide cartography. A map and its cast of characters — river profile, habitat markers, tributaries, and elevation in an elegant visual index.</small>
       </button>
     </div>
 
@@ -730,8 +792,13 @@
     "year-in-motion":   "Year in Motion",
   };
   var STYLE_LABELS = {
-    "neon-basin":      "Neon Basin",
-    "elevation-tint":  "Elevation Tint",
+    "neon-basin":        "Neon Basin",
+    "elevation-tint":    "Elevation Tint",
+    "museum-specimen":   "The Specimen",
+    "museum-compass":    "The Compass",
+    "museum-almanac":    "The Almanac",
+    "museum-divide":     "The Divide",
+    "museum-index":      "The Index",
   };
 
   // ── Step navigation ───────────────────────────────────────────────────────
@@ -810,16 +877,41 @@
   }
 
   // ── Step 3: Style ─────────────────────────────────────────────────────────
-  var styleBtns = document.querySelectorAll("#style-grid .choice");
+  var STYLE_PREVIEWS = {
+    "neon-basin":        "shared/previews/neon-basin.jpg",
+    "elevation-tint":    "shared/previews/elevation-tint.jpg",
+    "museum-specimen":   "shared/previews/museum-specimen.jpg",
+    "museum-compass":    "shared/previews/museum-compass.jpg",
+    "museum-almanac":    "shared/previews/museum-almanac.jpg",
+    "museum-divide":     "shared/previews/museum-divide.jpg",
+    "museum-index":      "shared/previews/museum-index.jpg",
+  };
+  var previewPanel = document.getElementById("style-preview-panel");
+  var previewImg   = document.getElementById("style-preview-img");
+  var previewLabel = document.getElementById("style-preview-label");
+
+  var allStyleBtns = document.querySelectorAll("#style-grid .choice, #style-grid-museum .choice");
   var btnBack2  = document.getElementById("btn-back-2");
   var btnNext3  = document.getElementById("btn-next-3");
 
-  styleBtns.forEach(function (btn) {
+  function showStylePreview(style) {
+    var src = STYLE_PREVIEWS[style];
+    if (src) {
+      previewImg.src = src;
+      previewLabel.textContent = (STYLE_LABELS[style] || style) + " — Clark County, WA";
+      previewPanel.classList.add("visible");
+    } else {
+      previewPanel.classList.remove("visible");
+    }
+  }
+
+  allStyleBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {
-      styleBtns.forEach(function (b) { b.classList.remove("selected"); });
+      allStyleBtns.forEach(function (b) { b.classList.remove("selected"); });
       btn.classList.add("selected");
       S.style = btn.getAttribute("data-style");
       btnNext3.disabled = false;
+      showStylePreview(S.style);
     });
   });
 
@@ -1044,10 +1136,11 @@
   if (prefillStyle && startStep === "step-3") {
     var styleBtn = document.querySelector('[data-style="' + prefillStyle + '"]');
     if (styleBtn) {
-      styleBtns.forEach(function (b) { b.classList.remove("selected"); });
+      allStyleBtns.forEach(function (b) { b.classList.remove("selected"); });
       styleBtn.classList.add("selected");
       S.style = prefillStyle;
       btnNext3.disabled = false;
+      showStylePreview(prefillStyle);
       startStep = "step-4";
     }
   }

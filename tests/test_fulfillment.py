@@ -136,6 +136,65 @@ def test_catalogs_are_sane():
     assert all(isinstance(s, DataSource) for s in DEFAULT_SOURCES)
 
 
+MUSEUM_STYLES = [
+    "museum-specimen", "museum-compass", "museum-almanac",
+    "museum-divide", "museum-index",
+]
+
+
+def test_museum_styles_registered_in_catalog():
+    for style in MUSEUM_STYLES:
+        assert style in ORDER_STYLES, f"{style} missing from ORDER_STYLES"
+        spec = ORDER_STYLES[style]
+        assert isinstance(spec, StyleSpec)
+        assert not spec.uses_prism, f"{style} must not use PRISM"
+        assert spec.renderer.startswith("museum_"), f"{style} renderer should be museum_*"
+
+
+@pytest.mark.parametrize("style", MUSEUM_STYLES)
+def test_build_order_accepts_museum_styles(style):
+    order = build_order(_payload(style=style))
+    assert order.style == style
+    assert isinstance(order, Order)
+
+
+@pytest.mark.parametrize("style", MUSEUM_STYLES)
+def test_museum_styles_pass_rights_gate(style):
+    order = build_order(_payload(style=style))
+    assert_sellable(order)  # should not raise
+
+
+@pytest.mark.parametrize("style", MUSEUM_STYLES)
+def test_deliverable_plan_works_for_museum_styles(style):
+    order = build_order(_payload(style=style, formats=["png", "pdf"]))
+    plan = deliverable_plan(order)
+    assert len(plan.items) >= 2
+    fmts = {d.fmt for d in plan.items}
+    assert "png" in fmts and "pdf" in fmts
+    # filenames are deterministic
+    plan2 = deliverable_plan(build_order(_payload(style=style, formats=["png", "pdf"])))
+    assert [d.filename for d in plan.items] == [d.filename for d in plan2.items]
+
+
+@pytest.mark.parametrize("style", MUSEUM_STYLES)
+def test_museum_manifest_round_trips(style):
+    order = build_order(_payload(style=style))
+    plan = deliverable_plan(order)
+    cks = {d.filename: "ab" * 32 for d in plan.items}
+    m = fulfillment_manifest(order, plan, checksums=cks)
+    assert m["order"]["style"] == style
+    assert m["order"]["order_id"] == "ORD-1001"
+
+
+@pytest.mark.parametrize("style", MUSEUM_STYLES)
+def test_museum_title_block_defaults(style):
+    order = build_order(_payload(style=style, title=None, subtitle=None))
+    tb = title_block(order)
+    assert "Clark" in tb["title"]
+    assert "Washington" in tb["subtitle"]
+    assert tb["credit"]
+
+
 # --- Group 2: title block & attribution -----------------------------------
 
 def test_attribution_line_default_is_deterministic_and_nonempty():
