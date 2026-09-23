@@ -17,7 +17,7 @@
 
   :root {
     --bg:#07080c; --bg-2:#0a0c13; --panel:#10121b; --panel-2:#171a26; --line:#232838;
-    --ink:#e6ebf5; --muted:#8891a8; --faint:#5b6480;
+    --ink:#e6ebf5; --muted:#8891a8; --faint:#7b849c; --accent:#2AABAD;
     --cyan:#00ffff; --violet:#9d00ff; --azure:#0a5cff; --spring:#00ffab; --amber:#ffb300;
     --serif:"Fraunces", Georgia, "Times New Roman", serif;
     --display:"Fraunces Display", "Fraunces", Georgia, serif;
@@ -105,14 +105,14 @@
     font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
   }
   .progress-step {
-    display: flex; align-items: center; gap: 8px; color: var(--faint);
+    display: flex; align-items: center; gap: 8px; color: var(--muted);
     transition: color .3s;
   }
   .progress-step.done { color: var(--spring); }
   .progress-step.active { color: var(--cyan); }
   .progress-dot {
     width: 20px; height: 20px; border-radius: 50%;
-    border: 1px solid var(--faint);
+    border: 1px solid var(--muted);
     display: flex; align-items: center; justify-content: center;
     font-size: 9px; flex-shrink: 0; transition: border-color .3s, background .3s;
   }
@@ -141,7 +141,7 @@
   .step h1 {
     font-family: var(--display); font-weight: 600;
     font-size: clamp(30px, 4vw, 46px); line-height: .97;
-    letter-spacing: -.015em; margin: 0 0 14px;
+    letter-spacing: -.015em; margin: 0 0 14px; color: #fff;
   }
   .step-lede {
     font-size: 16px; color: var(--muted); max-width: 38em;
@@ -179,20 +179,27 @@
   .choice.selected::after { box-shadow: inset 0 0 20px rgba(0,255,255,.06); }
   .choice-check {
     position: absolute; top: 14px; right: 14px;
-    width: 18px; height: 18px; border-radius: 50%;
-    border: 1px solid var(--line); background: var(--bg);
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--muted); background: transparent;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; transition: border-color .2s, background .2s;
+    transition: border-color .2s, background .2s, box-shadow .2s;
   }
+  .choice-check svg { display: none; }
+  .choice:hover .choice-check { border-color: var(--ink); }
   .choice.selected .choice-check {
-    border-color: var(--cyan); background: var(--cyan); color: #031318;
+    border-color: var(--cyan); background: var(--cyan);
+    box-shadow: 0 0 8px rgba(0,255,255,.35);
   }
+  .choice.selected .choice-check svg { display: block; }
   .choice-icon {
-    font-size: 26px; margin-bottom: 10px; display: block; line-height: 1;
+    width: 32px; height: 32px; margin-bottom: 10px; display: block;
+    color: var(--cyan); opacity: .7;
   }
+  .choice:hover .choice-icon { opacity: .9; }
+  .choice.selected .choice-icon { opacity: 1; }
   .choice b {
     display: block; font-family: var(--display); font-weight: 600;
-    font-size: 19px; margin-bottom: 5px;
+    font-size: 19px; margin-bottom: 5px; color: #fff;
   }
   .choice small {
     display: block; color: var(--muted); font-size: 13.5px; line-height: 1.5;
@@ -237,7 +244,7 @@
   .field select:disabled { opacity: .45; cursor: not-allowed; }
   .field-hint {
     margin-top: 6px; font-family: var(--mono); font-size: 11px;
-    letter-spacing: .04em; color: var(--faint);
+    letter-spacing: .04em; color: var(--muted);
   }
 
   /* ---- Size selector ---- */
@@ -257,7 +264,7 @@
     background: rgba(0,255,255,.06);
     box-shadow: 0 0 0 1px var(--cyan);
   }
-  .size-btn span { display: block; font-size: 10px; color: var(--faint); margin-top: 3px; }
+  .size-btn span { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; }
 
   /* ---- Buttons ---- */
   .btn {
@@ -288,7 +295,7 @@
     padding: 20px 24px 16px;
     border-bottom: var(--edge);
     font-family: var(--mono); font-size: 10px;
-    letter-spacing: .18em; text-transform: uppercase; color: var(--faint);
+    letter-spacing: .18em; text-transform: uppercase; color: var(--muted);
   }
   .summary dl { margin: 0; padding: 6px 0; }
   .summary dl > div {
@@ -305,7 +312,7 @@
   .summary-product-title {
     padding: 22px 24px 18px;
     font-family: var(--display); font-weight: 600;
-    font-size: 26px; color: var(--ink);
+    font-size: 26px; color: #fff;
     border-bottom: var(--edge);
   }
 
@@ -329,6 +336,7 @@
   .confirmation h1 {
     font-family: var(--display); font-weight: 600;
     font-size: clamp(32px, 4vw, 52px); letter-spacing: -.015em; margin: 0 0 8px;
+    color: #fff;
   }
   .confirmation .req-id {
     font-family: var(--mono); font-size: 22px; letter-spacing: .1em;
@@ -348,7 +356,7 @@
   }
   .next-steps-label {
     font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--faint); margin-bottom: 14px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
   }
   .next-steps ol {
     margin: 0; padding-left: 20px;
@@ -369,7 +377,7 @@
     border-top: var(--edge); padding: 32px 28px;
     display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
     font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em;
-    color: var(--faint);
+    color: var(--muted);
   }
 
   /* ---- Responsive ---- */
@@ -446,29 +454,29 @@
 
     <div class="choice-grid" id="product-grid">
       <button class="choice" data-product="digital-image">
-        <div class="choice-check">✓</div>
-        <span class="choice-icon">🖥</span>
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="26" height="18" rx="2"/><line x1="11" y1="28" x2="21" y2="28"/><line x1="16" y1="24" x2="16" y2="28"/></svg>
         <b>Digital Image</b>
         <small>High-resolution SVG or PNG for screens, social, or your own printing.</small>
         <span class="price-hint">from $38</span>
       </button>
       <button class="choice" data-product="fine-art-print">
-        <div class="choice-check">✓</div>
-        <span class="choice-icon">🖼</span>
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="24" height="24" rx="1"/><rect x="8" y="8" width="16" height="16" rx="0.5"/></svg>
         <b>Fine-art Print</b>
         <small>Museum-grade archival pigment print — sizes up to 24×36.</small>
         <span class="price-hint">from $110</span>
       </button>
       <button class="choice" data-product="watershed-report">
-        <div class="choice-check">✓</div>
-        <span class="choice-icon">📊</span>
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="22" height="26" rx="2"/><line x1="10" y1="10" x2="22" y2="10"/><line x1="10" y1="15" x2="22" y2="15"/><line x1="10" y1="20" x2="17" y2="20"/><polyline points="10,25 14,22 18,26 22,21"/></svg>
         <b>Watershed Report</b>
         <small>Plain-language visual study of how your watershed's water moves through the year.</small>
         <span class="price-hint">from $95</span>
       </button>
       <button class="choice" data-product="year-in-motion">
-        <div class="choice-check">✓</div>
-        <span class="choice-icon">🌊</span>
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20c3-4 5-8 8-8s4 8 7 8 4-8 7-8 4 4 6 8"/><path d="M2 14c3-4 5-8 8-8s4 8 7 8 4-8 7-8 4 4 6 8" opacity=".4"/><path d="M8 26h4l2-3 3 5 2-4h5" stroke-width="1.2"/></svg>
         <b>Year in Motion</b>
         <small>A short loop of your rivers swelling and receding through the seasons. GIF / MP4.</small>
         <span class="price-hint">from $64</span>
@@ -506,12 +514,14 @@
 
     <div class="choice-grid" id="style-grid">
       <button class="choice" data-style="neon-basin">
-        <div class="choice-check">✓</div>
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4v6M10 7l3 5M22 7l-3 5" stroke="var(--cyan)"/><path d="M8 14c2 6 5 14 8 14s6-8 8-14" stroke="var(--violet)"/><circle cx="16" cy="26" r="3" stroke="var(--spring)"/></svg>
         <b>Neon Basin</b>
         <small>Watersheds colored in luminous neons — tributaries share their basin hue. The signature look.</small>
       </button>
       <button class="choice" data-style="elevation-tint">
-        <div class="choice-check">✓</div>
+        <div class="choice-check"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5L4.5 9L10 3" stroke="#031318" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <svg class="choice-icon" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 28L10 16l5 6 4-10 5 8 5-12"/><line x1="3" y1="28" x2="29" y2="28"/></svg>
         <b>Elevation Tint</b>
         <small>Rivers shaded by terrain height — summit white to valley blue. A quieter, topographic read.</small>
       </button>
@@ -539,22 +549,22 @@
     </div>
 
     <div class="field">
-      <label for="inp-title">Title <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <label for="inp-title">Title <span style="color:var(--muted); font-size:10px; letter-spacing:0">(optional)</span></label>
       <input type="text" id="inp-title" placeholder="e.g. Clark County Rivers" maxlength="80" autocomplete="off">
     </div>
     <div class="field">
-      <label for="inp-subtitle">Subtitle <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <label for="inp-subtitle">Subtitle <span style="color:var(--muted); font-size:10px; letter-spacing:0">(optional)</span></label>
       <input type="text" id="inp-subtitle" placeholder="e.g. Washington State · NHDPlus HR" maxlength="80" autocomplete="off">
     </div>
     <div class="field">
-      <label for="inp-note">Note to us <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <label for="inp-note">Note to us <span style="color:var(--muted); font-size:10px; letter-spacing:0">(optional)</span></label>
       <textarea id="inp-note" placeholder="Any special requests — framing, color tweaks, rush timeline…" maxlength="500"></textarea>
     </div>
 
     <div class="field" style="border-top:1px solid var(--line); padding-top:20px; margin-top:8px">
       <label style="display:flex; align-items:center; gap:10px; cursor:pointer">
         <input type="checkbox" id="inp-trip" style="width:18px; height:18px; accent-color:var(--cyan)">
-        <span>Trip memorial overlay <span style="color:var(--faint); font-size:10px">(+50% surcharge)</span></span>
+        <span>Trip memorial overlay <span style="color:var(--muted); font-size:10px">(+50% surcharge)</span></span>
       </label>
       <p style="font-size:12px; color:var(--muted); margin:6px 0 0">Overlay your hiking, paddling, or cycling route onto the artwork.</p>
     </div>
@@ -580,7 +590,7 @@
       <input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email">
     </div>
     <div class="field">
-      <label for="inp-name">Name <span style="color:var(--faint); font-size:10px; letter-spacing:0">(optional)</span></label>
+      <label for="inp-name">Name <span style="color:var(--muted); font-size:10px; letter-spacing:0">(optional)</span></label>
       <input type="text" id="inp-name" placeholder="First name or full name" maxlength="80" autocomplete="name">
     </div>
 
@@ -595,7 +605,7 @@
         <input type="text" id="inp-ship-line1" placeholder="Street address" maxlength="120" autocomplete="shipping address-line1">
       </div>
       <div class="field">
-        <label for="inp-ship-line2">Address line 2 <span style="color:var(--faint); font-size:10px">(optional)</span></label>
+        <label for="inp-ship-line2">Address line 2 <span style="color:var(--muted); font-size:10px">(optional)</span></label>
         <input type="text" id="inp-ship-line2" placeholder="Apt, suite, unit" maxlength="80" autocomplete="shipping address-line2">
       </div>
       <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px">
@@ -668,7 +678,7 @@
           <li>Final files are delivered for download</li>
         </ol>
       </div>
-      <p style="font-family:var(--mono); font-size:12px; color:var(--faint)">
+      <p style="font-family:var(--mono); font-size:12px; color:var(--muted)">
         Track at: <a id="confirm-delivery-link" href="#" style="color:var(--cyan)">—</a>
       </p>
       <div class="btn-row" style="justify-content:center; margin-top:28px">

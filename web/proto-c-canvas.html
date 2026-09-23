@@ -22,13 +22,13 @@
   /* Bottom timeline */
   .scrubber { position: fixed; left: 14px; right: 14px; bottom: 14px; padding: 10px 14px; z-index: 5; }
   .scrubber .row1 { display: flex; align-items: center; gap: 12px; }
-  .play { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--accent-dim); background: transparent; color: var(--accent); cursor: pointer; font-size: 15px; }
+  .play { width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--accent-dim); background: transparent; color: var(--accent-light); cursor: pointer; font-size: 15px; }
   .play:hover { background: rgba(0,255,255,.08); }
   .scrubber .timeline { flex: 1; }
-  .scrubber .now { color: var(--accent); min-width: 116px; text-align: right; font-size: 12px; }
+  .scrubber .now { color: var(--accent-light); min-width: 116px; text-align: right; font-size: 12px; }
   .iconbtn { background: transparent; border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--muted); padding: 6px 10px; cursor: pointer; font: inherit; }
   .iconbtn:hover { color: var(--ink); border-color: var(--accent-dim); }
-  .iconbtn.on { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .iconbtn.on { color: #fff; background: var(--accent-light); border-color: var(--accent-light); }
 </style>
 </head>
 <body>
@@ -46,9 +46,9 @@
   </div>
   <div class="ctrl" id="countyCtrl" hidden><label>County</label><select id="county"></select></div>
   <div class="spacer"></div>
-  <button class="iconbtn" id="styleBtn">◐ Style</button>
-  <button class="iconbtn" id="glowBtn">✦ Glow</button>
-  <button class="iconbtn on" id="exportBtn">⤓ Export</button>
+  <button class="iconbtn" id="styleBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20" fill="currentColor" opacity=".5"/></svg> Style</button>
+  <button class="iconbtn" id="glowBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M18 15l.75 2.25L21 18l-2.25.75L18 21l-.75-2.25L15 18l2.25-.75L18 15z"/></svg> Glow</button>
+  <button class="iconbtn on" id="exportBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
 </div>
 
 <!-- Style popover -->
@@ -106,13 +106,13 @@
   </div>
   <label class="row" style="margin-top:12px">build.py command</label>
   <pre id="cli" style="font-size:11px"></pre>
-  <button class="btn solid" id="genBtn" style="margin-top:10px">⤓ Generate</button>
+  <button class="btn solid" id="genBtn" style="margin-top:10px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Generate</button>
 </div>
 
 <!-- Bottom scrubber -->
 <div class="scrubber glass">
   <div class="row1">
-    <button class="play" id="play" title="Play year-in-motion">▶</button>
+    <button class="play" id="play" title="Play year-in-motion"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,3 20,12 6,21"/></svg></button>
     <div class="seg" id="timeMode" style="margin:0; flex:0 0 auto">
       <button data-v="annual" class="active">Annual</button>
       <button data-v="single">Month</button>
@@ -190,9 +190,9 @@ function apply(){
 
 // Play (year-in-motion): cycle through the selected range (or full year)
 function togglePlay(){
-  if (playing){ clearInterval(playing); playing = null; el("play").textContent = "▶"; return; }
+  if (playing){ clearInterval(playing); playing = null; el("play").innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6,3 20,12 6,21"/></svg>'; return; }
   if (state.timeMode === "annual"){ state.timeMode = "range"; state.monthStart = 0; state.monthEnd = 11; setSeg("timeMode","range"); }
-  el("play").textContent = "❚❚";
+  el("play").innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="5" y="3" width="4" height="18" rx="1"/><rect x="15" y="3" width="4" height="18" rx="1"/></svg>';
   playing = setInterval(() => {
     const lo = state.timeMode === "range" ? state.monthStart : 0;
     const hi = state.timeMode === "range" ? state.monthEnd : 11;

@@ -79,7 +79,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent-light); font: inhe
 }
 .seg button:hover { color: var(--ink); }
 .seg button.active {
-  color: var(--bg); background: var(--accent-light);
+  color: #fff; background: var(--accent-light);
   border-color: var(--accent-light); font-weight: 600;
 }
 
@@ -90,7 +90,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent-light); font: inhe
   padding: 9px; cursor: pointer; margin-top: 4px; font: inherit;
 }
 .btn:hover { background: rgba(23,108,112,.12); }
-.btn.solid { background: var(--accent-light); color: var(--bg); border-color: var(--accent-light); font-weight: 600; }
+.btn.solid { background: var(--accent-light); color: #fff; border-color: var(--accent-light); font-weight: 600; }
 .btn.solid:hover { background: #35c4c8; }
 .btn.ghost { color: var(--muted); border-color: var(--line); }
 .btn.ghost:hover { color: var(--ink); background: rgba(255,255,255,.04); }
@@ -105,7 +105,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent-light); font: inhe
   background: var(--panel-3); color: var(--muted); cursor: pointer; font-size: 11px;
 }
 .chip:hover { color: var(--ink); }
-.chip.active { color: var(--bg); background: var(--accent-light); border-color: var(--accent-light); font-weight: 600; }
+.chip.active { color: #fff; background: var(--accent-light); border-color: var(--accent-light); font-weight: 600; }
 .tag {
   display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 4px;
   border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: middle;
@@ -152,7 +152,7 @@ pre {
 }
 .timeline .mo:hover { color: var(--ink); }
 .timeline .mo.in-range { border-color: var(--accent-dim); color: var(--ink); background: rgba(23,108,112,.08); }
-.timeline .mo.edge { background: var(--accent-light); color: var(--bg); border-color: var(--accent-light); font-weight: 700; }
+.timeline .mo.edge { background: var(--accent-light); color: #fff; border-color: var(--accent-light); font-weight: 700; }
 
 /* ---------- Stepper (wizard prototype) ---------- */
 .steps { display: flex; gap: 0; margin: 0 0 18px; }
@@ -165,7 +165,7 @@ pre {
   border: 1px solid var(--line); margin-right: 6px; font-size: 10px;
 }
 .steps .step.active { color: var(--ink); border-bottom-color: var(--accent-light); }
-.steps .step.active .num { background: var(--accent-light); color: var(--bg); border-color: var(--accent-light); }
+.steps .step.active .num { background: var(--accent-light); color: #fff; border-color: var(--accent-light); }
 .steps .step.done { color: var(--ok); border-bottom-color: var(--accent-dim); }
 .steps .step.done .num { color: var(--ok); border-color: var(--accent-dim); }
 

@@ -60,7 +60,7 @@
   }
   .scope-row button:hover { color: var(--ink); }
   .scope-row button.active {
-    color: var(--bg); background: var(--accent-light);
+    color: #fff; background: var(--accent-light);
     border-color: var(--accent-light); font-weight: 600;
   }
 
@@ -110,7 +110,7 @@
 
   /* ── Generate / order buttons ───────────────────────────── */
   .btn-generate {
-    width: 100%; background: var(--accent-light); color: var(--bg);
+    width: 100%; background: var(--accent-light); color: #fff;
     border: 1px solid var(--accent-light); border-radius: var(--radius-sm);
     padding: 11px; cursor: pointer; font: inherit; font-weight: 600;
     font-size: 12px; letter-spacing: .04em; margin-top: 12px;
@@ -126,7 +126,7 @@
     font-size: 12px; letter-spacing: .04em; margin-top: 8px;
     transition: background .15s, color .15s;
   }
-  .btn-order:hover { background: var(--accent-light); color: var(--bg); }
+  .btn-order:hover { background: var(--accent-light); color: #fff; }
   .btn-order:disabled { opacity: .35; cursor: not-allowed; }
 
   /* ── Right panel: report preview ────────────────────────── */
@@ -196,10 +196,26 @@
   }
   .format-choice:hover { color: var(--ink); border-color: var(--muted); }
   .format-choice.active {
-    color: var(--bg); background: var(--accent-light);
+    color: #fff; background: var(--accent-light);
     border-color: var(--accent-light); font-weight: 600;
   }
-  .format-choice .fmt-icon { display: block; font-size: 16px; margin-bottom: 2px; }
+  .format-choice .fmt-icon { display: block; margin: 0 auto 4px; width: 22px; height: 22px; }
+  .format-choice .fmt-icon svg { width: 100%; height: 100%; }
+  .format-choice .fmt-icon svg path,
+  .format-choice .fmt-icon svg rect,
+  .format-choice .fmt-icon svg circle,
+  .format-choice .fmt-icon svg polyline,
+  .format-choice .fmt-icon svg line { stroke: var(--muted); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .format-choice:hover .fmt-icon svg path,
+  .format-choice:hover .fmt-icon svg rect,
+  .format-choice:hover .fmt-icon svg circle,
+  .format-choice:hover .fmt-icon svg polyline,
+  .format-choice:hover .fmt-icon svg line { stroke: var(--ink); }
+  .format-choice.active .fmt-icon svg path,
+  .format-choice.active .fmt-icon svg rect,
+  .format-choice.active .fmt-icon svg circle,
+  .format-choice.active .fmt-icon svg polyline,
+  .format-choice.active .fmt-icon svg line { stroke: #fff; }
 
   /* ── Facility list ───────────────────────────────────────── */
   .facility-list { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -244,7 +260,7 @@
     display: inline-block; line-height: 1.6;
   }
   .paywall-cta .btn-unlock {
-    display: inline-block; background: var(--accent-light); color: var(--bg);
+    display: inline-block; background: var(--accent-light); color: #fff;
     border: none; border-radius: var(--radius-sm); padding: 12px 32px;
     cursor: pointer; font: inherit; font-weight: 600; font-size: 13px;
     letter-spacing: .04em; transition: background .15s;
@@ -415,13 +431,13 @@
 
   <div class="format-grid" id="formatGrid">
     <button class="format-choice active" data-format="digital">
-      <span class="fmt-icon">&#x1F4C4;</span>PDF
+      <span class="fmt-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>PDF
     </button>
     <button class="format-choice" data-format="print">
-      <span class="fmt-icon">&#x1F5A8;</span>Print
+      <span class="fmt-icon"><svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>Print
     </button>
     <button class="format-choice" data-format="web">
-      <span class="fmt-icon">&#x1F310;</span>Web
+      <span class="fmt-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg></span>Web
     </button>
   </div>
 
@@ -437,7 +453,7 @@
 
   <!-- Empty state -->
   <div id="emptyState" class="empty-state">
-    <div class="icon">&#x1F30A;</div>
+    <div class="icon"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/></svg></div>
     <p>Select a location and click <strong>Preview report</strong> to see a sample watershed report for your area.</p>
     <p style="margin-top:12px;font-size:10px;color:var(--muted)">The preview uses deterministic sample data shaped by your selection. Real reports are built from USGS gauge records.</p>
   </div>

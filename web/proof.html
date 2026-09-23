@@ -18,7 +18,7 @@
 
   :root {
     --bg:#07080c; --bg2:#0a0c13; --panel:#10121b; --panel2:#171a26; --line:#232838;
-    --ink:#e6ebf5; --muted:#8891a8; --faint:#5b6480;
+    --ink:#e6ebf5; --muted:#8891a8; --faint:#7b849c; --accent:#2AABAD;
     --cyan:#00ffff; --spring:#00ffab; --violet:#9d00ff; --amber:#ffb300;
     --serif:"Fraunces", Georgia, serif;
     --display:"Fraunces Display","Fraunces", Georgia, serif;
@@ -73,7 +73,7 @@
   .brand { font-family:var(--display); font-weight:600; font-size:21px; letter-spacing:.01em; }
   .brand b { color:var(--accent); font-weight:600; }
   .nav-inner .spacer { flex:1; }
-  .nav-tag { font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); }
+  .nav-tag { font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
 
   /* Main */
   main { position:relative; z-index:2; padding:52px 0 80px; }
@@ -86,7 +86,7 @@
 
   h1 {
     font-family:var(--display); font-weight:600; font-size:clamp(28px,3.5vw,42px);
-    letter-spacing:-.02em; margin:0 0 8px; line-height:1.05;
+    letter-spacing:-.02em; margin:0 0 8px; line-height:1.05; color:#fff;
   }
 
   /* Proof layout */
@@ -120,8 +120,7 @@
   }
   .proof-placeholder .proof-watermark {
     font-family:var(--display); font-weight:600; font-size:clamp(38px,7vw,72px);
-    letter-spacing:.18em; text-transform:uppercase; color:transparent;
-    -webkit-text-stroke:1px rgba(0,255,255,.22);
+    letter-spacing:.18em; text-transform:uppercase; color:rgba(0,255,255,.18);
     user-select:none; pointer-events:none;
   }
   .proof-placeholder .proof-region {
@@ -133,7 +132,7 @@
     color:var(--muted);
   }
   .proof-placeholder .proof-id {
-    font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--faint);
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em; color:var(--muted);
     border:var(--edge); padding:5px 10px; border-radius:2px;
   }
   /* corner glow */
@@ -149,7 +148,7 @@
     font-family:var(--mono); gap:12px;
   }
   .proof-caption .cap-name { font-size:13px; letter-spacing:.04em; }
-  .proof-caption .cap-source { font-size:10px; letter-spacing:.06em; color:var(--faint); }
+  .proof-caption .cap-source { font-size:10px; letter-spacing:.06em; color:var(--muted); }
   .proof-caption .cap-right { text-align:right; }
   .proof-caption .expiry { font-size:10px; letter-spacing:.08em; color:var(--amber); text-transform:uppercase; }
 
@@ -164,7 +163,7 @@
   }
   .panel-card h3 {
     font-family:var(--display); font-weight:600; font-size:17px; margin:0 0 18px;
-    letter-spacing:-.01em; color:var(--ink);
+    letter-spacing:-.01em; color:#fff;
   }
 
   dl.detail-list { margin:0; }
@@ -231,11 +230,11 @@
   }
   .state-screen .icon {
     font-size:42px; line-height:1; font-style:normal;
-    font-family:var(--mono); color:var(--faint);
+    font-family:var(--mono); color:var(--muted);
   }
   .state-screen h2 {
     font-family:var(--display); font-weight:600; font-size:26px;
-    letter-spacing:-.01em; margin:0; color:var(--ink);
+    letter-spacing:-.01em; margin:0; color:#fff;
   }
   .state-screen p { margin:0; color:var(--muted); font-size:15px; max-width:30em; }
   .state-screen a { color:var(--cyan); border-bottom:1px dotted rgba(0,255,255,.4); }
@@ -256,9 +255,9 @@
   }
   .foot-inner {
     display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap;
-    font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--faint);
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--muted);
   }
-  .foot-inner a { color:var(--muted); border-bottom:1px dotted var(--faint); }
+  .foot-inner a { color:var(--ink); border-bottom:1px dotted var(--muted); }
 
   @media (max-width:820px) {
     .proof-grid { grid-template-columns:1fr; }
@@ -291,7 +290,7 @@
   <div class="wrap" id="root">
     <!-- filled by JS -->
     <div class="state-screen" id="loading-screen">
-      <span class="icon">◈</span>
+      <span class="icon"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 12l10 10 10-10L12 2z"/><circle cx="12" cy="12" r="3"/></svg></span>
       <h2>Loading proof&hellip;</h2>
       <p>Fetching your proof details — just a moment.</p>
     </div>
@@ -431,7 +430,7 @@
   function buildApprovedBanner() {
     return (
       '<div class="approved-banner">' +
-        '<span class="icon">✓</span>' +
+        '<span class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg></span>' +
         '<div><strong>Approved.</strong> Your proof has been accepted and is queued for fulfillment. Watch for a delivery email at the address on file.</div>' +
       '</div>'
     );
@@ -443,7 +442,7 @@
         '<button class="btn solid" id="btn-approve">Approve <span class="arw">→</span></button>' +
         '<button class="btn ghost" id="btn-adjust">Adjust &amp; Re-render</button>' +
       '</div>' +
-      '<p style="color:var(--faint);font-family:var(--mono);font-size:10px;letter-spacing:.05em;margin:12px 0 0;line-height:1.6">' +
+      '<p style="color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.05em;margin:12px 0 0;line-height:1.6">' +
         'Approving sends your order to production. "Adjust &amp; Re-render" returns you to the order form with your current settings pre-filled.' +
       '</p>'
     );
@@ -500,22 +499,22 @@
   function showError(type, err) {
     var map = {
       forbidden: {
-        icon: "⊘",
+        icon: '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93l14.14 14.14"/></svg>',
         title: "Invalid proof link",
         body: "This proof link is not valid. It may have been entered incorrectly. If you received this link by email, please use the original link from that message or <a href=\"mailto:hello@runde.studio\">contact support</a>."
       },
       expired: {
-        icon: "⊗",
+        icon: '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
         title: "Proof link has expired",
         body: "This proof link has expired. Proof links are valid for 14 days from the time of issue. Please <a href=\"mailto:hello@runde.studio\">contact support</a> to request a fresh link."
       },
       network: {
-        icon: "◌",
+        icon: '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke-dasharray="3 3"/><path d="M12 8v4"/><circle cx="12" cy="16" r=".5" fill="currentColor" stroke="none"/></svg>',
         title: "Could not load proof",
         body: "There was a problem reaching the server. Please check your connection and refresh the page. If the problem persists, <a href=\"mailto:hello@runde.studio\">contact support</a>."
       },
       invalid: {
-        icon: "◇",
+        icon: '<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 12l10 10 10-10L12 2z"/><path d="M9 9l6 6M15 9l-6 6"/></svg>',
         title: "No proof token",
         body: "This URL is missing a proof token. If you arrived here from an email, please use the full link provided. Otherwise, <a href=\"mailto:hello@runde.studio\">contact support</a>."
       }

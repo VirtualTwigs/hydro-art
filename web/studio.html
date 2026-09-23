@@ -17,7 +17,7 @@
   <fieldset>
     <legend>Presets &amp; sharing</legend>
     <div id="presets" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px"></div>
-    <button class="btn ghost" id="shareBtn" style="margin-top:8px">⧉ Copy share link</button>
+    <button class="btn ghost" id="shareBtn" style="margin-top:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy share link</button>
     <div class="hint">Presets apply a named look to the current selection. <b>Copy share link</b> encodes the current recipe into the URL — reopen or share it to reproduce this exact look.</div>
   </fieldset>
 
@@ -136,7 +136,7 @@
         <button data-v="yaml">config.yaml</button>
       </div>
       <button class="btn ghost" id="copyBtn" style="width:auto;margin:0;padding:7px 12px">Copy</button>
-      <button class="btn" id="runBtn" style="width:auto;margin:0;padding:7px 12px">▶ Run pipeline</button>
+      <button class="btn" id="runBtn" style="width:auto;margin:0;padding:7px 12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="vertical-align:-1px"><polygon points="6,3 20,12 6,21"/></svg> Run pipeline</button>
     </div>
     <pre id="cliOut"></pre>
     <pre id="yamlOut" hidden></pre>
@@ -276,7 +276,7 @@ H.seg(state, "contractMode","_contract",()=>{
 el("copyBtn").addEventListener("click", () => {
   const text = (state._contract === "yaml" ? el("yamlOut") : el("cliOut")).textContent;
   navigator.clipboard?.writeText(text);
-  el("copyBtn").textContent = "Copied ✓";
+  el("copyBtn").innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg> Copied';
   setTimeout(()=>{ el("copyBtn").textContent = "Copy"; }, 1200);
 });
 
@@ -389,8 +389,8 @@ el("presets").addEventListener("click", e => {
 el("shareBtn").addEventListener("click", () => {
   location.hash = H.encodeRecipe(state);
   navigator.clipboard?.writeText(location.href);
-  el("shareBtn").textContent = "Link copied ✓";
-  setTimeout(() => { el("shareBtn").textContent = "⧉ Copy share link"; }, 1400);
+  el("shareBtn").innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg> Link copied';
+  setTimeout(() => { el("shareBtn").innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy share link'; }, 1400);
 });
 function restoreFromHash(){
   const raw = location.hash.replace(/^#/, "");

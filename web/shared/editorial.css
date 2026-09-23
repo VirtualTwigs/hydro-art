@@ -12,6 +12,7 @@
   --panel-2: #ebeae1;
   --panel-3: #ffffff;
   --accent: var(--brand-teal);
+  --accent-text: #115457;  /* darker teal for text on light paper — 5.5:1 on #ebe9df */
   --accent-dim: #7eaaa1;
   --ok: var(--brand-teal);
   --warn: #9b6226;
