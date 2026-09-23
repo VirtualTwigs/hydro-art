@@ -72,18 +72,31 @@ def _load_payload(args) -> dict:
 
 
 def _stamp_title(svg: str, tb: dict, width_px: int, height_px: int) -> str:
-    """Append a title / subtitle / source-credit text block to the SVG."""
-    x = int(width_px * 0.04)
-    y0 = int(height_px * 0.94)
-    fs_title = max(24, int(width_px * 0.035))
+    """Append a title / subtitle / source-credit text block to the SVG.
+
+    The SVG viewBox is in projected meters (EPSG:5070), so font sizes and
+    positions must be proportional to the *viewBox* extent, not the pixel
+    dimensions.  We parse the viewBox to get the true coordinate space.
+    """
+    import re
+    m = re.search(r'viewBox="[\d.]+ [\d.]+ ([\d.]+) ([\d.]+)"', svg)
+    if m:
+        vb_w, vb_h = float(m.group(1)), float(m.group(2))
+    else:
+        vb_w, vb_h = float(width_px), float(height_px)
+    x = int(vb_w * 0.04)
+    y0 = int(vb_h * 0.91)
+    fs_title = max(200, int(vb_w * 0.028))
     fs_sub = int(fs_title * 0.5)
-    fs_credit = max(12, int(fs_title * 0.28))
+    fs_credit = max(100, int(fs_title * 0.3))
+    gap_sub = int(fs_sub * 1.3)
+    gap_credit = int(fs_credit * 1.4)
     esc = lambda s: (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     block = (
         f'<g id="title-block" font-family="Helvetica,Arial,sans-serif" fill="#e8eef6">'
         f'<text x="{x}" y="{y0}" font-size="{fs_title}" font-weight="700">{esc(tb["title"])}</text>'
-        f'<text x="{x}" y="{y0 + fs_sub + 6}" font-size="{fs_sub}" fill="#93a1b5">{esc(tb["subtitle"])}</text>'
-        f'<text x="{x}" y="{y0 + fs_sub + fs_credit + 14}" font-size="{fs_credit}" fill="#5c6b7d">'
+        f'<text x="{x}" y="{y0 + gap_sub}" font-size="{fs_sub}" fill="#93a1b5">{esc(tb["subtitle"])}</text>'
+        f'<text x="{x}" y="{y0 + gap_sub + gap_credit}" font-size="{fs_credit}" fill="#5c6b7d">'
         f'Source: {esc(tb["credit"])}</text>'
         f'</g>'
     )
@@ -110,8 +123,38 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def _load_waterbodies(boundary, huc4: str):
+    """Load NHDWaterbody polygons from the GDB, clipped to boundary."""
+    import geopandas as gpd
+    import shapely as shp
+    from tools.render_common import gdb_paths, EPSG
+
+    shp.prepare(boundary)
+    wb_tuples = []
+    for gdb in gdb_paths(huc4):
+        try:
+            wb = gpd.read_file(gdb, layer="NHDWaterbody",
+                               columns=["NHDPlusID", "FType"])
+        except Exception:
+            continue
+        wb = wb.to_crs(EPSG)
+        for _, row in wb.iterrows():
+            g = row.geometry
+            if g is None or g.is_empty:
+                continue
+            if not shp.intersects(boundary, g):
+                continue
+            trimmed = shp.intersection(boundary, g)
+            if not trimmed.is_empty:
+                wb_tuples.append((int(row["NHDPlusID"]), trimmed))
+    print(f"  waterbodies: {len(wb_tuples)} features in county")
+    return wb_tuples
+
+
 def _render_svg(order, width_px: int, huc4: str, min_order: int) -> str:
     """Neon-basin county clip via the shared art recipe -> SVG string."""
+    from src.rendering import render_svg
+
     state_fp = state_fips_for_region(order.region)
     print(f"loading {order.county} County (STATEFP {state_fp}) ...")
     boundary = load_county(state_fp, order.county)
@@ -124,7 +167,14 @@ def _render_svg(order, width_px: int, huc4: str, min_order: int) -> str:
     widths, base_units, _upp, _qmax = flow_scaled_widths(
         geometries, flows, width_px, 0.6, 5.0
     )
-    return render_art_svg(geometries, segment_colors, watersheds, base_units, widths)
+    wb_tuples = _load_waterbodies(boundary, huc4)
+    return render_svg(
+        geometries, segment_colors, watersheds,
+        line_width=base_units, stroke_widths=widths,
+        glow=True, glow_mode="blur", glow_radius=2.0,
+        waterbodies=wb_tuples if wb_tuples else None,
+        waterbody_color="#2ec4ff", waterbody_stroke_width=0.45,
+    )
 
 
 def main() -> int:

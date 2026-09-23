@@ -34,6 +34,10 @@ from tools.museum_common import (
 from tools.render_common import clip_flowlines
 from tools.render_state_mono import derive_elevations
 
+def _esc(s: str) -> str:
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
 PAPER = "#f7f3e8"          # warm almanac paper
 INK = "#2b2a22"            # near-black title ink
 MUTED = "#6f6a58"          # DM Mono label grey
@@ -117,10 +121,10 @@ def main() -> int:
         # title block
         f'<text x="{mx:.0f}" y="{H*0.075:.0f}" fill="{INK}" '
         f'font-family="{TITLE_FONT}" font-size="{ts:.0f}" '
-        f'letter-spacing="-0.5">{args.title}</text>',
+        f'letter-spacing="-0.5">{_esc(args.title)}</text>',
         f'<text x="{mx+2:.0f}" y="{H*0.098:.0f}" fill="{MUTED}" '
         f'font-family="{MONO_FONT}" font-size="{ss:.0f}" '
-        f'letter-spacing="2">{args.subtitle}</text>',
+        f'letter-spacing="2">{_esc(args.subtitle)}</text>',
     ]
 
     for idx, (label, tag, ink, ground, bias, amp) in enumerate(SEASONS):
