@@ -282,10 +282,26 @@ def _all_conus_huc4s() -> tuple[str, ...]:
     return tuple(ordered)
 
 
+def _read_svg_viewbox(svg_path: Path) -> tuple[float, float, float, float]:
+    """Extract the viewBox from an SVG and return (origin_x, origin_y, width, height)."""
+    import re
+    with svg_path.open() as f:
+        head = f.read(4000)
+    m = re.search(r'viewBox="([^"]+)"', head)
+    if not m:
+        raise SystemExit(f"No viewBox found in {svg_path}")
+    parts = m.group(1).split()
+    return tuple(float(p) for p in parts)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="CONUS datacenter map")
-    ap.add_argument("--min-order", type=int, default=3,
-                    help="Drop streams below this Strahler order (default 3).")
+    ap.add_argument("--base-png", type=str, default=None,
+                    help="Existing CONUS hero PNG to overlay on (skips re-render).")
+    ap.add_argument("--base-svg", type=str, default=None,
+                    help="SVG whose viewBox defines the coordinate bounds (required with --base-png).")
+    ap.add_argument("--min-order", type=int, default=5,
+                    help="Drop streams below this Strahler order (default 5).")
     ap.add_argument("--width", type=int, default=8000,
                     help="Reference pixel width for stroke scaling (default 8000).")
     ap.add_argument("--min-px", type=float, default=0.3,
@@ -296,50 +312,88 @@ def main() -> int:
                     help="Suppress datacenter name labels (less clutter at full-CONUS).")
     args = ap.parse_args()
 
-    huc4s = _all_conus_huc4s()
-    print(f"CONUS: {len(CONUS_STATES)} states, {len(huc4s)} HUC4 basins")
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Datacenters to plot: {len(DATACENTERS)}")
 
-    # 1) Union all 48 state boundaries into one CONUS boundary.
-    print("loading CONUS boundary (48 state polygons) ...")
-    state_geoms = [load_state(s) for s in CONUS_STATES]
-    boundary = shapely.unary_union(state_geoms)
-    print(f"boundary: {boundary.geom_type}")
+    if args.base_png:
+        # ── Overlay-only mode: use existing hero render ────────────────
+        png_path = args.base_png
+        if not Path(png_path).exists():
+            raise SystemExit(f"Base PNG not found: {png_path}")
+        svg_ref = Path(args.base_svg) if args.base_svg else None
+        if not svg_ref:
+            svg_ref = Path(png_path).with_suffix(".svg")
+        if not svg_ref.exists():
+            raise SystemExit(
+                f"Need --base-svg to read viewBox coordinates (tried {svg_ref})."
+            )
+        # The SVG uses a "0 0 W H" viewBox: all coordinates are shifted
+        # by -min_x on X and flipped via max_y - y.  To map datacenter
+        # lon/lats we need those original min_x / max_y.  Load the CONUS
+        # boundary (fast — no flowlines) and use its bounds as a close
+        # proxy; the flowline extent is slightly tighter but the state
+        # boundary reliably contains all datacenters.
+        print("loading CONUS boundary for coordinate mapping ...")
+        state_geoms = [load_state(s) for s in CONUS_STATES]
+        boundary = shapely.unary_union(state_geoms)
+        bx = boundary.bounds  # (minx, miny, maxx, maxy)
+        _, _, vb_w, vb_h = _read_svg_viewbox(svg_ref)
+        # Use boundary center + viewBox dimensions to recover the render frame.
+        cx, cy = (bx[0] + bx[2]) / 2, (bx[1] + bx[3]) / 2
+        min_x = cx - vb_w / 2
+        min_y = cy - vb_h / 2
+        max_x = cx + vb_w / 2
+        max_y = cy + vb_h / 2
+        code_color = None
+        print(f"overlay mode: base={png_path}, viewBox {vb_w:.0f}x{vb_h:.0f}")
+    else:
+        # ── Full render mode ───────────────────────────────────────────
+        huc4s = _all_conus_huc4s()
+        print(f"CONUS: {len(CONUS_STATES)} states, {len(huc4s)} HUC4 basins")
 
-    # 2) Clip flowlines.
-    print(f"clipping flowlines (min_order={args.min_order}) from {len(huc4s)} HUC4s ...")
-    geoms, orders, flows, basins = clip_flowlines(boundary, huc4s, args.min_order)
-    print(f"total kept: {len(geoms):,}")
-    if not geoms:
-        raise SystemExit("No flowlines fell inside the CONUS boundary.")
+        print("loading CONUS boundary (48 state polygons) ...")
+        state_geoms = [load_state(s) for s in CONUS_STATES]
+        boundary = shapely.unary_union(state_geoms)
+        print(f"boundary: {boundary.geom_type}")
 
-    # 3) Color by HUC2 (18 macro-basin families).
-    huc2_codes = [b[:2] for b in basins]
-    geometries, segment_colors, watersheds, code_color = build_inputs(geoms, huc2_codes)
-    widths, base_units, units_per_px, qmax = flow_scaled_widths(
-        geometries, flows, args.width, args.min_px, args.max_px,
-    )
-    print(
-        f"HUC2 groups: {sorted(watersheds)}; orders 1..{max(orders)}; "
-        f"flow 0..{qmax:.0f} cfs -> {args.min_px}..{args.max_px}px"
-    )
+        print(f"clipping flowlines (min_order={args.min_order}) from {len(huc4s)} HUC4s ...")
+        geoms, orders, flows, basins = clip_flowlines(boundary, huc4s, args.min_order)
+        print(f"total kept: {len(geoms):,}")
+        if not geoms:
+            raise SystemExit("No flowlines fell inside the CONUS boundary.")
 
-    # 4) Render base SVG.
-    svg = render_art_svg(geometries, segment_colors, watersheds, base_units, widths)
+        huc2_codes = [b[:2] for b in basins]
+        geometries, segment_colors, watersheds, code_color = build_inputs(geoms, huc2_codes)
+        widths, base_units, units_per_px, qmax = flow_scaled_widths(
+            geometries, flows, args.width, args.min_px, args.max_px,
+        )
+        print(
+            f"HUC2 groups: {sorted(watersheds)}; orders 1..{max(orders)}; "
+            f"flow 0..{qmax:.0f} cfs -> {args.min_px}..{args.max_px}px"
+        )
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    svg_path = OUT_DIR / "conus-datacenters.svg"
-    svg_path.write_text(svg)
-    print(f"wrote {svg_path} ({len(svg):,} bytes, {len(geometries):,} paths)")
-    print(f"  sha256: {_sha256(svg_path)}")
+        svg = render_art_svg(geometries, segment_colors, watersheds, base_units, widths)
+        svg_path = OUT_DIR / "conus-datacenters.svg"
+        svg_path.write_text(svg)
+        print(f"wrote {svg_path} ({len(svg):,} bytes, {len(geometries):,} paths)")
+        print(f"  sha256: {_sha256(svg_path)}")
 
-    # 5) Rasterize to PNG.
-    png_path = str(OUT_DIR / "conus-datacenters.png")
-    rasterize(str(svg_path), png_path, args.width, args.max_px)
-    print(f"wrote {png_path}")
+        # Rasterize via rsvg-convert (handles large SVGs better than resvg).
+        png_path = str(OUT_DIR / "conus-datacenters-base.png")
+        import subprocess
+        try:
+            subprocess.run(
+                ["rsvg-convert", "-w", str(args.width), str(svg_path), "-o", png_path],
+                check=True,
+            )
+        except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+            print(f"rsvg-convert failed ({exc}); trying layered rasterizer ...")
+            rasterize(str(svg_path), png_path, args.width, args.max_px)
+        print(f"wrote {png_path}")
 
-    # 6) Overlay datacenter markers + legend.
-    min_x, min_y, max_x, max_y = bounds(geometries.values())
+        min_x, min_y, max_x, max_y = bounds(geometries.values())
+
+    # Overlay datacenter markers + legend.
     im = Image.open(png_path).convert("RGBA")
     overlay = Image.new("RGBA", im.size, (0, 0, 0, 0))
     W, H = im.size
@@ -404,7 +458,7 @@ def main() -> int:
     sw = int(legend_font.size * 1.1)
     pw = int(pad * 3 + sw + text_w + 20)
 
-    # HUC2 basin swatches (top-level macro-basins)
+    # HUC2 basin swatches (top-level macro-basins) — only in full-render mode.
     basin_rows = []
     huc2_names = {
         "01": "New England",    "02": "Mid-Atlantic",   "03": "South Atlantic",
@@ -414,9 +468,10 @@ def main() -> int:
         "13": "Rio Grande",     "14": "Upper Colorado",  "15": "Lower Colorado",
         "16": "Great Basin",    "17": "Pacific Northwest", "18": "California",
     }
-    for code in sorted(code_color):
-        bname = huc2_names.get(code, f"HUC2-{code}")
-        basin_rows.append((bname, code, code_color[code]))
+    if code_color:
+        for code in sorted(code_color):
+            bname = huc2_names.get(code, f"HUC2-{code}")
+            basin_rows.append((bname, code, code_color[code]))
 
     total_rows = len(legend_lines) + len(basin_rows) + 4  # title, subtitle, region, + separator lines
     ph = int(pad * 2 + lh * total_rows)
