@@ -2,6 +2,7 @@
 
 import warnings
 
+import pytest
 from shapely.geometry import LineString, Point
 
 from src.loading import (
@@ -51,6 +52,7 @@ def test_fake_loader_satisfies_protocol_and_yields_layer():
 
 
 def test_pyogrio_loader_warns_and_returns_empty_when_no_source(tmp_path):
+    pytest.importorskip("pyogrio")
     loader = PyogrioLayerLoader()
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
