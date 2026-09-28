@@ -136,7 +136,9 @@ const state = {
   widthMode: "flow", minW: 0.5, maxW: 2.0, gamma: 0.5, glow: false, glowR: 2.5, formats: ["svg"],
 };
 
-el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}"${s.id===state.state?" selected":""}>${s.label}</option>`).join("");
+el("state").innerHTML = H.STATES.map(s => s.unavailable
+  ? `<option value="${s.id}" disabled style="text-decoration:line-through;color:#999">${s.label} (data unavailable)</option>`
+  : `<option value="${s.id}"${s.id===state.state?" selected":""}>${s.label}</option>`).join("");
 H.fillCounties(state);
 
 // Timeline — kept local (not HydroUX.buildTimeline/paintTimeline): this canvas

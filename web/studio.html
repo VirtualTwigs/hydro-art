@@ -159,7 +159,9 @@ const state = {
 };
 
 // ---- Populate selects ----
-el("state").innerHTML = H.STATES.map(s => `<option value="${s.id}">${s.label}</option>`).join("");
+el("state").innerHTML = H.STATES.map(s => s.unavailable
+  ? `<option value="${s.id}" disabled style="text-decoration:line-through;color:#999">${s.label} (data unavailable)</option>`
+  : `<option value="${s.id}">${s.label}</option>`).join("");
 // renderCountyOptions writes the #county <option>s without resetting the
 // current selection; syncControls() reuses it to preserve state.county after a
 // preset/recipe apply. HydroUX.fillCounties is the shared "reset to first"

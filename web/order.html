@@ -844,7 +844,14 @@
   H.STATES.forEach(function (s) {
     var opt = document.createElement("option");
     opt.value = s.id;
-    opt.textContent = s.label;
+    if (s.unavailable) {
+      opt.disabled = true;
+      opt.style.textDecoration = "line-through";
+      opt.style.color = "#999";
+      opt.textContent = s.label + " (data unavailable)";
+    } else {
+      opt.textContent = s.label;
+    }
     selState.appendChild(opt);
   });
 

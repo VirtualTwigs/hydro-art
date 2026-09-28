@@ -48,13 +48,14 @@ TITLE_INK = (42, 32, 22)      # near-black warm brown
 SUBTITLE_INK = (110, 90, 68)  # mid-brown
 
 
-def museum_elevation_colors(elevs, gamma: float, anchor: float | None = None):
-    """Map per-reach elevation -> warm brown..gold hex, anchored at the max."""
+def museum_elevation_colors(elevs, gamma: float, anchor: float | None = None,
+                            *, lo_rgb=None, hi_rgb=None):
+    """Map per-reach elevation -> low..high hex, anchored at the max."""
     arr = np.clip(np.asarray(elevs, dtype=float), 0.0, None)
     emax = anchor if anchor else (float(arr.max()) if arr.size else 0.0)
     t = np.zeros_like(arr) if emax <= 0 else np.clip(arr / emax, 0.0, 1.0) ** gamma
-    lo = np.array(LOW_COLOR, dtype=float)
-    hi = np.array(HIGH_COLOR, dtype=float)
+    lo = np.array(lo_rgb or LOW_COLOR, dtype=float)
+    hi = np.array(hi_rgb or HIGH_COLOR, dtype=float)
     colors: dict[int, str] = {}
     for i, ti in enumerate(t):
         r, g, b = (lo + (hi - lo) * ti).round().astype(int)
@@ -77,16 +78,23 @@ def _font(sz: int):
 
 
 def add_poster_chrome(png_path: str, state: str, n_streams: int,
-                      elev_max: float, out_path: str) -> None:
-    """Add a title bar and attribution below the map on cream ground."""
+                      elev_max: float, out_path: str,
+                      bg_hex: str | None = None) -> None:
+    """Add a title bar and attribution below the map."""
     im = Image.open(png_path).convert("RGB")
     W, H = im.size
+    bg_hex = bg_hex or CREAM
 
     # Title bar height
     bar_h = int(H * 0.12)
     footer_h = int(H * 0.04)
-    canvas = Image.new("RGB", (W, H + bar_h + footer_h),
-                       tuple(int(CREAM.lstrip("#")[i:i+2], 16) for i in (0, 2, 4)))
+    bg_rgb = tuple(int(bg_hex.lstrip("#")[i:i+2], 16) for i in (0, 2, 4))
+    # Pick light or dark text based on background luminance
+    lum = bg_rgb[0] * 0.299 + bg_rgb[1] * 0.587 + bg_rgb[2] * 0.114
+    dark_text = lum > 128
+    title_ink = TITLE_INK if dark_text else (235, 239, 248)
+    sub_ink = SUBTITLE_INK if dark_text else (160, 170, 190)
+    canvas = Image.new("RGB", (W, H + bar_h + footer_h), bg_rgb)
     canvas.paste(im, (0, bar_h))
     draw = ImageDraw.Draw(canvas)
 
@@ -103,20 +111,20 @@ def add_poster_chrome(png_path: str, state: str, n_streams: int,
     title_y = int(bar_h * 0.12)
     tw = draw.textlength(state.upper(), font=title_font)
     draw.text(((W - tw) / 2, title_y), state.upper(),
-              fill=TITLE_INK, font=title_font)
+              fill=title_ink, font=title_font)
 
     # Subtitle — positioned below the title with a gap
     subtitle_y = title_y + fs_title + int(bar_h * 0.08)
     subtitle = f"Rivers & Streams  |  {n_streams:,} waterways  |  elevation 0\u2013{elev_max:.0f} m"
     sw = draw.textlength(subtitle, font=sub_font)
     draw.text(((W - sw) / 2, subtitle_y), subtitle,
-              fill=SUBTITLE_INK, font=sub_font)
+              fill=sub_ink, font=sub_font)
 
     # Footer
     footer = "USGS NHDPlus HR  \u00b7  Elevation-tinted  \u00b7  hydro-art"
     fw = draw.textlength(footer, font=foot_font)
     draw.text(((W - fw) / 2, H + bar_h + footer_h * 0.2), footer,
-              fill=SUBTITLE_INK, font=foot_font)
+              fill=sub_ink, font=foot_font)
 
     canvas.save(out_path, quality=95)
 
@@ -137,6 +145,14 @@ def main() -> int:
                     help="Elevation ramp shaping; <1 brightens mid-slopes toward gold.")
     ap.add_argument("--anchor-pct", type=float, default=97.0,
                     help="Percentile of reach elevation mapping to pure gold.")
+    ap.add_argument("--bg", default=None,
+                    help="Background hex color (default: cream #f5f0e6).")
+    ap.add_argument("--low-color", default=None,
+                    help="Lowland stream RGB as 'R,G,B' (default: 62,39,25 dark umber).")
+    ap.add_argument("--high-color", default=None,
+                    help="Highland stream RGB as 'R,G,B' (default: 180,120,45 warm gold).")
+    ap.add_argument("--tag", default=None,
+                    help="Output filename tag (default: state name).")
     ap.add_argument("--no-chrome", action="store_true",
                     help="Skip the title bar / footer (raw map only).")
     args = ap.parse_args()
@@ -145,8 +161,14 @@ def main() -> int:
     if not spec:
         raise SystemExit(f"No HUC4 mapping for {args.state!r}; check STATE_HUC4.")
 
-    tag = args.state.lower().replace(" ", "_")
-    cache = Path(f"output/_clipcache_{tag}_mo{args.min_order}.pkl")
+    # Custom palette overrides
+    bg = args.bg or CREAM
+    lo_color = tuple(int(x) for x in args.low_color.split(",")) if args.low_color else LOW_COLOR
+    hi_color = tuple(int(x) for x in args.high_color.split(",")) if args.high_color else HIGH_COLOR
+
+    tag = args.tag or args.state.lower().replace(" ", "_")
+    state_tag = args.state.lower().replace(" ", "_")
+    cache = Path(f"output/_clipcache_{state_tag}_mo{args.min_order}.pkl")
     if cache.exists():
         print(f"loading cached clip {cache} ...")
         geoms, elev_mean, elev_max, flows = pickle.loads(cache.read_bytes())
@@ -171,7 +193,8 @@ def main() -> int:
     elevs = elev_max if isinstance(elev_max, list) else elev_max
     anchor = float(np.percentile(np.clip(elevs, 0.0, None), args.anchor_pct))
     geometries = {i: g for i, g in enumerate(geoms)}
-    segment_colors, emax = museum_elevation_colors(elevs, args.gamma, anchor)
+    segment_colors, emax = museum_elevation_colors(elevs, args.gamma, anchor,
+                                                    lo_rgb=lo_color, hi_rgb=hi_color)
     widths, base_units, units_per_px, qmax = flow_scaled_widths(
         geometries, flows, args.width, args.min_px, args.max_px
     )
@@ -182,15 +205,15 @@ def main() -> int:
     # Render SVG with cream background, no glow (clean print lines)
     svg = render_svg(
         geometries, segment_colors, {},
-        background=CREAM, line_width=base_units, stroke_widths=widths,
+        background=bg, line_width=base_units, stroke_widths=widths,
         glow=False,
     )
 
     out_dir = Path("output")
     out_dir.mkdir(exist_ok=True)
-    svg_out = out_dir / f"{tag}_poster_cream.svg"
-    png_raw = out_dir / f"{tag}_poster_cream_raw.png"
-    png_out = out_dir / f"{tag}_poster_cream.png"
+    svg_out = out_dir / f"{tag}_poster.svg"
+    png_raw = out_dir / f"{tag}_poster_raw.png"
+    png_out = out_dir / f"{tag}_poster.png"
 
     svg_out.write_text(svg)
     print(f"wrote {svg_out} ({len(svg):,} bytes, {len(geometries):,} paths)")
@@ -199,7 +222,8 @@ def main() -> int:
     print(f"wrote {png_raw}")
 
     if not args.no_chrome:
-        add_poster_chrome(str(png_raw), args.state, len(geoms), emax, str(png_out))
+        add_poster_chrome(str(png_raw), args.state, len(geoms), emax, str(png_out),
+                          bg_hex=bg)
         print(f"wrote {png_out} (with title + footer)")
     else:
         import shutil

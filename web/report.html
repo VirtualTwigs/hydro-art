@@ -81,7 +81,7 @@
     padding: 6px 0;
   }
   .toggle-row .toggle-label { color: var(--ink); font-size: 12px; }
-  .toggle-row .toggle-hint { color: var(--muted); font-size: 10px; margin-top: 1px; }
+  .toggle-row .toggle-hint { color: var(--muted); font-size: 10px; margin-top: 1px; line-height: 1.45; max-width: 260px; }
   .toggle-switch {
     position: relative; width: 36px; height: 20px; flex: none;
   }
@@ -349,15 +349,31 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Headline metrics</div>
-      <div class="toggle-hint">Peak, summer low, timing</div>
+      <div class="toggle-hint">Peak flow, summer low-flow, and center of timing &mdash; the three numbers that summarize a watershed's current state and direction.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="tiles" /><span class="slider"></span></label>
   </div>
 
   <div class="toggle-row">
     <div>
+      <div class="toggle-label">Watershed map</div>
+      <div class="toggle-hint">Elevation-tinted network map with outlet and gauge markers. Orients the reader and shows basin shape and drainage structure.</div>
+    </div>
+    <label class="toggle-switch"><input type="checkbox" checked data-section="map" /><span class="slider"></span></label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">Year-over-year hydrographs</div>
+      <div class="toggle-hint">Monthly flow for every year in the record. Shows the actual variability before it gets averaged &mdash; the raw material behind every other metric.</div>
+    </div>
+    <label class="toggle-switch"><input type="checkbox" checked data-section="hydrographs" /><span class="slider"></span></label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
       <div class="toggle-label">Long record</div>
-      <div class="toggle-hint">Annual peak trend line</div>
+      <div class="toggle-hint">Annual peak flow over the full record with Mann-Kendall trend test and Sen's slope. Reveals whether flood risk is rising or falling over decades.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="long" /><span class="slider"></span></label>
   </div>
@@ -365,23 +381,39 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Typical year</div>
-      <div class="toggle-hint">Monthly climatology</div>
+      <div class="toggle-hint">Monthly climatology with P10&ndash;P90 band. Shows when water arrives and how variable the annual cycle is &mdash; critical for supply planning.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="typical" /><span class="slider"></span></label>
   </div>
 
   <div class="toggle-row">
     <div>
+      <div class="toggle-label">Low-flow trend</div>
+      <div class="toggle-hint">Summer minimum flow trend (Jun&ndash;Aug). The most direct drought-stress indicator &mdash; declining low flows signal shrinking ecological and supply buffers.</div>
+    </div>
+    <label class="toggle-switch"><input type="checkbox" checked data-section="lowflow" /><span class="slider"></span></label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
       <div class="toggle-label">ENSO drivers</div>
-      <div class="toggle-hint">Ocean state vs. peak flow</div>
+      <div class="toggle-hint">Scatter of annual peak flow vs. Oceanic Ni&ntilde;o Index (ONI). Reveals whether El Ni&ntilde;o/La Ni&ntilde;a years predict wetter or drier conditions in this basin.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="enso" /><span class="slider"></span></label>
   </div>
 
   <div class="toggle-row">
     <div>
+      <div class="toggle-label">Timing drift</div>
+      <div class="toggle-hint">Center-of-timing shift by decade. Tracks whether peak runoff is arriving earlier (snowmelt acceleration) or later &mdash; a key climate-change fingerprint.</div>
+    </div>
+    <label class="toggle-switch"><input type="checkbox" checked data-section="timing" /><span class="slider"></span></label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
       <div class="toggle-label">Snow vs. rain regime</div>
-      <div class="toggle-hint">Snowmelt fraction &amp; drift</div>
+      <div class="toggle-hint">Snowmelt fraction and melt-pulse timing. Classifies the basin as snowmelt, rain, or mixed and tracks whether the regime is shifting.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="regime" /><span class="slider"></span></label>
   </div>
@@ -389,7 +421,7 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Analog years</div>
-      <div class="toggle-hint">Most-similar historical years</div>
+      <div class="toggle-hint">Historical years ranked by monthly-shape similarity to the most recent year. Identifies precedent years for planning and context.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="analogs" /><span class="slider"></span></label>
   </div>
@@ -397,7 +429,7 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Record book</div>
-      <div class="toggle-hint">Driest summers &amp; wettest years</div>
+      <div class="toggle-hint">Ranked leaderboards of driest summers and wettest years. Puts the current conditions in historical context and flags extremes.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="records" /><span class="slider"></span></label>
   </div>
@@ -405,7 +437,7 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Facilities</div>
-      <div class="toggle-hint">Data centers, plants, dams</div>
+      <div class="toggle-hint">Data centers, water treatment plants, dams, and other infrastructure drawing from or discharging to this watershed.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="facilities" /><span class="slider"></span></label>
   </div>
@@ -413,7 +445,7 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Flow-duration curves</div>
-      <div class="toggle-hint">Exceedance by decade</div>
+      <div class="toggle-hint">Exceedance quantiles by decade. Shows how the full flow regime has shifted &mdash; are median flows declining? Are extremes intensifying?</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="fdc" /><span class="slider"></span></label>
   </div>
@@ -421,7 +453,7 @@
   <div class="toggle-row">
     <div>
       <div class="toggle-label">Climate composites</div>
-      <div class="toggle-hint">Warm / neutral / cool hydrographs</div>
+      <div class="toggle-hint">Mean hydrograph by ENSO phase (warm/neutral/cool). Shows how ocean climate states reshape the annual water cycle in this basin.</div>
     </div>
     <label class="toggle-switch"><input type="checkbox" checked data-section="composites" /><span class="slider"></span></label>
   </div>
@@ -476,30 +508,59 @@
     <div class="report-grid" id="tiles" data-section-id="tiles"></div>
     <div class="warn ok" id="honesty" style="margin:-6px 0 14px" data-section-id="tiles"></div>
 
+    <!-- Watershed map -->
+    <div class="chart-card" data-section-id="map">
+      <h3>Watershed map</h3>
+      <div class="section-note">Elevation-tinted drainage network with outlet marker. The map shows basin shape, tributary structure, and how terrain drives flow direction. Real reports include DEM hillshade and gauge locations.</div>
+      <div id="mapPlaceholder" style="height:120px;display:flex;align-items:center;justify-content:center;background:var(--panel-2);border-radius:var(--radius-sm);color:var(--muted);font-size:11px;border:1px dashed var(--line)">Rendered from DEM + NHDPlus HR in real reports</div>
+    </div>
+
+    <!-- Year-over-year hydrographs -->
+    <div class="chart-card" data-section-id="hydrographs">
+      <h3>Year-over-year hydrographs</h3>
+      <div class="section-note">Monthly outlet flow for every year in the analysis period. Each line is one water year &mdash; the spread shows how much variability the averages conceal. Real reports color by year (viridis).</div>
+      <div id="hydrographSpark"></div>
+    </div>
+
     <!-- Long record -->
     <div class="chart-card" data-section-id="long">
       <h3>The long record &mdash; annual peak</h3>
-      <div class="section-note" id="longNote"></div>
+      <div class="section-note">Annual peak flow over the full period of record with Mann-Kendall statistical trend test and Sen's slope. A statistically significant upward trend means flood risk is growing; a downward trend means peak events are weakening &mdash; both reshape infrastructure planning.</div>
+      <div class="section-note" id="longNote" style="margin-top:2px"></div>
       <div id="longSpark"></div>
     </div>
 
     <div class="chart-row">
       <div class="chart-card" data-section-id="typical">
         <h3>Typical year &mdash; mean monthly flow</h3>
-        <div class="section-note">Fixed-span monthly climatology (cfs).</div>
+        <div class="section-note">Monthly climatology showing the mean and P10&ndash;P90 envelope. Shows when water arrives, how sharply the annual pulse peaks, and how much year-to-year variability there is &mdash; essential for water-supply planning and ecological flow targets.</div>
         <div id="typicalSpark"></div>
       </div>
       <div class="chart-card" id="ensoCard" data-section-id="enso">
         <h3>Climate drivers &mdash; ENSO (ONI)</h3>
-        <div class="section-note">Annual peak vs. ocean state.</div>
+        <div class="section-note">Scatter of annual peak flow against the Oceanic Ni&ntilde;o Index. A strong correlation means El Ni&ntilde;o or La Ni&ntilde;a forecasts can predict wet/dry years for this basin months in advance.</div>
         <div id="ensoSpark"></div>
       </div>
+    </div>
+
+    <!-- Low-flow trend -->
+    <div class="chart-card" data-section-id="lowflow">
+      <h3>Low-flow trend &mdash; summer minimum</h3>
+      <div class="section-note">June&ndash;August minimum flow for each year with Sen's slope trend line. The most direct drought-stress indicator &mdash; declining summer lows signal shrinking buffers for ecosystems, municipal supply, and downstream users. A persistent downward trend often precedes water-rights curtailments.</div>
+      <div id="lowflowSpark"></div>
+    </div>
+
+    <!-- Timing drift -->
+    <div class="chart-card" data-section-id="timing">
+      <h3>Timing drift &mdash; center of flow</h3>
+      <div class="section-note">The calendar day when half the annual flow has passed, plotted year by year with a decadal shift estimate. Earlier timing (negative drift) typically signals accelerating snowmelt or rain replacing snow &mdash; a widely used climate-change fingerprint in snow-influenced basins.</div>
+      <div id="timingSpark"></div>
     </div>
 
     <!-- Facilities on this basin -->
     <div class="chart-card" data-section-id="facilities" id="facilitiesCard">
       <h3>Facilities on this watershed</h3>
-      <div class="section-note">Data centers, water treatment plants, intakes, dams, and other infrastructure drawing from or discharging to this basin.</div>
+      <div class="section-note">Data centers, water treatment plants, intakes, dams, springs, and other infrastructure drawing from or discharging to this basin. Shows the human demands competing for the same water &mdash; a data center campus can consume millions of gallons daily for cooling, directly reducing downstream flow.</div>
       <div id="facilitiesBody"></div>
     </div>
 
@@ -508,12 +569,12 @@
       <div class="chart-row">
         <div class="chart-card" data-section-id="regime">
           <h3>Snow-vs-rain regime</h3>
-          <div class="section-note">Is this a snowmelt or a rain river &mdash; and is that shifting?</div>
+          <div class="section-note">Classifies the basin by snowmelt fraction &mdash; snowmelt-dominant, rain-dominant, or mixed &mdash; and tracks whether the melt pulse is arriving earlier or later by decade. Regime shifts from snow to rain fundamentally change flood timing, reservoir operations, and summer water availability.</div>
           <div id="regimeBody"></div>
         </div>
         <div class="chart-card" data-section-id="analogs">
           <h3>Analog years &mdash; most like <span id="analogTarget"></span></h3>
-          <div class="section-note">Ranked by monthly-shape correlation (magnitude removed).</div>
+          <div class="section-note">Historical years ranked by how closely their monthly flow shape matches the most recent year (Pearson r on normalized profiles, magnitude removed). Identifies precedent years for planning &mdash; if the last analog ended in drought, this year may too.</div>
           <ol class="mini-list" id="analogList"></ol>
         </div>
       </div>
@@ -521,12 +582,12 @@
       <div class="chart-row" data-section-id="records">
         <div class="chart-card">
           <h3>Record book &mdash; driest summers</h3>
-          <div class="section-note">Lowest Jun&ndash;Aug flow on record.</div>
+          <div class="section-note">The five lowest June&ndash;August flows on record. Puts the current summer in context &mdash; how close is this year to a historical worst? Useful for drought declarations and water-rights decisions.</div>
           <ol class="mini-list" id="driestList"></ol>
         </div>
         <div class="chart-card">
           <h3>Record book &mdash; wettest years</h3>
-          <div class="section-note">Highest annual peak on record.</div>
+          <div class="section-note">The five highest annual peaks on record. Establishes the basin's flood ceiling and shows whether recent years are approaching or exceeding historical extremes.</div>
           <ol class="mini-list" id="wettestList"></ol>
         </div>
       </div>
@@ -534,12 +595,13 @@
       <div class="chart-row">
         <div class="chart-card" data-section-id="fdc">
           <h3>Flow-duration curves &mdash; decade overlays</h3>
-          <div class="section-note" id="fdcNote"></div>
+          <div class="section-note">Flow-duration curves for each decade, overlaid on a log scale. If the curves shift left over time, the basin is drying (flows exceeded less often); if they shift right, it's getting wetter. The shape of the curve also reveals flashiness vs. baseflow dominance.</div>
+          <div class="section-note" id="fdcNote" style="margin-top:2px"></div>
           <div id="fdcSpark"></div>
         </div>
         <div class="chart-card" data-section-id="composites">
           <h3>Climate composites &mdash; mean hydrograph by phase</h3>
-          <div class="section-note">Warm (El Ni&ntilde;o) &middot; neutral &middot; cool (La Ni&ntilde;a), ONI &plusmn;0.5.</div>
+          <div class="section-note">Average monthly hydrograph split by ENSO phase (warm / neutral / cool, ONI &plusmn;0.5). Shows how ocean climate states reshape the annual water cycle &mdash; in many western basins, La Ni&ntilde;a years deliver far more snow, while El Ni&ntilde;o years bring earlier, rain-driven peaks.</div>
           <div id="compositeSpark"></div>
         </div>
       </div>
@@ -600,7 +662,15 @@
   // ── Populate states ───────────────────────────────────────────────────────
   UX.STATES.forEach(function (s) {
     var opt = document.createElement("option");
-    opt.value = s.id; opt.textContent = s.label;
+    opt.value = s.id;
+    if (s.unavailable) {
+      opt.disabled = true;
+      opt.style.textDecoration = "line-through";
+      opt.style.color = "#999";
+      opt.textContent = s.label + " (data unavailable)";
+    } else {
+      opt.textContent = s.label;
+    }
     selState.appendChild(opt);
   });
 
@@ -861,6 +931,16 @@
     var lowTrend = Number(((summerLow[summerLow.length-1] - summerLow[0]) / ((endYear - startYear) / 10)).toFixed(2));
     var cotIdx = Math.floor(rnd() * 5) + 1;
 
+    // Timing drift: center-of-timing (day of year) per year
+    var timingDays = years.map(function (y, i) {
+      var base = 120 + phaseShift * 15; // ~late April baseline
+      return Math.round(base + (rnd() - 0.5) * 30 - (y - startYear) * 0.15);
+    });
+    var timingDrift = {
+      years: years, days: timingDays,
+      daysPerDecade: Number((timingDays[timingDays.length-1] - timingDays[0]) / ((endYear - startYear) / 10)).toFixed(1),
+    };
+
     return {
       watershed: wsName, place: place, range: [startYear, endYear],
       metrics: {
@@ -873,6 +953,7 @@
       typicalYear: { months: MONTH_ABBR.slice(), mean: mean, lo: lo, hi: hi },
       enso: enso, regime: regime, analogs: analogs, recordBook: recordBook,
       fdc: fdc, fdcQuantiles: fdcQuantiles, composites: composites,
+      timingDrift: timingDrift, perYear: perYear,
     };
   }
 
@@ -1119,7 +1200,10 @@
   function renderReport(doc) {
     renderHeader(doc);
     renderTiles(doc);
+    renderHydrographs(doc);
     renderCharts(doc);
+    renderLowFlow(doc);
+    renderTimingDrift(doc);
     renderFacilities();
     renderRegime(doc);
     renderAnalogs(doc);
@@ -1263,6 +1347,31 @@
         return '<div class="spark-row"><span>' + pair[0] + '</span>' +
           UX.buildSparkline(pair[1], { w: 280, h: 40, label: pair[0] + " composite" }) + '</div>';
       }).join("");
+  }
+
+  function renderHydrographs(doc) {
+    // Show a few representative year sparklines overlaid
+    var html = '';
+    var step = Math.max(1, Math.floor(doc.perYear.length / 5));
+    for (var i = 0; i < doc.perYear.length; i += step) {
+      var yr = doc.longRecord.years[i];
+      html += '<div class="spark-row"><span>' + yr + '</span>' +
+        UX.buildSparkline(doc.perYear[i], { w: 280, h: 36, label: yr + " flow" }) + '</div>';
+    }
+    $("hydrographSpark").innerHTML = html;
+  }
+
+  function renderLowFlow(doc) {
+    $("lowflowSpark").innerHTML = UX.buildSparkline(doc.longRecord.summerLow, { w: 640, h: 60, label: "summer low" });
+  }
+
+  function renderTimingDrift(doc) {
+    var td = doc.timingDrift;
+    var dir = Number(td.daysPerDecade) < 0 ? "earlier" : "later";
+    $("timingSpark").innerHTML =
+      '<div class="section-note" style="margin:0 0 4px">Shift: <b>' +
+      UX.fmtNum(Math.abs(td.daysPerDecade)) + ' days/decade ' + dir + '</b></div>' +
+      UX.buildSparkline(td.days, { w: 640, h: 60, label: "center-of-timing (DOY)" });
   }
 
   function renderHeader(doc) {
