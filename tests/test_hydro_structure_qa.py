@@ -201,6 +201,46 @@ def test_build_qa_report_all_clean() -> None:
     assert report.overlaps == ()
 
 
+# --- Missing-line coverage additions (lines 103, 134, 137, 148-149) -----------
+
+
+def test_nearest_distance_skips_none_flowlines() -> None:
+    """None flowline entries in the list are skipped (line 103)."""
+    flowline = LineString([(0.0, 0.0), (100.0, 0.0)])
+    near = _structure("near", Point(10.0, 5.0))
+
+    # Mix in None flowlines; they must be skipped without error.
+    placement = structure_network_placement(
+        [near], [None, flowline, None], tolerance_m=50.0
+    )
+    assert placement.count == 1
+    assert placement.on_network == 1
+    assert placement.median_distance_m == 5.0
+
+
+def test_structure_with_none_geometry_skipped_in_placement() -> None:
+    """Structure with geometry=None contributes count 0 (line 134)."""
+    flowline = LineString([(0.0, 0.0), (100.0, 0.0)])
+    no_geom = _structure("no_geom", None)
+
+    placement = structure_network_placement([no_geom], [flowline], tolerance_m=50.0)
+    assert placement.count == 0
+    assert placement.on_network == 0
+    assert placement.median_distance_m == 0.0
+    assert placement.max_distance_m == 0.0
+
+
+def test_empty_flowlines_list_yields_zero_counts() -> None:
+    """No flowlines → nearest distance is None → structure skipped (lines 137, 148-149)."""
+    near = _structure("near", Point(10.0, 5.0))
+
+    placement = structure_network_placement([near], [], tolerance_m=50.0)
+    assert placement.count == 0
+    assert placement.on_network == 0
+    assert placement.median_distance_m == 0.0
+    assert placement.max_distance_m == 0.0
+
+
 def test_build_qa_report_all_violating() -> None:
     """A pathological build trips every check at once.
 

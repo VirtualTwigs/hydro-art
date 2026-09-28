@@ -114,3 +114,32 @@ class TestWatermark:
         svg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><path d="M0 0 L100 100"/></svg>'
         result = watermark_svg(svg, "PROOF")
         assert 'd="M0 0 L100 100"' in result
+
+
+# --- Coverage gap: verify_proof_token edge cases (lines 66, 83-84) ----------
+
+class TestTokenEdgeCases:
+    def test_token_with_too_few_parts_rejected(self):
+        """Token that base64-decodes to fewer than 3 dot-segments → ('', False)."""
+        import base64
+
+        from src.proof import verify_proof_token
+
+        # One dot segment instead of three
+        bad = base64.urlsafe_b64encode(b"no-dots-here").decode()
+        request_id, valid = verify_proof_token(bad, b"secret")
+        assert request_id == ""
+        assert valid is False
+
+    def test_token_with_non_integer_expiry_rejected(self):
+        """Token with non-integer expiry field → ('', False)."""
+        import base64
+
+        from src.proof import verify_proof_token
+
+        # Format: request_id.expiry.sig — make expiry non-numeric
+        raw = "REQ-001.abc.fakesig"
+        token = base64.urlsafe_b64encode(raw.encode()).decode()
+        request_id, valid = verify_proof_token(token, b"secret")
+        assert request_id == ""
+        assert valid is False

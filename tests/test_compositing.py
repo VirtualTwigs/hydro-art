@@ -143,3 +143,33 @@ def test_composite_empty_layers_returns_background_copy():
     out = composite_over_background(base, [])
     assert np.array_equal(out, base)
     assert out is not base  # a copy, not the same array
+
+
+# --- Coverage gap: _validate_rgba branches (lines 44, 48) -------------------
+
+def test_validate_rgba_rejects_2d_array():
+    """A 2D array triggers CompositingError (line 44)."""
+    base = np.zeros((3, 3, 4), dtype=np.uint8)
+    bad = np.zeros((3, 3), dtype=np.uint8)
+    with pytest.raises(CompositingError, match="RGBA"):
+        alpha_over(base, bad)
+
+
+def test_validate_rgba_rejects_float_dtype():
+    """A float32 array triggers CompositingError (line 48)."""
+    base = np.zeros((3, 3, 4), dtype=np.uint8)
+    bad = np.zeros((3, 3, 4), dtype=np.float32)
+    with pytest.raises(CompositingError, match="uint8"):
+        alpha_over(base, bad)
+
+
+# --- Coverage gap: solid_canvas error branches (lines 112, 116) --------------
+
+def test_solid_canvas_zero_height_raises():
+    with pytest.raises(CompositingError, match="positive"):
+        solid_canvas(0, 10)
+
+
+def test_solid_canvas_bad_color_raises():
+    with pytest.raises(CompositingError, match="color"):
+        solid_canvas(2, 2, (300, 0, 0))

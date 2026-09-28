@@ -171,3 +171,302 @@ def test_render_svg_stream_writes_valid_svg():
     assert "<svg" in svg
     assert "</svg>" in svg
     assert svg.endswith("\n")
+
+
+# ---------------------------------------------------------------------------
+# Coverage additions for missing lines
+# ---------------------------------------------------------------------------
+
+import math
+
+from shapely.geometry import Point, Polygon
+
+from src.rendering import (
+    hypsometric_colors,
+    polygon_path_d,
+    stream_order_widths,
+)
+from src import rendering
+
+
+def test_path_d_none_returns_empty():
+    """path_d with None geometry returns empty string (line 66)."""
+    assert path_d(None, 0, 10, 3) == ""
+
+
+def test_polygon_path_d_none_returns_empty():
+    """polygon_path_d with None returns empty string (line 149)."""
+    assert polygon_path_d(None, 0, 10, 3) == ""
+
+
+def test_bounds_with_none_and_empty_geoms_returns_zero_box():
+    """bounds with list of None/empty geoms returns the zero box (line 174).
+
+    ``bounds()`` is defined over *line* geometries and always returns a
+    4-tuple (never None).  Passing None/empty items simply yields no
+    coordinates, so the result is the well-defined zero box ``(0,0,0,0)``.
+    """
+    assert bounds([None, LineString()]) == (0.0, 0.0, 0.0, 0.0)
+
+
+def test_hypsometric_colors_empty_dict():
+    """hypsometric_colors with empty dict returns empty dict (line 1363)."""
+    assert hypsometric_colors({}) == {}
+
+
+def test_stream_order_widths_max_order_le_1():
+    """stream_order_widths with max_order=1 returns flat widths (line 1122-1123)."""
+    orders = {1: 1, 2: 1, 3: 1}
+    result = stream_order_widths(orders, max_order=1, base_width=0.5)
+    assert all(v == 0.5 for v in result.values())
+    assert set(result.keys()) == {1, 2, 3}
+
+
+def test_stream_order_widths_interpolation():
+    """stream_order_widths interpolates middle orders (lines 1131-1132)."""
+    orders = {1: 1, 2: 2, 3: 3}
+    result = stream_order_widths(orders, max_order=3, base_width=1.0, max_scale=3.0)
+    # Order 1 -> base_width = 1.0
+    assert math.isclose(result[1], 1.0)
+    # Order 3 (max_order) -> base_width * max_scale = 3.0
+    assert math.isclose(result[3], 3.0)
+    # Order 2 -> midpoint: frac = (2-1)/(3-1) = 0.5, so 1.0 + (3.0 - 1.0) * 0.5 = 2.0
+    assert math.isclose(result[2], 2.0)
+
+
+def test_render_svg_empty_geoms_point_features_seeds_bounds():
+    """render_svg with empty geometries but non-empty point_features seeds bounds
+    from extras (lines 989-990).
+    """
+    svg = render_svg(
+        {},
+        {},
+        {},
+        point_features=[(1, Point(5.0, 5.0), "spring")],
+    )
+    assert len(svg) > 0
+    assert "<svg" in svg
+    assert "</svg>" in svg
+
+
+def test_render_svg_structure_empty_linestring():
+    """Exercise _structure_bar_element degenerate path with an empty
+    LineString (lines 510-514): falls back to (0,0) bar.
+    """
+    from shapely import wkt
+
+    empty_line = wkt.loads("LINESTRING EMPTY")
+    svg = render_svg(
+        _STREAM_GEOMS,
+        _STREAM_COLORS,
+        _STREAM_WATERSHEDS,
+        hydro_structures=[(99, empty_line, "dam_weir")],
+    )
+    # Empty geom → _iter_line_parts yields nothing → degenerate fallback bar
+    assert "<svg" in svg
+
+
+def test_render_svg_glyph_shapes_dot_diamond_triangle():
+    """Exercise dot, diamond, triangle glyph shapes (lines 543-544, 550-553)."""
+    pt = Point(5.0, 5.0)
+    for shape, family in [("dot", "spring"), ("diamond", "gate"), ("triangle", "spillway")]:
+        svg = render_svg(
+            _STREAM_GEOMS,
+            _STREAM_COLORS,
+            _STREAM_WATERSHEDS,
+            hydro_structures=[(1, pt, family)],
+            hydro_structure_styles={family: {"marker": shape}},
+        )
+        assert "<svg" in svg
+        assert "hydro_" + family in svg
+
+
+def test_render_svg_structure_polygon_outline_with_dash():
+    """Exercise structure polygon with fill_mode outline and dash style
+    (lines 607-610).
+    """
+    poly = Polygon([(0, 0), (2, 0), (2, 2), (0, 2)])
+    svg = render_svg(
+        _STREAM_GEOMS,
+        _STREAM_COLORS,
+        _STREAM_WATERSHEDS,
+        hydro_structures=[(42, poly, "lock_chamber")],
+        hydro_structure_styles={"lock_chamber": {"fill": "outline", "dash": "2 1"}},
+    )
+    assert "stroke-dasharray" in svg
+    assert "hydro_lock_chamber" in svg
+
+
+# ---------------------------------------------------------------------------
+# Additional coverage for uncovered lines
+# ---------------------------------------------------------------------------
+
+from shapely.geometry import box, MultiPolygon
+
+from src.rendering import polygon_bounds, polygon_path_d
+
+
+class _FakeLineString:
+    """A fake geometry that _iter_line_parts yields but whose coords are empty."""
+
+    is_empty = False
+    geom_type = "LineString"
+    coords = []
+
+
+def test_path_d_continue_on_empty_transform(monkeypatch):
+    """path_d skips a line part whose coords transform to nothing (line 139).
+
+    A degenerate LineString-like object with empty coords causes
+    transform_coords to return [], triggering the continue branch.
+    """
+    result = path_d(_FakeLineString(), min_x=0.0, max_y=10.0, precision=3)
+    assert result == ""
+
+
+def test_path_d_multiline_skips_degenerate_part():
+    """path_d skips degenerate parts in a MultiLineString (line 139).
+
+    Construct a MultiLineString-like where one part has empty coords
+    while another is valid — only the valid part appears in output.
+    """
+
+    class _FakeMulti:
+        is_empty = False
+        geom_type = "MultiLineString"
+        geoms = [_FakeLineString(), LineString([(0.0, 10.0), (5.0, 0.0)])]
+
+    d = path_d(_FakeMulti(), min_x=0.0, max_y=10.0, precision=3)
+    assert d.count("M") == 1
+    assert d == "M 0,0 L 5,10"
+
+
+def test_polygon_bounds_returns_none_for_all_empty():
+    """polygon_bounds returns None when all geometries are empty (line 174)."""
+    empty_poly = Polygon()
+    assert polygon_bounds([empty_poly, Polygon()]) is None
+
+
+def test_polygon_path_d_skips_ring_with_fewer_than_2_points():
+    """polygon_path_d skips a ring with <2 distinct points after transform
+    (line 192).
+
+    A fake polygon whose ring has only one unique coordinate (after the
+    closing-duplicate is dropped) results in <2 points -> skip.
+    """
+
+    class _SinglePointPoly:
+        """Polygon-like with a degenerate single-point ring."""
+
+        is_empty = False
+        geom_type = "Polygon"
+
+        class exterior:
+            coords = [(5.0, 5.0), (5.0, 5.0)]
+
+        interiors = []
+
+    result = polygon_path_d(_SinglePointPoly(), min_x=0.0, max_y=10.0, precision=3)
+    assert result == ""
+
+
+def test_point_bounds_returns_none_for_all_empty_or_none():
+    """_point_bounds returns None when all items have None/empty geom (line 285)."""
+    items = [
+        (1, None, "spring"),
+        (2, Point(), "well"),
+    ]
+    result = rendering._point_bounds(items)
+    assert result is None
+
+
+def test_structure_bounds_skips_geom_with_falsy_bounds():
+    """_structure_bounds skips geom where .bounds is falsy (line 309).
+
+    A mock geometry that is not empty but has falsy (empty tuple) bounds.
+    """
+
+    class _FalsyBoundsGeom:
+        is_empty = False
+        bounds = ()
+
+    items = [(1, _FalsyBoundsGeom(), "dam_weir")]
+    result = rendering._structure_bounds(items)
+    assert result is None
+
+
+def test_halo_lines_per_segment_stroke_and_channel_dashes():
+    """_halo_lines with color=None appends per-segment stroke (line 743) and
+    channel_dashes entry appends stroke-dasharray (line 745).
+
+    Unassigned segments get color=None at line 1061; exercising them with
+    vector_glow=True and channel_dashes hits both branches.
+    """
+    geoms = {1: LineString([(0.0, 0.0), (5.0, 10.0)])}
+    colors = {1: "#ff0000"}
+    # Segment 1 is unassigned (not in any watershed), so the river_groups
+    # entry will be ("rivers_unassigned", None, [1]).
+    svg = render_svg(
+        geoms,
+        colors,
+        {},  # no watersheds -> segment 1 is unassigned -> color=None
+        glow=True,
+        glow_mode="vector",
+        channel_dashes={1: "4 2"},
+    )
+    assert "<svg" in svg
+    # The halo group should have per-segment stroke since group color is None.
+    assert 'stroke="#ff0000"' in svg
+    # Channel dashes should appear on the halo path.
+    assert 'stroke-dasharray="4 2"' in svg
+
+
+def test_point_features_rendered_below():
+    """Point features with point_feature_order='below' are rendered before
+    rivers (line 1040).
+    """
+    svg = render_svg(
+        _STREAM_GEOMS,
+        _STREAM_COLORS,
+        _STREAM_WATERSHEDS,
+        point_features=[(10, Point(3.0, 3.0), "spring")],
+        point_feature_order="below",
+    )
+    assert "<svg" in svg
+    # Point features group appears before watershed groups.
+    pf_pos = svg.find("point_features")
+    ws_pos = svg.find("watershed_")
+    assert pf_pos < ws_pos, "point features should appear before rivers when order=below"
+
+
+def test_hydro_structures_rendered_below():
+    """Hydro structures with hydro_structure_order='below' are rendered before
+    rivers (line 1045).
+    """
+    svg = render_svg(
+        _STREAM_GEOMS,
+        _STREAM_COLORS,
+        _STREAM_WATERSHEDS,
+        hydro_structures=[(20, Point(3.0, 3.0), "dam_weir")],
+        hydro_structure_order="below",
+    )
+    assert "<svg" in svg
+    # Structures group appears before watershed groups.
+    hs_pos = svg.find("hydro_")
+    ws_pos = svg.find("watershed_")
+    assert hs_pos < ws_pos, "hydro structures should appear before rivers when order=below"
+
+
+def test_empty_watershed_group_skipped():
+    """A watershed whose segment IDs are all absent from geometries is skipped
+    (line 1056).
+    """
+    geoms = {1: LineString([(0.0, 0.0), (5.0, 10.0)])}
+    colors = {1: "#ff0000"}
+    watersheds = {
+        "PRESENT": {1},
+        "ABSENT": {999, 998},  # IDs not in geoms -> skipped
+    }
+    svg = render_svg(geoms, colors, watersheds)
+    assert "watershed_PRESENT" in svg
+    assert "watershed_ABSENT" not in svg

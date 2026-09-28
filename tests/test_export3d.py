@@ -130,3 +130,85 @@ def test_export_scene_is_deterministic() -> None:
     export_scene(_scene(), out_dir="/o", name="c", writer=lambda p, d: a.__setitem__(p, d))
     export_scene(_scene(), out_dir="/o", name="c", writer=lambda p, d: b.__setitem__(p, d))
     assert a == b
+
+
+# --- Coverage gap tests (lines 66, 79-82, 124-125) ---
+
+
+def _scene_with_none_z(vertical_exaggeration=1.0):
+    """Build a scene whose river has a None-z vertex mid-run, forcing a flush."""
+    vals = np.array([[0, 1, 2], [1, 2, 3], [2, 3, 4]], dtype=float)
+    g = RasterGrid(vals, GridTransform(0.0, 3.0, 1.0, 1.0), "EPSG:5070", None)
+    terrain = build_terrain_mesh(g, error_budget_m=0.01, boundary_id="clark")
+    # River with 5 vertices: 2 valid, 1 None (breaks the run), 2 valid.
+    r = ElevatedLine(
+        1,
+        (
+            ElevatedVertex(0.5, 0.5, 10.0),
+            ElevatedVertex(1.0, 0.5, 9.0),
+            ElevatedVertex(1.5, 0.5, None),   # <-- interrupts the run
+            ElevatedVertex(2.0, 0.5, 7.0),
+            ElevatedVertex(2.5, 0.5, 6.0),
+        ),
+        ((0.5, 0.5), (1.0, 0.5), (1.5, 0.5), (2.0, 0.5), (2.5, 0.5)),
+        "dem-1",
+    )
+    return assemble_scene(
+        terrain=terrain,
+        rivers=[r],
+        segment_colors={1: "#00ffff"},
+        vertical_exaggeration=vertical_exaggeration,
+    )
+
+
+def test_vertical_exaggeration_applied_to_terrain() -> None:
+    """Line 66: _terrain_verts applies vertical_exaggeration when requested."""
+    from src.export3d import _terrain_verts
+
+    scene = _scene(vertical_exaggeration=3.0)
+    verts_1x = _terrain_verts(scene, apply=False)
+    verts_ex = _terrain_verts(scene, apply=True)
+    # z values should differ by the exaggeration factor.
+    for v1, vx in zip(verts_1x, verts_ex):
+        assert abs(vx[2] - v1[2] * 3.0) < 1e-9
+        # x and y unchanged.
+        assert v1[0] == vx[0]
+        assert v1[1] == vx[1]
+
+
+def test_river_run_flush_on_none_z() -> None:
+    """Lines 79-82: a None-z vertex mid-run flushes the accumulated run."""
+    from src.export3d import _river_runs
+
+    scene = _scene_with_none_z()
+    runs = _river_runs(scene, apply=False)
+    # The None-z splits into two runs of 2 vertices each.
+    assert len(runs) == 2
+    assert len(runs[0][1]) == 2
+    assert len(runs[1][1]) == 2
+
+
+def test_glb_buffer_alignment_padding() -> None:
+    """Lines 124-125: GLB binary buffer views are 4-byte aligned.
+
+    Build a scene and verify that every bufferView.byteOffset is 4-byte aligned
+    and the total GLB length is a multiple of 4.
+    """
+    glb = scene_to_glb(_scene())
+    # Parse JSON chunk to inspect buffer views.
+    clen = struct.unpack_from("<I", glb, 12)[0]
+    doc = json.loads(glb[20 : 20 + clen])
+    for bv in doc["bufferViews"]:
+        assert bv["byteOffset"] % 4 == 0, f"Unaligned bufferView at offset {bv['byteOffset']}"
+    assert len(glb) % 4 == 0
+
+
+def test_disk_writer_creates_parent_and_writes_bytes(tmp_path) -> None:
+    """Lines 275-277: _disk_writer creates parent dirs and writes data."""
+    from src.export3d import _disk_writer
+
+    target = str(tmp_path / "sub" / "dir" / "file.glb")
+    _disk_writer(target, b"hello")
+    from pathlib import Path
+
+    assert Path(target).read_bytes() == b"hello"

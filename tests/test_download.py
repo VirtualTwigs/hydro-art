@@ -102,3 +102,93 @@ def test_matching_checksum_passes(tmp_path):
         _descriptor(good_sha), tmp_path / "f.zip"
     )
     assert dest.read_bytes() == payload
+
+
+# --- UrllibFetcher coverage (lines 62-91) -----------------------------------
+
+class _FakeResponse:
+    """Minimal fake for the object returned by urlopen."""
+
+    def __init__(self, data, headers=None):
+        self._data = data
+        self._pos = 0
+        self.headers = headers or {}
+        self.closed = False
+
+    def read(self, size=-1):
+        if self._pos >= len(self._data):
+            return b""
+        end = self._pos + size if size > 0 else len(self._data)
+        chunk = self._data[self._pos:end]
+        self._pos = end
+        return chunk
+
+    def close(self):
+        self.closed = True
+
+
+def test_urllib_fetcher_basic_open(monkeypatch):
+    """UrllibFetcher.open returns a FetchResponse with chunks."""
+    from src.download import UrllibFetcher
+
+    payload = b"hello"
+    fake_resp = _FakeResponse(payload, {"Content-Length": "5"})
+    monkeypatch.setattr("src.download.urlopen", lambda req, timeout=None: fake_resp)
+
+    fetcher = UrllibFetcher(timeout=10, chunk_size=2)
+    result = fetcher.open("http://example.com/data.zip")
+    assert result.total_size == 5
+    data = b"".join(result.chunks)
+    assert data == payload
+    assert fake_resp.closed
+
+
+def test_urllib_fetcher_range_header(monkeypatch):
+    """UrllibFetcher.open adds Range header when start_byte > 0."""
+    from src.download import UrllibFetcher
+
+    captured_request = {}
+
+    def fake_urlopen(req, timeout=None):
+        captured_request["headers"] = dict(req.headers)
+        return _FakeResponse(b"tail", {"Content-Range": "bytes 5-8/10"})
+
+    monkeypatch.setattr("src.download.urlopen", fake_urlopen)
+
+    fetcher = UrllibFetcher()
+    result = fetcher.open("http://example.com/data.zip", start_byte=5)
+    assert captured_request["headers"].get("Range") == "bytes=5-"
+    assert result.total_size == 10
+
+
+def test_urllib_fetcher_content_range_unparseable(monkeypatch):
+    """Content-Range with '*' total → total_size is None."""
+    from src.download import UrllibFetcher
+
+    fake_resp = _FakeResponse(b"x", {"Content-Range": "bytes 0-0/*"})
+    monkeypatch.setattr("src.download.urlopen", lambda req, timeout=None: fake_resp)
+
+    result = UrllibFetcher().open("http://example.com/f.zip")
+    assert result.total_size is None
+
+
+def test_urllib_fetcher_content_length_fallback(monkeypatch):
+    """No Content-Range → falls back to Content-Length + start_byte."""
+    from src.download import UrllibFetcher
+
+    fake_resp = _FakeResponse(b"data", {"Content-Length": "4"})
+    monkeypatch.setattr("src.download.urlopen", lambda req, timeout=None: fake_resp)
+
+    result = UrllibFetcher().open("http://example.com/f.zip", start_byte=100)
+    assert result.total_size == 104
+
+
+def test_urllib_fetcher_no_size_headers(monkeypatch):
+    """No Content-Range, no Content-Length → total_size is None."""
+    from src.download import UrllibFetcher
+
+    fake_resp = _FakeResponse(b"data", {})
+    monkeypatch.setattr("src.download.urlopen", lambda req, timeout=None: fake_resp)
+
+    result = UrllibFetcher().open("http://example.com/f.zip")
+    assert result.total_size is None

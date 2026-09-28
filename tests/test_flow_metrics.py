@@ -764,3 +764,75 @@ def test_longitudinal_frames_propagates_profile_errors() -> None:
     accum, hydroseq, dnhydroseq, _ = _mainstem()
     with pytest.raises(FlowMetricsError):
         longitudinal_frames(accum, hydroseq, dnhydroseq, [30, 10])  # broken chain
+
+
+# --- edge-case guard-clause coverage ---------------------------------------
+
+from src.flow_metrics import _coerce_year_rows, _shape_similarity
+
+
+def test_snow_fraction_raises_on_shape_mismatch() -> None:
+    """Line 478: rain and melt with different shapes must raise."""
+    rain = np.ones(12)
+    melt = np.ones((3, 12))
+    with pytest.raises(FlowMetricsError, match="must share shape"):
+        snow_fraction(rain, melt)
+
+
+def test_snow_regime_raises_on_matrix_input() -> None:
+    """Line 517: snow_regime rejects multi-row (ndim != 1) inputs."""
+    rain = np.ones((2, 12))
+    melt = np.ones((2, 12))
+    with pytest.raises(FlowMetricsError, match="single \\[12\\]"):
+        snow_regime(rain, melt)
+
+
+def test_coerce_year_rows_rejects_years_with_mapping() -> None:
+    """Line 541: passing years alongside a dict must raise."""
+    mapping = {2000: np.ones(12), 2001: np.ones(12)}
+    with pytest.raises(FlowMetricsError, match="not a mapping"):
+        _coerce_year_rows(mapping, years=[2000, 2001], name="test")
+
+
+def test_coerce_year_rows_rejects_1d_matrix() -> None:
+    """Line 547: a flat 1-D array is not a valid matrix."""
+    with pytest.raises(FlowMetricsError, match="must have shape"):
+        _coerce_year_rows(np.ones(12), years=None, name="test")
+
+
+def test_coerce_year_rows_rejects_years_length_mismatch() -> None:
+    """Line 550: years list length must match row count."""
+    mat = np.ones((3, 12))
+    with pytest.raises(FlowMetricsError, match="years length"):
+        _coerce_year_rows(mat, years=[2000, 2001], name="test")
+
+
+def test_shape_similarity_returns_nan_on_constant_vector() -> None:
+    """Lines 599-600: constant 12-vector → zero variance → FlowValidationError
+    caught internally → nan."""
+    constant = np.ones(12)
+    other = np.arange(1.0, 13.0)
+    result = _shape_similarity(constant, other)
+    assert np.isnan(result)
+
+
+def test_shape_similarity_returns_nan_on_all_nan_vectors() -> None:
+    """Lines 599-600: all-NaN inputs → FlowValidationError from _paired → nan."""
+    all_nan = np.full(12, np.nan)
+    other = np.arange(1.0, 13.0)
+    result = _shape_similarity(all_nan, other)
+    assert np.isnan(result)
+
+
+def test_record_book_raises_on_non_1d_vec() -> None:
+    """Line 708: each year's vector must be 1-D."""
+    series = {2000: np.ones((2, 12)), 2001: np.ones(12)}
+    with pytest.raises(FlowMetricsError, match="single hydrographs"):
+        record_book(series)
+
+
+def test_decade_flow_duration_raises_on_small_decade_size() -> None:
+    """Line 744: decade_size < 1 must raise."""
+    series = {2000: np.ones(12)}
+    with pytest.raises(FlowMetricsError, match="decade_size must be >= 1"):
+        decade_flow_duration(series, quantiles=[0.5], decade_size=0)

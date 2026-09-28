@@ -368,3 +368,41 @@ class TestPaymentStateMachine:
         assert req.stripe_payment_intent is None
         assert req.amount_cents is None
         assert req.paid_at is None
+
+
+# --- Coverage gap: OrderEvent.from_dict (line 93) ----------------------------
+
+def test_order_event_from_dict_roundtrip():
+    """OrderEvent.from_dict reconstructs from to_dict output."""
+    from src.orders import OrderEvent
+
+    ev = OrderEvent(timestamp="2026-09-28T00:00:00Z", event="test_event", detail={"key": "val"})
+    d = ev.to_dict()
+    restored = OrderEvent.from_dict(d)
+    assert restored.timestamp == ev.timestamp
+    assert restored.event == ev.event
+    assert restored.detail == ev.detail
+
+
+def test_order_event_from_dict_missing_detail():
+    """OrderEvent.from_dict defaults detail to {} when missing."""
+    from src.orders import OrderEvent
+
+    d = {"timestamp": "2026-09-28T00:00:00Z", "event": "bare"}
+    ev = OrderEvent.from_dict(d)
+    assert ev.detail == {}
+
+
+# --- Coverage gap: list_all skips corrupt JSON (lines 207-208) ----------------
+
+def test_list_all_skips_corrupt_json(tmp_path):
+    """Corrupt JSON files in the store dir are silently skipped."""
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_valid_payload())
+    # Write a corrupt file alongside the valid one
+    corrupt = tmp_path / "orders" / "REQ-CORRUPT-0001.json"
+    corrupt.write_text("{invalid json!!!")
+    requests = store.list_all()
+    ids = [r.request_id for r in requests]
+    assert req.request_id in ids
+    assert "REQ-CORRUPT-0001" not in ids

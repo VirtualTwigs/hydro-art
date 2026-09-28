@@ -144,3 +144,61 @@ def test_injectable_reproject_seam_used():
     )
     assert calls == ["EPSG:4269->EPSG:5070"]
     assert [f.source_id for f in result.selected] == ["g"]
+
+
+# --- Missing-line coverage additions (lines 86, 177-178, 181-182, 186-187, 218-219) ---
+
+
+def test_geometry_kind_geometry_collection_returns_other():
+    """_geometry_kind with a GeometryCollection falls through to 'other' (line 86)."""
+    from shapely.geometry import GeometryCollection
+    from src.hydro_structure_selection import _geometry_kind
+
+    gc = GeometryCollection([Point(0, 0), LineString([(0, 0), (1, 1)])])
+    assert _geometry_kind(gc) == "other"
+
+
+def test_excluded_class_passes_straight_through():
+    """Structure with struct_class='excluded' goes directly to excluded (lines 177-178)."""
+    feat = _structure(Point(1, 1), struct_class="excluded", source_id="pre_ex")
+    result = process_hydro_structures([feat])
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "pre_ex"
+
+
+def test_structure_with_none_geometry_excluded():
+    """Structure with geometry=None is excluded with 'no geometry' reason (lines 181-182)."""
+    feat = _structure(None, struct_class="dam_weir", source_id="no_geom")
+    result = process_hydro_structures([feat])
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "no_geom"
+    assert "no geometry" in result.excluded[0].inclusion_reason
+
+
+def test_structure_geometry_dropped_in_repair_excluded():
+    """Structure whose geometry becomes None after repair is excluded (lines 185-187)."""
+    from unittest.mock import patch
+    from src.geometry import RepairOutcome
+
+    feat = _structure(LineString([(0, 0), (1, 1)]), source_id="bad_repair")
+
+    with patch("src.hydro_structure_selection.repair_geometry") as mock_repair:
+        mock_repair.return_value = RepairOutcome(geometry=None, dropped="empty")
+        result = process_hydro_structures([feat])
+
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "bad_repair"
+    assert "geometry dropped in repair" in result.excluded[0].inclusion_reason
+
+
+def test_duplicate_geometry_second_excluded():
+    """Two structures with identical geometry: first selected, second excluded (lines 218-219)."""
+    a = _structure(LineString([(0, 0), (10, 10)]), struct_class="dam_weir", source_id="a")
+    b = _structure(LineString([(0, 0), (10, 10)]), struct_class="dam_weir", source_id="b")
+    result = process_hydro_structures([a, b])
+    assert [f.source_id for f in result.selected] == ["a"]
+    assert [f.source_id for f in result.excluded] == ["b"]
+    assert "duplicate geometry" in result.excluded[0].inclusion_reason

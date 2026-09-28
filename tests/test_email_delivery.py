@@ -179,3 +179,123 @@ class TestSendConfirmationEmail:
         plain = msg.get_payload()[0].get_payload(decode=True).decode()
         assert "Riverglyph" in plain
         assert "Hydro-Art" not in plain
+
+
+# --- Coverage gap: SmtpSender.configured (line 45) ---------------------------
+
+class TestSmtpSender:
+    def test_configured_false_without_password(self):
+        from src.email_delivery import SmtpSender
+
+        sender = SmtpSender(app_password="")
+        assert sender.configured is False
+
+    def test_configured_true_with_password(self):
+        from src.email_delivery import SmtpSender
+
+        sender = SmtpSender(app_password="test-pass")
+        assert sender.configured is True
+
+    def test_send_returns_false_without_password(self):
+        from email.mime.multipart import MIMEMultipart
+
+        from src.email_delivery import SmtpSender
+
+        sender = SmtpSender(app_password="")
+        msg = MIMEMultipart()
+        assert sender.send(msg) is False
+
+
+# --- Coverage gap: send_*_email exception handling (lines 182-184, 254, 281)
+
+class FakeExplodingSender:
+    def send(self, msg):
+        raise RuntimeError("boom")
+
+
+class FakeRefusingSender:
+    def send(self, msg):
+        return False
+
+
+class TestEmailFailurePaths:
+    def test_send_confirmation_exception_returns_false(self):
+        result = send_confirmation_email("a@b.com", "REQ-001", sender=FakeExplodingSender())
+        assert result is False
+
+    def test_send_proof_exception_returns_false(self):
+        from src.email_delivery import send_proof_email
+
+        result = send_proof_email("a@b.com", "REQ-001", "http://proof", sender=FakeExplodingSender())
+        assert result is False
+
+    def test_send_delivery_exception_returns_false(self):
+        result = send_delivery_email("a@b.com", "ORD-001", "http://dl", sender=FakeExplodingSender())
+        assert result is False
+
+    def test_send_proof_returns_false_on_refusal(self):
+        from src.email_delivery import send_proof_email
+
+        result = send_proof_email("a@b.com", "REQ-001", "http://proof", sender=FakeRefusingSender())
+        assert result is False
+
+    def test_send_delivery_returns_false_on_refusal(self):
+        result = send_delivery_email("a@b.com", "ORD-001", "http://dl", sender=FakeRefusingSender())
+        assert result is False
+
+
+# --- Coverage gap: sender=None fallback to SmtpSender (lines 250, 277) -------
+
+
+def test_send_proof_email_default_sender_no_password(monkeypatch):
+    """send_proof_email with sender=None falls back to SmtpSender (no password → False)."""
+    from src.email_delivery import send_proof_email
+
+    monkeypatch.delenv("HYDRO_ART_GMAIL_APP_PASSWORD", raising=False)
+    result = send_proof_email("a@b.com", "REQ-001", "http://proof")
+    assert result is False
+
+
+def test_send_delivery_email_default_sender_no_password(monkeypatch):
+    """send_delivery_email with sender=None falls back to SmtpSender (no password → False)."""
+    monkeypatch.delenv("HYDRO_ART_GMAIL_APP_PASSWORD", raising=False)
+    result = send_delivery_email("a@b.com", "ORD-001", "http://dl")
+    assert result is False
+
+
+# --- Coverage gap: SmtpSender.send with monkeypatched SMTP_SSL (lines 53-56) -
+
+
+def test_smtp_sender_send_with_password(monkeypatch):
+    """SmtpSender.send connects via SMTP_SSL and sends."""
+    from src.email_delivery import SmtpSender
+
+    monkeypatch.setenv("HYDRO_ART_GMAIL_APP_PASSWORD", "test-pass")
+
+    sent_messages = []
+
+    class FakeConnection:
+        def login(self, user, password):
+            self._user = user
+            self._password = password
+
+        def send_message(self, msg):
+            sent_messages.append(msg)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+    monkeypatch.setattr("src.email_delivery.smtplib.SMTP_SSL", lambda host, port: FakeConnection())
+
+    from email.mime.multipart import MIMEMultipart
+
+    msg = MIMEMultipart()
+    msg["To"] = "test@example.com"
+    msg["Subject"] = "Test"
+
+    sender = SmtpSender()
+    assert sender.send(msg) is True
+    assert len(sent_messages) == 1

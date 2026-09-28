@@ -448,3 +448,236 @@ def test_flowline_channels_unknown_preset_raises():
         build_settings(
             {**DEFAULTS, "flowline_channels": {"preset": "fantasy"}}
         )
+
+
+# --- Coverage gap: coercion error branches -----------------------------------
+
+
+class TestOutputCoercionErrors:
+    def test_non_mapping_non_list_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'output'"):
+            build_settings({**DEFAULTS, "output": 42})
+
+    def test_unknown_output_format_raises(self):
+        with pytest.raises(ConfigError, match="Unsupported output"):
+            build_settings({**DEFAULTS, "output": ["svg", "bmp"]})
+
+
+class TestWaterbodyCoercionErrors:
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'waterbodies'"):
+            build_settings({**DEFAULTS, "waterbodies": "yes"})
+
+    def test_invalid_stroke_width_type_raises(self):
+        with pytest.raises(ConfigError, match="stroke_width"):
+            build_settings({**DEFAULTS, "waterbodies": {"stroke_width": "thick"}})
+
+    def test_invalid_min_area_type_raises(self):
+        with pytest.raises(ConfigError, match="min_inland_area_m2"):
+            build_settings({**DEFAULTS, "waterbodies": {"min_inland_area_m2": "big"}})
+
+    def test_negative_min_area_raises(self):
+        with pytest.raises(ConfigError, match="min_inland_area_m2"):
+            build_settings({**DEFAULTS, "waterbodies": {"min_inland_area_m2": -1}})
+
+    def test_invalid_render_order_raises(self):
+        with pytest.raises(ConfigError, match="render_order"):
+            build_settings({**DEFAULTS, "waterbodies": {"render_order": "random"}})
+
+    def test_invalid_coastal_mode_raises(self):
+        with pytest.raises(ConfigError, match="coastal_mode"):
+            build_settings({**DEFAULTS, "waterbodies": {"coastal_mode": "fantasy"}})
+
+
+class TestPointFeatureCoercionErrors:
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'point_features'"):
+            build_settings({**DEFAULTS, "point_features": "yes"})
+
+    def test_invalid_size_type_raises(self):
+        with pytest.raises(ConfigError, match="size"):
+            build_settings({**DEFAULTS, "point_features": {"size": "big"}})
+
+    def test_zero_size_raises(self):
+        with pytest.raises(ConfigError, match="size"):
+            build_settings({**DEFAULTS, "point_features": {"size": 0}})
+
+
+class TestArealFeatureCoercionErrors:
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'areal_features'"):
+            build_settings({**DEFAULTS, "areal_features": 42})
+
+    def test_invalid_opacity_type_raises(self):
+        with pytest.raises(ConfigError, match="opacity"):
+            build_settings({**DEFAULTS, "areal_features": {"opacity": "half"}})
+
+    def test_opacity_out_of_range_raises(self):
+        with pytest.raises(ConfigError, match="opacity"):
+            build_settings({**DEFAULTS, "areal_features": {"opacity": 0}})
+
+    def test_invalid_dash_raises(self):
+        with pytest.raises(ConfigError, match="dash"):
+            build_settings({**DEFAULTS, "areal_features": {"dash": "zigzag!!!"}})
+
+
+class TestHydroStructureCoercionErrors:
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'hydro_structures'"):
+            build_settings({**DEFAULTS, "hydro_structures": [1, 2]})
+
+    def test_invalid_size_type_raises(self):
+        with pytest.raises(ConfigError, match="size"):
+            build_settings({**DEFAULTS, "hydro_structures": {"size": "big"}})
+
+    def test_zero_size_raises(self):
+        with pytest.raises(ConfigError, match="size"):
+            build_settings({**DEFAULTS, "hydro_structures": {"size": -1}})
+
+    def test_invalid_opacity_type_raises(self):
+        with pytest.raises(ConfigError, match="opacity"):
+            build_settings({**DEFAULTS, "hydro_structures": {"opacity": "opaque"}})
+
+    def test_opacity_out_of_range_raises(self):
+        with pytest.raises(ConfigError, match="opacity"):
+            build_settings({**DEFAULTS, "hydro_structures": {"opacity": 1.5}})
+
+    def test_invalid_dash_raises(self):
+        with pytest.raises(ConfigError, match="dash"):
+            build_settings({**DEFAULTS, "hydro_structures": {"dash": "no!!"}})
+
+
+class TestFlowlineChannelCoercionErrors:
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'flowline_channels'"):
+            build_settings({**DEFAULTS, "flowline_channels": True})
+
+    def test_invalid_dash_value_raises(self):
+        with pytest.raises(ConfigError, match="dashes"):
+            build_settings({**DEFAULTS, "flowline_channels": {
+                "dashes": {"canal_ditch": "bad!!pattern"}
+            }})
+
+
+class TestElevationCoercionErrors:
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="Invalid 'elevation'"):
+            build_settings({**DEFAULTS, "elevation": "high"})
+
+    def test_invalid_source_raises(self):
+        with pytest.raises(ConfigError, match="elevation.source"):
+            build_settings({**DEFAULTS, "elevation": {"source": "satellite"}})
+
+    def test_invalid_vertical_exaggeration_type_raises(self):
+        with pytest.raises(ConfigError, match="vertical_exaggeration"):
+            build_settings({**DEFAULTS, "elevation": {"vertical_exaggeration": "lots"}})
+
+    def test_tile_budget_bool_raises(self):
+        with pytest.raises(ConfigError, match="tile_budget"):
+            build_settings({**DEFAULTS, "elevation": {"tile_budget": True}})
+
+    def test_tile_budget_negative_raises(self):
+        with pytest.raises(ConfigError, match="tile_budget"):
+            build_settings({**DEFAULTS, "elevation": {"tile_budget": -1}})
+
+
+class TestBuildSettingsEdgeCases:
+    def test_invalid_projection_raises(self):
+        with pytest.raises(ConfigError, match="projection"):
+            build_settings({**DEFAULTS, "projection": "mercator"})
+
+    def test_invalid_line_width_type_raises(self):
+        with pytest.raises(ConfigError, match="line_width"):
+            build_settings({**DEFAULTS, "line_width": "thick"})
+
+    def test_invalid_min_order_type_raises(self):
+        with pytest.raises(ConfigError, match="min_order"):
+            build_settings({**DEFAULTS, "min_order": "all"})
+
+    def test_invalid_width_min_type_raises(self):
+        with pytest.raises(ConfigError, match="width_min"):
+            build_settings({**DEFAULTS, "width_min": "thin"})
+
+    def test_invalid_width_max_type_raises(self):
+        with pytest.raises(ConfigError, match="width_max"):
+            build_settings({**DEFAULTS, "width_max": "wide"})
+
+    def test_zero_width_max_raises(self):
+        with pytest.raises(ConfigError, match="width_max"):
+            build_settings({**DEFAULTS, "width_max": 0})
+
+    def test_invalid_width_gamma_type_raises(self):
+        with pytest.raises(ConfigError, match="width_gamma"):
+            build_settings({**DEFAULTS, "width_gamma": "linear"})
+
+    def test_invalid_png_size_type_raises(self):
+        with pytest.raises(ConfigError, match="png_size"):
+            build_settings({**DEFAULTS, "png_size": "big"})
+
+    def test_unsupported_png_size_raises(self):
+        with pytest.raises(ConfigError, match="png_size"):
+            build_settings({**DEFAULTS, "png_size": 999})
+
+
+class TestLoadYaml:
+    def test_non_mapping_yaml_raises(self, tmp_path):
+        from src.config import load_yaml
+
+        p = tmp_path / "config.yaml"
+        p.write_text("- list\n- items\n")
+        with pytest.raises(ConfigError, match="mapping"):
+            load_yaml(p)
+
+    def test_unknown_keys_emit_warning(self, tmp_path):
+        from src.config import load_yaml
+
+        p = tmp_path / "config.yaml"
+        p.write_text("region: Oregon\nfoobar_typo: true\n")
+        with pytest.warns(UserWarning, match="foobar_typo"):
+            result = load_yaml(p)
+        assert result["region"] == "Oregon"
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        from src.config import load_yaml
+
+        result = load_yaml(tmp_path / "nonexistent.yaml")
+        assert result == {}
+
+
+class TestNoneValueCoercion:
+    """Passing None for sub-config blocks uses defaults (lines 841, 993, 1047, 1113, 1199, 1242)."""
+
+    def test_waterbodies_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "waterbodies": None})
+        # waterbodies.enabled defaults to True in DEFAULTS
+        assert s.waterbodies.color == "#2ec4ff"  # default color preserved
+
+    def test_point_features_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "point_features": None})
+        assert s.point_features.enabled is False
+
+    def test_areal_features_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "areal_features": None})
+        assert s.areal_features.enabled is False
+
+    def test_hydro_structures_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "hydro_structures": None})
+        assert s.hydro_structures.enabled is False
+
+    def test_flowline_channels_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "flowline_channels": None})
+        assert s.flowline_channels.enabled is False
+
+    def test_elevation_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "elevation": None})
+        assert s.elevation.enabled is False
+
+
+class TestBuildSettingsMoreEdgeCases:
+    def test_no_region_raises(self):
+        with pytest.raises(ConfigError, match="region"):
+            build_settings({**DEFAULTS, "region": []})
+
+    def test_empty_output_list_raises(self):
+        with pytest.raises(ConfigError, match="output"):
+            build_settings({**DEFAULTS, "output": []})

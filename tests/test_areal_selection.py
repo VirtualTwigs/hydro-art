@@ -144,3 +144,102 @@ def test_point_duplicate_coordinates_suppressed():
     assert [f.source_id for f in result.selected] == ["a"]
     assert [f.source_id for f in result.excluded] == ["dup"]
     assert "duplicate" in result.excluded[0].inclusion_reason.lower()
+
+
+# --- Missing-line coverage additions (lines 144-165, 291-297) ------------------
+
+
+def test_areal_feature_with_none_geometry_excluded():
+    """Feature with geometry=None goes directly to excluded (lines 144-146)."""
+    feat = _areal(None, source_id="no_geom")
+    result = process_areal_features([feat])
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "no_geom"
+    assert "no geometry" in result.excluded[0].inclusion_reason
+
+
+def test_areal_feature_geometry_dropped_in_repair_excluded():
+    """Feature whose geometry becomes None after repair is excluded (lines 149-151)."""
+    from unittest.mock import patch
+    from src.geometry import RepairOutcome
+
+    bad_geom = _square(0, 0, 10)
+    feat = _areal(bad_geom, source_id="bad_repair")
+
+    with patch("src.areal_selection.repair_geometry") as mock_repair:
+        mock_repair.return_value = RepairOutcome(geometry=None, dropped="empty")
+        result = process_areal_features([feat])
+
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "bad_repair"
+    assert "geometry dropped in repair" in result.excluded[0].inclusion_reason
+
+
+def test_point_feature_with_none_geometry_excluded():
+    """Point feature with geometry=None goes directly to excluded (lines 291-292)."""
+    feat = _point(None, source_id="no_geom_pt")
+    result = process_point_features([feat])
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "no_geom_pt"
+    assert "no geometry" in result.excluded[0].inclusion_reason
+
+
+def test_point_feature_geometry_dropped_in_repair_excluded():
+    """Point feature whose geometry becomes None after repair is excluded (lines 295-297)."""
+    from unittest.mock import patch
+    from src.geometry import RepairOutcome
+
+    feat = _point(Point(1, 1), source_id="bad_repair_pt")
+
+    with patch("src.areal_selection.repair_geometry") as mock_repair:
+        mock_repair.return_value = RepairOutcome(geometry=None, dropped="empty")
+        result = process_point_features([feat])
+
+    assert len(result.selected) == 0
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "bad_repair_pt"
+    assert "geometry dropped in repair" in result.excluded[0].inclusion_reason
+
+
+# --- Coverage gap: clip_geometry returns None (lines 160-165) -----------------
+
+
+def test_areal_clip_returns_none_excluded():
+    """Areal feature that intersects boundary but clip yields None is excluded."""
+    from unittest.mock import patch
+
+    boundary = Polygon([(0, 0), (100, 0), (100, 100), (0, 100)])
+    # Feature partially overlaps boundary — straddles the edge
+    feat = _areal(
+        Polygon([(99, 0), (101, 0), (101, 1), (99, 1)]),
+        source_id="clip_none",
+    )
+
+    with patch("src.areal_selection.clip_geometry", return_value=None):
+        result = process_areal_features([feat], boundary=boundary)
+
+    assert len(result.excluded) == 1
+    assert "outside region boundary" in result.excluded[0].inclusion_reason
+
+
+# --- Coverage gap: clip_geometry returns valid geometry (lines 164-165) --------
+
+
+def test_areal_clip_returns_valid_geometry_marks_clipped():
+    """Areal feature clipped to boundary gets geom=clipped and was_clipped=True."""
+    boundary = Polygon([(0, 0), (100, 0), (100, 100), (0, 100)])
+    # Feature straddles the boundary — half inside
+    feat = _areal(
+        Polygon([(50, 0), (150, 0), (150, 100), (50, 100)]),
+        source_id="half_inside",
+    )
+    result = process_areal_features([feat], boundary=boundary)
+    assert len(result.selected) == 1
+    sel = result.selected[0]
+    assert sel.source_id == "half_inside"
+    # Area should be approximately 50*100 = 5000 m² (the clipped half)
+    assert abs(sel.area_m2 - 5000) < 1
+    assert "clipped" in sel.qa_flags

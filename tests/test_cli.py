@@ -141,3 +141,42 @@ def test_unset_months_flag_keeps_yaml(tmp_path):
     # --months not passed; YAML's months must survive.
     settings = resolve_settings(["--config", path])
     assert settings.months == (5, 6, 7, 8, 9)
+
+
+# --- Coverage gap: cli_overrides branches (lines 317,335,337,339,369,399,405) -
+
+def test_cli_palette_flag(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings(["--config", path, "--palette", "neon"])
+    assert settings.palette == "neon"
+
+
+def test_cli_stream_method_and_min_order(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings([
+        "--config", path, "--stream-method", "strahler",
+        "--min-order", "3", "--huc-level", "HUC8",
+    ])
+    assert settings.stream_method == "strahler"
+    assert settings.min_order == 3
+    assert settings.huc_level == "HUC8"
+
+
+def test_cli_point_feature_preset(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings([
+        "--config", path, "--point-features", "--point-feature-preset", "screen",
+    ])
+    assert settings.point_features.enabled is True
+
+
+def test_cli_elevation_source_and_cache_policy(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings([
+        "--config", path, "--elevation",
+        "--elevation-source", "3dep",
+        "--cache-policy", "reuse",
+    ])
+    assert settings.elevation.enabled is True
+    assert settings.elevation.source == "3dep"
+    assert settings.elevation.cache_policy == "reuse"

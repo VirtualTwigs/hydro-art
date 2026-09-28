@@ -107,3 +107,83 @@ def test_mesh_from_dem_selects_pyramid_level() -> None:
     assert mesh.lod == 1
     assert mesh.max_error_m <= 0.01
     assert mesh.source_raster_hash  # populated from the selected level
+
+
+# --- Coverage gap tests (lines 85, 126, 134, 150, 159, 272) ---
+
+
+def test_bary_returns_none_for_degenerate_triangle() -> None:
+    """Line 85: _bary returns None when three points are collinear (zero area)."""
+    from src.mesh import _bary
+
+    # Three collinear points along the x-axis.
+    tri = ((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (2.0, 0.0, 0.0))
+    assert _bary(tri, 0.5, 0.0) is None
+
+
+def test_build_terrain_mesh_negative_budget_raises() -> None:
+    """Line 126: ValueError when error_budget_m < 0."""
+    import pytest
+
+    with pytest.raises(ValueError, match="error_budget_m must be >= 0"):
+        build_terrain_mesh(
+            _grid(_plane(3, 3)), error_budget_m=-1.0, boundary_id="b"
+        )
+
+
+def test_build_terrain_mesh_all_nodata_raises() -> None:
+    """Line 134: ValueError when every sample is nodata."""
+    import pytest
+
+    vals = [[-9999.0, -9999.0], [-9999.0, -9999.0]]
+    with pytest.raises(ValueError, match="at least one valid sample"):
+        build_terrain_mesh(
+            _grid(vals, nodata=-9999.0), error_budget_m=1.0, boundary_id="b"
+        )
+
+
+def test_build_terrain_mesh_fewer_than_3_distinct_corners_raises() -> None:
+    """Line 150: ValueError when fewer than 3 distinct valid corners can be found.
+
+    A single-column grid has only 2 distinct corner positions (top and bottom),
+    so _nearest_valid maps all four corner targets to <= 2 unique cells.
+    """
+    import pytest
+
+    # 3-row, 1-column grid: corners (0,0), (0,0), (2,0), (2,0) -> 2 distinct.
+    vals = [[1.0], [2.0], [3.0]]
+    with pytest.raises(ValueError, match="Not enough distinct valid corners"):
+        build_terrain_mesh(
+            _grid(vals), error_budget_m=1.0, boundary_id="b"
+        )
+
+
+def test_build_terrain_mesh_exactly_3_valid_corners() -> None:
+    """Line 159: fallback to a single triangle when only 3 seed corners are distinct.
+
+    A 2x2 grid with one nodata corner: 3 of 4 corners are valid but the 4th
+    maps to an already-used cell, yielding exactly 3 seed vertices -> [(0,1,2)].
+    """
+    vals = [[-9999.0, 5.0], [3.0, 4.0]]
+    mesh = build_terrain_mesh(
+        _grid(vals, nodata=-9999.0), error_budget_m=100.0, boundary_id="b"
+    )
+    # With only 3 seed corners and a loose budget, we get exactly one triangle.
+    assert len(mesh.positions) == 3
+    assert len(mesh.triangles) >= 1
+
+
+def test_covers_any_returns_true_for_interior_point() -> None:
+    """Line 272: _covers_any returns True when a point is strictly inside a triangle."""
+    from src.mesh import _covers_any
+
+    vertices = [
+        (0.0, 0.0, 0.0),
+        (10.0, 0.0, 0.0),
+        (0.0, 10.0, 0.0),
+    ]
+    tri = (0, 1, 2)
+    # Point (2, 2) is strictly inside the triangle.
+    assert _covers_any(vertices, tri, [(2.0, 2.0)]) is True
+    # Point far outside should return False.
+    assert _covers_any(vertices, tri, [(20.0, 20.0)]) is False

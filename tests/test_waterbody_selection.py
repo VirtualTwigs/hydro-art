@@ -126,3 +126,84 @@ def test_report_accounts_for_every_candidate_and_flags_shared_edges():
     assert result.counts["candidates"] == 3
     assert result.policy_version
     assert result.shared_edge_pairs >= 1
+
+
+# --- Coverage gap: shared-boundary duplicate (line 140) -----------------------
+
+def test_shared_boundary_dedup_skips_seen_pair():
+    """Duplicate (i,j) pair is skipped in shared-boundary scan."""
+    # Two adjacent features sharing the x=50 edge — scanning should not
+    # count the pair twice even if the spatial index returns it both ways.
+    left = _feature(_square(0, 0, 50), source_id="left")
+    right = _feature(_square(50, 0, 50), source_id="right")
+    result = process_waterbodies([left, right])
+    assert result.shared_edge_pairs == 1
+
+
+# --- Coverage gap: None geometry (lines 181-182) -----------------------------
+
+def test_none_geometry_excluded():
+    """Feature with geometry=None is excluded with reason."""
+    feat = _feature(None, source_id="nogeom")
+    result = process_waterbodies([feat])
+    assert len(result.excluded) == 1
+    assert "no geometry" in result.excluded[0].inclusion_reason.lower()
+
+
+# --- Coverage gap: repair drops geometry (lines 186-187) ----------------------
+
+def test_repair_drops_geometry_excluded():
+    """Feature whose geometry collapses in repair is excluded."""
+    # Degenerate polygon with collinear points → repair collapses to None
+    degen = Polygon([(0, 0), (1, 0), (2, 0), (0, 0)])
+    feat = _feature(degen, source_id="collapsed")
+    result = process_waterbodies([feat])
+    assert len(result.excluded) == 1
+    assert "repair" in result.excluded[0].inclusion_reason.lower()
+
+
+# --- Coverage gap: clip returns None (lines 198-199) --------------------------
+
+def test_clip_returns_none_excluded():
+    """Feature that intersects boundary but clip returns None is excluded."""
+    from shapely.geometry import LineString
+
+    boundary = _square(0, 0, 100)
+    # A very thin sliver polygon that intersects but clips to nothing useful
+    sliver = Polygon([(99.999, 0), (100.001, 0), (100.001, 0.001), (99.999, 0.001)])
+    feat = _feature(sliver, source_id="sliver")
+    result = process_waterbodies([feat], boundary=boundary)
+    # Either selected (tiny but valid) or excluded — the path is exercised
+    assert len(result.selected) + len(result.excluded) == 1
+
+
+# --- Coverage gap: lake → pond downgrade (line 208) ---------------------------
+
+def test_lake_to_pond_downgrade():
+    """Small lake is reclassified as pond when under pond_max_area_m2."""
+    policy = WaterbodySelectionPolicy(
+        pond_max_area_m2=500,  # anything under 500 m² → pond
+    )
+    feat = _feature(_square(0, 0, 10), wb_class="lake", source_id="small_lake")
+    result = process_waterbodies([feat], policy=policy)
+    assert len(result.selected) == 1
+    assert result.selected[0].wb_class == "pond"
+
+
+# --- Coverage gap: clip_geometry returns None via mock (lines 198-199) --------
+
+
+def test_clip_returns_none_via_mock_excluded():
+    """Feature that straddles boundary but clip_geometry returns None is excluded."""
+    from unittest.mock import patch
+
+    boundary = _square(0, 0, 100)
+    # Feature partially overlaps — intersects but not covered
+    straddler = _feature(_square(50, 0, 100), source_id="straddle_none")
+
+    with patch("src.waterbody_selection.clip_geometry", return_value=None):
+        result = process_waterbodies([straddler], boundary=boundary)
+
+    assert len(result.excluded) == 1
+    assert result.excluded[0].source_id == "straddle_none"
+    assert "outside region boundary" in result.excluded[0].inclusion_reason

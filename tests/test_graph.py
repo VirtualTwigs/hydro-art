@@ -122,3 +122,30 @@ def test_build_graph_mixed_layers_with_and_without_attrs():
     assert None in ftype_present or any(
         "ftype" not in data for _, _, data in edges
     )
+
+
+# --- Coverage gap: snap with positive tolerance (line 64) ---------------------
+
+def test_snap_with_positive_tolerance():
+    """_snap rounds to the given grid spacing when tolerance > 0."""
+    from src.graph import _snap
+
+    # tolerance=10 → coords snap to multiples of 10
+    assert _snap((13.7, 27.2), tolerance=10) == (10.0, 30.0)
+    assert _snap((16.0, 24.0), tolerance=10) == (20.0, 20.0)
+
+
+# --- Coverage gap: degenerate segment dropped (lines 139-140) -----------------
+
+def test_single_point_segment_is_dropped():
+    """A LineString with only one point (degenerate) is dropped from the graph."""
+    # Use a MultiLineString where one part has < 2 coords after iteration
+    # (Shapely won't create a 1-point LineString, but a 2-point degenerate
+    # where start == end is dropped by the loop-edge check at lines 143-145.)
+    loop = LineString([(5.0, 5.0), (5.0, 5.0)])  # start == end after snap
+    normal = LineString([(0, 0), (1, 1)])
+    graph = build_graph([_flow(loop, normal)])
+    edges = list(graph.digraph.edges(data=True))
+    # Only the normal edge should survive; the loop is dropped
+    assert len(edges) == 1
+    assert graph.dropped_degenerate >= 1

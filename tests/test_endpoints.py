@@ -257,3 +257,66 @@ def test_conus_request_passes_rights_gate():
     """CONUS + neon-basin is public domain — sellable."""
     req = build_endpoint_request(_payload(region="CONUS", county=None))
     assert_sellable(req)
+
+
+# --- Coverage gap: kind_for KeyError (line 96) --------------------------------
+
+def test_kind_for_unknown_format_raises():
+    """EndpointContract.kind_for raises KeyError for unknown format."""
+    contract = list(ENDPOINT_CONTRACTS.values())[0]
+    with pytest.raises(KeyError):
+        contract.kind_for("nonexistent_format")
+
+
+# --- Coverage gap: dispatch_endpoint unknown renderer (line 340) --------------
+
+def test_dispatch_no_renderer_raises():
+    """dispatch_endpoint raises when no renderer registered."""
+    req = build_endpoint_request(_payload())
+    with pytest.raises(EndpointError, match="No renderer"):
+        dispatch_endpoint(req, renderers={})  # empty registry
+
+
+# --- Coverage gap: combined_manifest edge cases (lines 378, 381) --------------
+
+def test_combined_manifest_empty_raises():
+    """combined_manifest with empty results raises."""
+    from src.endpoints import combined_manifest
+
+    with pytest.raises(EndpointError, match="at least one"):
+        combined_manifest([])
+
+
+def test_combined_manifest_duplicate_endpoint_raises():
+    """combined_manifest with duplicate endpoints raises."""
+    from src.endpoints import combined_manifest
+
+    req = build_endpoint_request(_payload())
+    plan = endpoint_plan(req)
+    checksums = {item.filename: "abc123" * 10 + "ab" for item in plan.items}
+    result = EndpointResult(
+        endpoint=req.endpoint,
+        plan=plan,
+        manifest=endpoint_manifest(req, plan, checksums=checksums),
+    )
+    with pytest.raises(EndpointError, match="Duplicate"):
+        combined_manifest([result, result])
+
+
+# --- Coverage gap: e2e_contract_digest edge cases (lines 410, 413) ------------
+
+def test_e2e_digest_empty_raises():
+    """e2e_contract_digest with empty requests raises."""
+    from src.endpoints import e2e_contract_digest
+
+    with pytest.raises(EndpointError, match="at least one"):
+        e2e_contract_digest([])
+
+
+def test_e2e_digest_duplicate_endpoint_raises():
+    """e2e_contract_digest with duplicate endpoints raises."""
+    from src.endpoints import e2e_contract_digest
+
+    req = build_endpoint_request(_payload())
+    with pytest.raises(EndpointError, match="Duplicate"):
+        e2e_contract_digest([req, req])

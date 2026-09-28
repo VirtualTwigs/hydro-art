@@ -96,3 +96,69 @@ class TestSurcharge:
 
         with pytest.raises(TripOverlayError, match="[Ff]ile"):
             validate_trip_order(is_trip=True, file_content=None)
+
+
+# --- Namespace-free fallback paths (lines 50-54, 57, 90-96, 99, 128) ------
+
+SAMPLE_GPX_NO_NS = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <trkseg>
+      <trkpt lat="45.5" lon="-122.6"><ele>10</ele></trkpt>
+      <trkpt lat="45.6" lon="-122.7"><ele>15</ele></trkpt>
+    </trkseg>
+  </trk>
+</gpx>
+"""
+
+SAMPLE_KML_NO_NS = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<kml>
+  <Document>
+    <Placemark>
+      <LineString>
+        <coordinates>-122.6,45.5,10 -122.7,45.6,15</coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>
+"""
+
+
+class TestGpxNamespaceFallback:
+    def test_parses_gpx_without_namespace(self):
+        from src.trip_overlay import parse_gpx
+
+        coords = parse_gpx(SAMPLE_GPX_NO_NS)
+        assert len(coords) == 2
+        assert coords[0] == pytest.approx((45.5, -122.6), abs=0.01)
+
+    def test_empty_gpx_raises(self):
+        from src.trip_overlay import TripOverlayError, parse_gpx
+
+        with pytest.raises(TripOverlayError, match="No track points"):
+            parse_gpx("<gpx><trk><trkseg></trkseg></trk></gpx>")
+
+
+class TestKmlNamespaceFallback:
+    def test_parses_kml_without_namespace(self):
+        from src.trip_overlay import parse_kml
+
+        coords = parse_kml(SAMPLE_KML_NO_NS)
+        assert len(coords) == 2
+        assert coords[0] == pytest.approx((45.5, -122.6), abs=0.01)
+
+    def test_empty_kml_raises(self):
+        from src.trip_overlay import TripOverlayError, parse_kml
+
+        with pytest.raises(TripOverlayError, match="No coordinates"):
+            parse_kml("<kml><Document></Document></kml>")
+
+
+class TestOverlayEmptyCoords:
+    def test_empty_coords_returns_svg_unchanged(self):
+        from src.trip_overlay import overlay_path_on_svg
+
+        result = overlay_path_on_svg(SAMPLE_SVG, [])
+        assert "</svg>" in result

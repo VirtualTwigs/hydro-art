@@ -141,3 +141,51 @@ def test_ensure_cached_without_datasets_root_downloads_uncached(tmp_path):
     ensure_cached([desc], cache, downloader)
 
     assert downloader.calls == 1
+
+
+# --- Coverage gap: corrupt cache index (lines 65-70) ------------------------
+
+def test_corrupt_index_is_ignored_and_warns(tmp_path):
+    """A corrupt index.json is ignored with a warning; cache still works."""
+    import warnings as warn_mod
+
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "index.json").write_text("not json {{")
+    with warn_mod.catch_warnings(record=True) as caught:
+        warn_mod.simplefilter("always")
+        cache = Cache(cache_dir)
+    assert any("corrupt" in str(w.message).lower() for w in caught)
+    assert cache.metadata(_descriptor()) is None
+
+
+# --- Coverage gap: has() existence-only (line 82) ----------------------------
+
+def test_has_returns_true_without_checksum(tmp_path):
+    """has() returns True when file exists and no checksum is expected."""
+    cache = Cache(tmp_path / "cache")
+    desc = _descriptor()
+    path = cache.path_for(desc)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"data")
+    assert cache.has(desc) is True
+
+
+# --- Coverage gap: extract_archive non-zip (line 115) -----------------------
+
+def test_extract_rejects_non_zip(tmp_path):
+    """A non-zip file raises AcquisitionError."""
+    bad = tmp_path / "data.txt"
+    bad.write_text("plain text")
+    with pytest.raises(AcquisitionError, match="Not a valid zip"):
+        extract_archive(bad, tmp_path / "out")
+
+
+# --- Coverage gap: extract_archive corrupt zip (line 130) -------------------
+
+def test_extract_corrupt_zip_raises(tmp_path):
+    """A corrupt zip raises AcquisitionError."""
+    bad = tmp_path / "bad.zip"
+    bad.write_bytes(b"PK\x03\x04" + b"\x00" * 100)
+    with pytest.raises(AcquisitionError, match="Corrupt|valid"):
+        extract_archive(bad, tmp_path / "out")

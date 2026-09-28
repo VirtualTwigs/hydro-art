@@ -227,3 +227,25 @@ def test_flowline_attribute_fields_contain_ftype_and_fcode():
     # Flowline attributes are minimal — no provenance fields like waterbodies.
     assert "GNIS_Name" not in FLOWLINE_ATTRIBUTE_FIELDS
     assert "AreaSqKm" not in FLOWLINE_ATTRIBUTE_FIELDS
+
+
+# --- Coverage gap: _find_source (lines 469, 471) ----------------------------
+
+def test_find_source_returns_gdb_directory(tmp_path):
+    """_find_source returns the first .gdb directory."""
+    gdb_dir = tmp_path / "NHDPLUS_H_1707.gdb"
+    gdb_dir.mkdir()
+    (gdb_dir / "data").write_text("fake")
+    assert PyogrioLayerLoader._find_source(tmp_path) == gdb_dir
+
+
+def test_find_source_returns_shp_when_no_gdb(tmp_path):
+    """_find_source falls back to .shp when no .gdb exists."""
+    shp_file = tmp_path / "NHDFlowline.shp"
+    shp_file.write_text("fake")
+    assert PyogrioLayerLoader._find_source(tmp_path) == shp_file
+
+
+def test_find_source_returns_none_when_empty(tmp_path):
+    """_find_source returns None for a directory with no GIS files."""
+    assert PyogrioLayerLoader._find_source(tmp_path) is None

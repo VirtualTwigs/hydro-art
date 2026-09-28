@@ -130,6 +130,59 @@ class TestWebhookVerification:
         r2 = handle_webhook(payload, signature, secret)
         assert r1 == r2 == "REQ-001"
 
+    def test_missing_t_field_rejected(self):
+        from src.payment import WebhookError, handle_webhook
+
+        with pytest.raises(WebhookError, match="missing t or v1"):
+            handle_webhook("body", "v1=abc", "secret")
+
+    def test_missing_v1_field_rejected(self):
+        from src.payment import WebhookError, handle_webhook
+
+        with pytest.raises(WebhookError, match="missing t or v1"):
+            handle_webhook("body", "t=123", "secret")
+
+    def test_non_integer_timestamp_rejected(self):
+        from src.payment import WebhookError, handle_webhook
+
+        with pytest.raises(WebhookError, match="Invalid timestamp"):
+            handle_webhook("body", "t=notanumber,v1=abc", "secret")
+
+    def test_expired_timestamp_rejected(self):
+        from src.payment import WebhookError, handle_webhook
+
+        old_ts = str(int(time.time()) - 600)
+        with pytest.raises(WebhookError, match="outside tolerance"):
+            handle_webhook("body", f"t={old_ts},v1=abc", "secret")
+
+    def test_valid_sig_but_non_json_payload_rejected(self):
+        from src.payment import WebhookError, handle_webhook
+
+        secret = "whsec_test"
+        payload = "not json {{"
+        timestamp = str(int(time.time()))
+        sig_payload = f"{timestamp}.{payload}"
+        sig = hmac.new(secret.encode(), sig_payload.encode(), hashlib.sha256).hexdigest()
+        signature = f"t={timestamp},v1={sig}"
+
+        with pytest.raises(WebhookError, match="Invalid JSON"):
+            handle_webhook(payload, signature, secret)
+
+    def test_missing_request_id_in_metadata_rejected(self):
+        from src.payment import WebhookError, handle_webhook
+
+        secret = "whsec_test"
+        payload = json.dumps({
+            "data": {"object": {"metadata": {}}}
+        })
+        timestamp = str(int(time.time()))
+        sig_payload = f"{timestamp}.{payload}"
+        sig = hmac.new(secret.encode(), sig_payload.encode(), hashlib.sha256).hexdigest()
+        signature = f"t={timestamp},v1={sig}"
+
+        with pytest.raises(WebhookError, match="No request_id"):
+            handle_webhook(payload, signature, secret)
+
 
 class TestPaymentStateTransitions:
     def test_approved_to_payment_pending_to_paid_to_fulfilled(self):

@@ -210,3 +210,87 @@ def test_committed_golden_hashes_are_hex64() -> None:
         assert _HEX64.match(golden.svg_sha256), f"{key} svg_sha256 not hex64"
         if golden.dem_mosaic_sha256 is not None:
             assert _HEX64.match(golden.dem_mosaic_sha256), f"{key} dem_mosaic_sha256 not hex64"
+
+
+# --- Coverage gap: _parse_entry edge cases (lines 117, 125) -----------------
+
+def test_load_registry_bad_dem_sha_raises(tmp_path) -> None:
+    """An entry whose dem_mosaic_sha256 is not 64-hex raises."""
+    p = tmp_path / "reg.json"
+    p.write_text(json.dumps({"Oregon": {"svg_sha256": _A, "dem_mosaic_sha256": "short"}}))
+    with pytest.raises(DeterminismError, match="dem_mosaic_sha256"):
+        load_registry(p)
+
+
+def test_load_registry_non_dict_non_string_entry_raises(tmp_path) -> None:
+    """A registry entry that is neither a string nor dict raises."""
+    p = tmp_path / "reg.json"
+    p.write_text(json.dumps({"Oregon": 42}))
+    with pytest.raises(DeterminismError, match="must be a sha256"):
+        load_registry(p)
+
+
+# --- Coverage gap: load_registry malformed JSON (lines 142-143, 145) ---------
+
+def test_load_registry_invalid_json_raises(tmp_path) -> None:
+    """Non-JSON file raises DeterminismError."""
+    p = tmp_path / "reg.json"
+    p.write_text("not json {{")
+    with pytest.raises(DeterminismError, match="not valid JSON"):
+        load_registry(p)
+
+
+def test_load_registry_non_object_json_raises(tmp_path) -> None:
+    """Top-level JSON list raises DeterminismError."""
+    p = tmp_path / "reg.json"
+    p.write_text("[1, 2]")
+    with pytest.raises(DeterminismError, match="must be a JSON object"):
+        load_registry(p)
+
+
+# --- Coverage gap: needs_recording (line 199) --------------------------------
+
+def test_needs_recording_false_when_drift() -> None:
+    """If run-to-run is not OK, needs_recording is False."""
+    verdict = evaluate("Oregon", [_A, _B], {})
+    assert not verdict.run_to_run_ok
+    assert not verdict.needs_recording
+
+
+# --- Coverage gap: evaluate bad sha inputs (lines 237, 239) -----------------
+
+def test_evaluate_rejects_bad_svg_sha() -> None:
+    """Non-hex SVG sha raises DeterminismError."""
+    with pytest.raises(DeterminismError, match="not a 64-hex"):
+        evaluate("Oregon", ["short", "short"], {})
+
+
+def test_evaluate_rejects_bad_dem_sha() -> None:
+    """Non-hex DEM sha raises DeterminismError."""
+    with pytest.raises(DeterminismError, match="not a 64-hex"):
+        evaluate("Oregon", [_A, _A], {}, dem_sha="bad")
+
+
+# --- Coverage gap: format_verdict branches (lines 309, 320, 322) ------------
+
+def test_format_verdict_drift_no_golden() -> None:
+    """Drift + no golden → 'fix run-to-run drift first'."""
+    verdict = evaluate("Oregon", [_A, _B], {})
+    text = format_verdict(verdict)
+    assert "fix run-to-run" in text
+
+
+def test_format_verdict_dem_not_checked_golden_recorded() -> None:
+    """DEM golden exists but DEM sha not supplied → 'not checked'."""
+    registry = {"Oregon": Golden(svg_sha256=_A, dem_mosaic_sha256=_B)}
+    verdict = evaluate("Oregon", [_A, _A], registry, dem_sha=None)
+    text = format_verdict(verdict)
+    assert "dem: not checked" in text
+
+
+def test_format_verdict_dem_unrecorded() -> None:
+    """DEM sha present but no golden DEM recorded → 'none recorded'."""
+    registry = {"Oregon": Golden(svg_sha256=_A)}
+    verdict = evaluate("Oregon", [_A, _A], registry, dem_sha=_C)
+    text = format_verdict(verdict)
+    assert "dem: none recorded" in text

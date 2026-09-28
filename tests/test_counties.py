@@ -76,3 +76,138 @@ def test_census_provider_wraps_missing_shapefile_path():
     provider = CensusCountyProvider(shapefile="/nonexistent/counties.shp")
     with pytest.raises((AcquisitionError, OSError)):
         provider.load(state_fips="41", county="Multnomah", target_crs="EPSG:5070")
+
+
+# --- CensusCountyProvider.load with mocked geopandas (lines 161-179) --------
+
+
+class _BoolMask(list):
+    """List of bools supporting element-wise & (like pandas Series)."""
+
+    def __and__(self, other):
+        return _BoolMask(a and b for a, b in zip(self, other))
+
+    def __rand__(self, other):
+        return self.__and__(other)
+
+
+class _FakeStrAccessor:
+    """Mimics pandas .str accessor for a column of string values."""
+
+    def __init__(self, values):
+        self._values = values
+
+    def lower(self):
+        return _FakeColumn([v.lower() for v in self._values])
+
+
+class _FakeColumn:
+    """Minimal column supporting == comparison and .str accessor."""
+
+    def __init__(self, values):
+        self._values = values
+        self.str = _FakeStrAccessor(values)
+
+    def __eq__(self, other):
+        if isinstance(other, _FakeColumn):
+            return _BoolMask(a == b for a, b in zip(self._values, other._values))
+        return _BoolMask(v == other for v in self._values)
+
+
+class _FakeGeoDataFrame:
+    """Minimal GeoDataFrame stand-in for CensusCountyProvider.load tests."""
+
+    def __init__(self, rows):
+        self._rows = rows  # list of dicts with STATEFP, NAME, geom
+        self.STATEFP = _FakeColumn([r["STATEFP"] for r in rows])
+        self.NAME = _FakeColumn([r["NAME"] for r in rows])
+        self.empty = len(rows) == 0
+
+    def __getitem__(self, mask):
+        filtered = [r for r, keep in zip(self._rows, mask) if keep]
+        return _FakeGeoDataFrame(filtered)
+
+    def to_crs(self, crs):
+        self._crs = crs
+        return self
+
+    @property
+    def geometry(self):
+        return _FakeGeomSeries([r["geom"] for r in self._rows])
+
+
+class _FakeGeomSeries:
+    """Mimics a geopandas geometry series with .iloc indexing."""
+
+    def __init__(self, geoms):
+        self._geoms = geoms
+
+    @property
+    def iloc(self):
+        return self
+
+    def __getitem__(self, idx):
+        return self._geoms[idx]
+
+
+def _fake_gpd_module(rows):
+    """Return a module-like object whose read_file returns a _FakeGeoDataFrame."""
+    import types
+
+    mod = types.ModuleType("geopandas")
+    mod.read_file = lambda path: _FakeGeoDataFrame(rows)
+    return mod
+
+
+def test_census_provider_load_success(tmp_path, monkeypatch):
+    """CensusCountyProvider.load reads, filters, and reprojects correctly."""
+    shp = tmp_path / "counties.shp"
+    shp.write_text("")  # just needs to exist
+
+    sentinel = box(10, 20, 30, 40)
+    rows = [
+        {"STATEFP": "41", "NAME": "Multnomah", "geom": sentinel},
+        {"STATEFP": "41", "NAME": "Clackamas", "geom": box(0, 0, 1, 1)},
+        {"STATEFP": "53", "NAME": "Clark", "geom": box(0, 0, 2, 2)},
+    ]
+    fake_gpd = _fake_gpd_module(rows)
+    import sys
+
+    monkeypatch.setitem(sys.modules, "geopandas", fake_gpd)
+
+    provider = CensusCountyProvider(shapefile=str(shp))
+    result = provider.load(state_fips="41", county="Multnomah", target_crs="EPSG:5070")
+    assert result is sentinel
+
+
+def test_census_provider_load_case_insensitive(tmp_path, monkeypatch):
+    """County name matching is case-insensitive."""
+    shp = tmp_path / "counties.shp"
+    shp.write_text("")
+
+    sentinel = box(5, 5, 15, 15)
+    rows = [{"STATEFP": "53", "NAME": "Clark", "geom": sentinel}]
+    fake_gpd = _fake_gpd_module(rows)
+    import sys
+
+    monkeypatch.setitem(sys.modules, "geopandas", fake_gpd)
+
+    provider = CensusCountyProvider(shapefile=str(shp))
+    result = provider.load(state_fips="53", county="clark", target_crs="EPSG:5070")
+    assert result is sentinel
+
+
+def test_census_provider_load_not_found(tmp_path, monkeypatch):
+    """AcquisitionError when county doesn't match any row."""
+    shp = tmp_path / "counties.shp"
+    shp.write_text("")
+
+    rows = [{"STATEFP": "41", "NAME": "Multnomah", "geom": box(0, 0, 1, 1)}]
+    fake_gpd = _fake_gpd_module(rows)
+    import sys
+
+    monkeypatch.setitem(sys.modules, "geopandas", fake_gpd)
+
+    provider = CensusCountyProvider(shapefile=str(shp))
+    with pytest.raises(AcquisitionError, match="not found"):
+        provider.load(state_fips="41", county="Nonexistent", target_crs="EPSG:5070")

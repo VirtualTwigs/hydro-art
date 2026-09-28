@@ -68,3 +68,15 @@ def test_descriptor_url_and_filename_are_derived():
     sample = next(f for f in files if f.dataset_id == "nhdplus_hr")
     assert sample.url.endswith(f"NHDPLUS_H_{sample.huc4}_HU4_GDB.zip")
     assert sample.filename == f"NHDPLUS_H_{sample.huc4}_HU4_GDB.zip"
+
+
+# --- Coverage gap: _dataset unknown id (lines 287-290) -----------------------
+
+def test_unknown_dataset_id_raises():
+    """An unknown dataset_id raises AcquisitionError."""
+    import pytest
+
+    from src.datasets import AcquisitionError, _dataset
+
+    with pytest.raises(AcquisitionError, match="Unknown dataset"):
+        _dataset("nonexistent_dataset")

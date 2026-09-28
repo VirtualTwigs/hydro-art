@@ -107,3 +107,32 @@ def test_format_plan_summary(tmp_path):
     assert isinstance(text, str)
     assert "missing" in text.lower()
     assert "1" in text  # the one missing file is surfaced
+
+
+# --- Coverage gap: format_plan DEM tile line + corrupt (lines 128-130, 136) --
+
+def test_format_plan_dem_over_budget(tmp_path):
+    """format_plan shows OVER BUDGET when tiles exceed budget."""
+    settings = build_settings(
+        {"region": ["Oregon"], "elevation": {"enabled": True, "tile_budget": 5}}
+    )
+    cache = _cache_with(tmp_path, resolve_required_files(settings))
+    plan = plan_package(cache, settings, tile_count=10)
+    text = format_plan(plan)
+    assert "OVER BUDGET" in text
+    assert "10" in text
+
+
+def test_format_plan_shows_corrupt_files(tmp_path):
+    """format_plan surfaces corrupt files in the listing."""
+    settings = _settings()
+    required = resolve_required_files(settings)
+    cache = _cache_with(tmp_path, required)
+    # Manually mark a file as corrupt in the plan
+    plan = plan_package(cache, settings)
+    # Simulate corrupt entry
+    from dataclasses import replace
+
+    plan_with_corrupt = replace(plan, corrupt=frozenset(["wbd/1707/corrupt.zip"]))
+    text = format_plan(plan_with_corrupt)
+    assert "corrupt" in text.lower()
