@@ -6,19 +6,8 @@
 <title>Riverglyph / Operations</title>
 <link rel="stylesheet" href="shared/editorial.css">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
-  a { color: inherit; }
-
-  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
-  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
-  .brand b { color: var(--accent-text); }
-  .top nav { margin-left: auto; display: flex; gap: 14px; font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase; }
-  .top nav a { text-decoration: none; }
-  .top nav a:hover, .top nav a.active { color: var(--accent-text); text-decoration: underline; }
-
   .wrap { max-width: 1200px; margin: auto; padding: 40px 4vw 85px; }
-  .eyebrow { margin: 0 0 8px; color: var(--accent-text); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+  .eyebrow { margin: 0 0 8px; }
   h1 { font: 700 36px var(--ui-serif); letter-spacing: -.03em; margin: 0 0 24px; }
 
   /* Metrics bar */
@@ -59,15 +48,10 @@
   .detail-row dt { color: var(--muted); }
   .detail-row dd { margin: 0; font-weight: 600; text-align: right; }
   .action-bar { margin-top: 24px; display: flex; gap: 10px; flex-wrap: wrap; }
-  .btn { display: inline-block; border: 1px solid var(--accent-text); padding: 10px 16px; background: var(--accent-text); color: white; text-decoration: none; font: 700 11px var(--ui-mono); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
-  .btn:hover { opacity: .9; }
-  .btn.ghost { background: transparent; color: var(--accent-text); }
-  .btn.danger { background: var(--danger); border-color: var(--danger); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; }
 
   .render-status { margin-top: 16px; padding: 12px; background: var(--panel-2); font-size: 13px; display: none; }
 
-  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
+  /* footer styled by .editorial-footer in editorial.css */
 
   @media (max-width: 900px) {
     .board-head, .order-row { grid-template-columns: 140px 1fr 100px 100px; }
@@ -79,7 +63,7 @@
 </head>
 <body>
 
-<header class="top">
+<header class="editorial-top">
   <a class="brand" href="order.html">Riverglyph</a>
   <nav>
     <a href="order.html">Order</a>
@@ -141,7 +125,7 @@
   <div class="render-status" id="render-status"></div>
 </div>
 
-<footer class="footer">
+<footer class="editorial-footer">
   <span>RIVERGLYPH / OPERATIONS</span>
   <span>&copy; 2026 RUNDE STRATEGIES</span>
 </footer>

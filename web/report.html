@@ -51,18 +51,9 @@
   }
   .section-label:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
 
-  .scope-row { display: flex; gap: 4px; margin-bottom: 16px; }
-  .scope-row button {
-    flex: 1; background: var(--panel-3); color: var(--muted);
-    border: 1px solid var(--line); border-radius: var(--radius-sm);
-    padding: 8px 4px; cursor: pointer; font: inherit; font-size: 11px;
-    transition: color .15s, border-color .15s, background .15s;
-  }
-  .scope-row button:hover { color: var(--ink); }
-  .scope-row button.active {
-    color: #fff; background: var(--accent-light);
-    border-color: var(--accent-light); font-weight: 600;
-  }
+  /* scope-row reuses .seg from ux.css */
+  .scope-row { margin-bottom: 16px; }
+  .scope-row button { font-size: 11px; }
 
   .field { margin-bottom: 12px; }
   .field label {
@@ -108,26 +99,13 @@
   .range-row select { width: auto; flex: 1; font-size: 12px; padding: 6px 8px; }
   .range-row .sep { color: var(--muted); font-size: 12px; }
 
-  /* ── Generate / order buttons ───────────────────────────── */
-  .btn-generate {
-    width: 100%; background: var(--accent-light); color: #fff;
-    border: 1px solid var(--accent-light); border-radius: var(--radius-sm);
-    padding: 11px; cursor: pointer; font: inherit; font-weight: 600;
-    font-size: 12px; letter-spacing: .04em; margin-top: 12px;
-    transition: opacity .15s, background .15s;
+  /* ── Generate / order buttons (use .btn from ux.css) ───── */
+  .btn-generate, .btn-order {
+    width: 100%; font-size: 12px; letter-spacing: .04em;
   }
-  .btn-generate:hover { background: #35c4c8; }
-  .btn-generate:disabled { opacity: .35; cursor: not-allowed; }
-
-  .btn-order {
-    width: 100%; background: transparent; color: var(--accent-light);
-    border: 1px solid var(--accent-light); border-radius: var(--radius-sm);
-    padding: 10px; cursor: pointer; font: inherit; font-weight: 600;
-    font-size: 12px; letter-spacing: .04em; margin-top: 8px;
-    transition: background .15s, color .15s;
-  }
+  .btn-generate { margin-top: 12px; }
+  .btn-order { margin-top: 8px; }
   .btn-order:hover { background: var(--accent-light); color: #fff; }
-  .btn-order:disabled { opacity: .35; cursor: not-allowed; }
 
   /* ── Right panel: report preview ────────────────────────── */
   .preview-panel {
@@ -174,9 +152,9 @@
   .mini-list .muted { color: var(--muted); font-size: 11px; }
   .spark-row { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
   .spark-row span { color: var(--muted); font-size: 11px; width: 54px; flex: none; }
-  .chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px;
+  .status-chip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px;
     font-weight: 600; border: 1px solid var(--line); margin-right: 6px; }
-  .chip.ok { color: #35e08b; } .chip.warn { color: #ffcf5a; } .chip.danger { color: #ff6b6b; }
+  .status-chip.ok { color: #35e08b; } .status-chip.warn { color: #ffcf5a; } .status-chip.danger { color: #ff6b6b; }
 
   .new-report { display: inline-block; color: var(--accent-light); font-size: 11px;
     cursor: pointer; border: none; background: none; font: inherit; padding: 0;
@@ -259,14 +237,7 @@
     color: var(--muted); font-size: 12px; margin: 0 0 16px; max-width: 400px;
     display: inline-block; line-height: 1.6;
   }
-  .paywall-cta .btn-unlock {
-    display: inline-block; background: var(--accent-light); color: #fff;
-    border: none; border-radius: var(--radius-sm); padding: 12px 32px;
-    cursor: pointer; font: inherit; font-weight: 600; font-size: 13px;
-    letter-spacing: .04em; transition: background .15s;
-    text-decoration: none;
-  }
-  .paywall-cta .btn-unlock:hover { background: #35c4c8; }
+  .paywall-cta .btn-unlock { padding: 12px 32px; font-size: 13px; text-decoration: none; }
   .paywall-cta .price {
     display: block; color: var(--muted); font-size: 11px; margin-top: 8px;
   }
@@ -303,7 +274,7 @@
   <!-- Location scope -->
   <div class="section-label">Location</div>
 
-  <div class="scope-row" id="scopeRow">
+  <div class="seg scope-row" id="scopeRow">
     <button data-scope="state">State</button>
     <button data-scope="county" class="active">County</button>
     <button data-scope="basin">Water basin</button>
@@ -474,8 +445,8 @@
   </div>
 
   <!-- Actions -->
-  <button class="btn-generate" id="btnGenerate" disabled>Preview report</button>
-  <button class="btn-order" id="btnOrder" disabled>Order this report &rarr;</button>
+  <button class="btn solid btn-generate" id="btnGenerate" disabled>Preview report</button>
+  <button class="btn btn-order" id="btnOrder" disabled>Order this report &rarr;</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -610,7 +581,7 @@
     <div class="paywall-cta" id="paywallCta">
       <h3>Unlock the full report</h3>
       <p>The preview above shows sample data shaped by your selection. Order the real report to get gauge-calibrated metrics, long-record trends, and climate analysis built from USGS records.</p>
-      <button class="btn-unlock" id="btnPaywallOrder">Order this report &rarr;</button>
+      <button class="btn solid btn-unlock" id="btnPaywallOrder">Order this report &rarr;</button>
       <span class="price">From $95 &middot; PDF delivered by email</span>
     </div>
 
@@ -1306,7 +1277,7 @@
     var drift = r.driftDaysPerDecade;
     $("regimeBody").innerHTML =
       '<div style="font-size:15px;margin-bottom:4px">' +
-      '<span class="chip ' + cls + '">' + r.label.toUpperCase() + '</span>' +
+      '<span class="status-chip ' + cls + '">' + r.label.toUpperCase() + '</span>' +
       'snowmelt fraction <b>' + UX.fmtNum(r.fraction, 2) + '</b></div>' +
       '<div class="section-note" style="margin:0">melt pulse centered on ' +
       '<b>' + UX.MONTH_ABBR[Math.round(r.meltCenterMonth)] + '</b>, arriving ' +

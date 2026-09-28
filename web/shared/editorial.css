@@ -22,7 +22,55 @@
   --ui-mono: "DM Mono", ui-monospace, monospace;
 }
 
+/* ---- Reset ---- */
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 16px/1.5 var(--ui-sans);
+}
+a { color: inherit; }
+
+/* ---- Type helpers ---- */
 .editorial-type { font-family: var(--ui-sans); }
-.editorial-kicker {
+.eyebrow, .editorial-kicker {
   font: 10px/1.4 var(--ui-mono); letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent-text);
+}
+
+/* ---- Nav bar ---- */
+.editorial-top {
+  height: 70px; padding: 0 4vw; display: flex; align-items: center;
+  gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright);
+}
+.editorial-top nav {
+  margin-left: auto; display: flex; gap: 14px;
+  font: 10px var(--ui-mono); letter-spacing: .05em; text-transform: uppercase;
+}
+.editorial-top nav a { text-decoration: none; }
+.editorial-top nav a:hover, .editorial-top nav a.active { color: var(--accent-text); text-decoration: underline; }
+
+/* ---- Brand ---- */
+.brand {
+  font: 700 25px var(--ui-serif); text-decoration: none;
+  letter-spacing: -.025em; white-space: nowrap;
+}
+.brand b { color: var(--accent-text); }
+
+/* ---- Buttons (editorial/light) ---- */
+.btn {
+  display: inline-block; border: 1px solid var(--accent-text);
+  padding: 10px 16px; background: var(--accent-text); color: white;
+  text-decoration: none; font: 700 11px var(--ui-mono);
+  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
+}
+.btn:hover { opacity: .9; }
+.btn.ghost { background: transparent; color: var(--accent-text); }
+.btn.danger { background: var(--danger); border-color: var(--danger); }
+.btn:disabled, .btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+/* ---- Footer (editorial/dark) ---- */
+.editorial-footer {
+  padding: 25px 5vw; background: #102321; color: #d1e0d9;
+  display: flex; justify-content: space-between;
+  font: 10px var(--ui-mono); letter-spacing: .05em;
 }

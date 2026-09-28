@@ -85,10 +85,11 @@ input[type="range"] { width: 100%; accent-color: var(--accent-light); font: inhe
 
 /* ---------- Buttons ---------- */
 .btn {
-  width: 100%; background: transparent; color: var(--accent-light);
+  background: transparent; color: var(--accent-light);
   border: 1px solid var(--accent-dim); border-radius: var(--radius-sm);
   padding: 9px; cursor: pointer; margin-top: 4px; font: inherit;
 }
+.btn.full-width { width: 100%; }
 .btn:hover { background: rgba(23,108,112,.12); }
 .btn.solid { background: var(--accent-light); color: #fff; border-color: var(--accent-light); font-weight: 600; }
 .btn.solid:hover { background: #35c4c8; }

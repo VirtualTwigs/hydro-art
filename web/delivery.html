@@ -11,16 +11,8 @@
 <meta property="og:image" content="brand/social-preview.png">
 <link rel="stylesheet" href="shared/editorial.css">
 <style>
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.5 var(--ui-sans); }
-  a { color: inherit; }
-
-  .top { height: 70px; padding: 0 4vw; display: flex; align-items: center; gap: 24px; border-bottom: 1px solid var(--line); background: var(--paper-bright); }
-  .brand { font: 700 25px var(--ui-serif); text-decoration: none; letter-spacing: -.025em; white-space: nowrap; }
-  .brand b { color: var(--accent-text); }
-
   .wrap { max-width: 900px; margin: auto; padding: 50px 5vw 85px; }
-  .eyebrow { margin: 0 0 8px; color: var(--accent-text); font: 10px var(--ui-mono); letter-spacing: .1em; text-transform: uppercase; }
+  .eyebrow { margin: 0 0 8px; }
   h1 { font: 700 clamp(28px,3.5vw,44px)/.96 var(--ui-serif); letter-spacing: -.03em; margin: 0 0 8px; }
   .subtitle { color: var(--muted); font-size: 17px; margin: 0 0 32px; }
 
@@ -54,8 +46,6 @@
   .status-banner.pending { background: #fbf0d6; color: #735a26; border: 1px solid #d4b86a; }
   .status-banner.ready { background: #d0f0e8; color: #21655f; border: 1px solid #6cb89e; }
 
-  .footer { padding: 25px 5vw; background: #102321; color: #d1e0d9; display: flex; justify-content: space-between; font: 10px var(--ui-mono); letter-spacing: .05em; }
-
   @media (max-width: 640px) {
     .delivery-grid { grid-template-columns: 1fr; }
     .download-links { flex-direction: column; }
@@ -64,7 +54,7 @@
 </head>
 <body>
 
-<header class="top">
+<header class="editorial-top">
   <a class="brand" href="order.html">Riverglyph</a>
 </header>
 
@@ -74,7 +64,7 @@
   </div>
 </main>
 
-<footer class="footer">
+<footer class="editorial-footer">
   <span>RIVERGLYPH</span>
   <span>&copy; 2026 RUNDE STRATEGIES</span>
 </footer>

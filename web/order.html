@@ -9,86 +9,17 @@
 <meta property="og:title" content="Riverglyph — Place an Order">
 <meta property="og:description" content="Cartographic art shaped by the rivers beneath a place.">
 <meta property="og:image" content="brand/social-preview.png">
+<link rel="stylesheet" href="shared/neon.css" />
 <style>
-  @font-face { font-family:"Fraunces"; src:url("shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
-  @font-face { font-family:"Fraunces Display"; src:url("shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
-
-  :root {
-    --bg:#07080c; --bg-2:#0a0c13; --panel:#10121b; --panel-2:#171a26; --line:#232838;
-    --ink:#e6ebf5; --muted:#8891a8; --faint:#7b849c; --accent:#2AABAD;
-    --cyan:#00ffff; --violet:#9d00ff; --azure:#0a5cff; --spring:#00ffab; --amber:#ffb300;
-    --serif:"Fraunces", Georgia, "Times New Roman", serif;
-    --display:"Fraunces Display", "Fraunces", Georgia, serif;
-    --mono:"DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    --edge:1px solid var(--line);
-    --shadow:0 24px 60px rgba(0,0,0,.55);
-    --maxw:860px;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font-family: var(--serif); font-weight: 380; line-height: 1.5;
-    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
-    overflow-x: hidden;
-  }
-  ::selection { background: var(--cyan); color: #04121a; }
-  a { color: inherit; text-decoration: none; }
+  :root { --maxw:860px; --wash-cyan:.07; --wash-violet:.09; --wash-azure:.07; --grid-opacity:.25; }
   button { font-family: inherit; cursor: pointer; }
 
-  /* ---- Atmosphere ---- */
-  .atmos { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-  .atmos .wash {
-    position: absolute; inset: 0;
-    background:
-      radial-gradient(120% 90% at 78% -10%, rgba(0,255,255,.07), transparent 55%),
-      radial-gradient(90% 80% at 8% 8%, rgba(157,0,255,.09), transparent 60%),
-      radial-gradient(120% 120% at 50% 120%, rgba(10,92,255,.07), transparent 55%);
-  }
-  .atmos .grid {
-    position: absolute; inset: 0; opacity: .25;
-    background-image:
-      linear-gradient(to right, rgba(140,160,190,.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(140,160,190,.05) 1px, transparent 1px);
-    background-size: 64px 64px;
-    -webkit-mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
-            mask-image: radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
-  }
-
   /* ---- Nav ---- */
-  header.nav {
-    position: relative; z-index: 3;
-    border-bottom: var(--edge);
-    background: rgba(7,8,12,.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-  }
   .nav-inner {
-    max-width: var(--maxw); margin: 0 auto; padding: 0 28px;
-    display: flex; align-items: center; gap: 20px; height: 64px;
+    max-width: var(--maxw); margin: 0 auto; padding: 0 28px; height: 64px;
   }
-  .brand {
-    font-family: var(--display); font-weight: 600; font-size: 20px;
-    letter-spacing: .01em; white-space: nowrap;
-  }
-  .brand b { color: var(--accent); font-weight: 600; }
   .nav-spacer { flex: 1; }
-  .nav-links {
-    display: flex; gap: 26px;
-    font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
-    color: var(--muted); text-transform: uppercase;
-  }
-  .nav-links a { position: relative; padding-bottom: 3px; transition: color .2s; }
-  .nav-links a::after {
-    content: ""; position: absolute; left: 0; right: 100%; bottom: 0;
-    height: 1px; background: var(--cyan); transition: right .25s ease;
-  }
-  .nav-links a:hover { color: var(--ink); }
-  .nav-links a:hover::after, .nav-links a.active::after { right: 0; }
-  .nav-links a.active { color: var(--cyan); }
+  .nav-links { font-size: 11px; }
 
   /* ---- Main wrap ---- */
   .wrap {
@@ -288,23 +219,8 @@
   }
   .size-btn span { display: block; font-size: 10px; color: var(--muted); margin-top: 3px; }
 
-  /* ---- Buttons ---- */
-  .btn {
-    display: inline-flex; align-items: center; gap: 10px;
-    font-family: var(--mono); font-size: 12px; letter-spacing: .06em;
-    text-transform: uppercase; padding: 14px 22px; border-radius: 2px;
-    border: var(--edge); background: transparent; color: var(--ink);
-    cursor: pointer; transition: transform .15s, border-color .2s, background .2s, box-shadow .2s;
-  }
-  .btn .arw { transition: transform .2s; }
-  .btn:hover { transform: translateY(-1px); }
-  .btn:hover .arw { transform: translateX(4px); }
-  .btn.solid {
-    background: var(--cyan); color: #031318; border-color: var(--cyan); font-weight: 500;
-  }
-  .btn.solid:hover { box-shadow: 0 10px 28px rgba(0,255,255,.26); }
-  .btn.ghost:hover { border-color: var(--cyan); color: var(--cyan); }
-  .btn:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+  /* ---- Buttons (overrides for order form) ---- */
+  .btn { font-size: 12px; }
   .btn-row { display: flex; gap: 12px; margin-top: 32px; align-items: center; }
 
   /* ---- Review summary ---- */
@@ -421,7 +337,7 @@
 
 <div class="atmos"><div class="wash"></div><div class="grid"></div></div>
 
-<header class="nav">
+<header class="neon-nav">
   <div class="nav-inner">
     <a class="brand" href="start.html">Riverglyph</a>
     <span class="nav-spacer"></span>

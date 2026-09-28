@@ -10,79 +10,19 @@
 <meta property="og:description" content="Cartographic art shaped by the rivers beneath a place.">
 <meta property="og:image" content="brand/social-preview.png">
 <meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="shared/neon.css" />
 <style>
-  @font-face { font-family:"Fraunces"; src:url("shared/fonts/Fraunces.ttf") format("truetype"); font-weight:100 900; font-display:swap; }
-  @font-face { font-family:"Fraunces Display"; src:url("shared/fonts/FrauncesDisplay-600.ttf") format("truetype"); font-weight:600; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Regular.ttf") format("truetype"); font-weight:400; font-display:swap; }
-  @font-face { font-family:"DM Mono"; src:url("shared/fonts/DMMono-Medium.ttf") format("truetype"); font-weight:500; font-display:swap; }
-
-  :root {
-    --bg:#07080c; --bg2:#0a0c13; --panel:#10121b; --panel2:#171a26; --line:#232838;
-    --ink:#e6ebf5; --muted:#8891a8; --faint:#7b849c; --accent:#2AABAD;
-    --cyan:#00ffff; --spring:#00ffab; --violet:#9d00ff; --amber:#ffb300;
-    --serif:"Fraunces", Georgia, serif;
-    --display:"Fraunces Display","Fraunces", Georgia, serif;
-    --mono:"DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
-    --edge:1px solid var(--line);
-  }
-
-  *, *::before, *::after { box-sizing:border-box; }
-  html { scroll-behavior:smooth; }
-  body {
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:var(--serif); font-weight:380; line-height:1.5;
-    -webkit-font-smoothing:antialiased; overflow-x:hidden;
-  }
-  a { color:inherit; text-decoration:none; }
-  ::selection { background:var(--cyan); color:#04121a; }
-
-  /* Atmosphere */
-  .atmos { position:fixed; inset:0; z-index:0; pointer-events:none; }
-  .atmos .wash {
-    position:absolute; inset:0;
-    background:
-      radial-gradient(120% 90% at 78% -10%, rgba(0,255,255,.08), transparent 55%),
-      radial-gradient(90% 80% at 8% 8%, rgba(157,0,255,.10), transparent 60%),
-      radial-gradient(120% 120% at 50% 120%, rgba(10,92,255,.08), transparent 55%);
-  }
-  .atmos .grid {
-    position:absolute; inset:0; opacity:.28;
-    background-image:
-      linear-gradient(to right, rgba(140,160,190,.05) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(140,160,190,.05) 1px, transparent 1px);
-    background-size:64px 64px;
-    -webkit-mask-image:radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
-            mask-image:radial-gradient(120% 80% at 50% 0%, #000 30%, transparent 80%);
-  }
-  .grain {
-    position:fixed; inset:-50%; z-index:1; pointer-events:none; opacity:.045;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-    animation:grain 8s steps(6) infinite;
-  }
-  @keyframes grain {
-    0%{transform:translate(0,0)} 20%{transform:translate(-6%,3%)} 40%{transform:translate(4%,-5%)}
-    60%{transform:translate(-3%,6%)} 80%{transform:translate(6%,2%)} 100%{transform:translate(0,0)}
-  }
-
-  /* Layout */
-  .wrap { position:relative; z-index:2; max-width:1140px; margin:0 auto; padding:0 28px; }
+  :root { --maxw:1140px; --wash-cyan:.08; --wash-violet:.10; --wash-azure:.08; --grid-opacity:.28; --grain-opacity:.045; }
 
   /* Nav */
   header { position:relative; z-index:3; border-bottom:var(--edge); background:rgba(7,8,12,.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); }
-  .nav-inner { display:flex; align-items:center; gap:16px; padding:18px 0; }
-  .brand { font-family:var(--display); font-weight:600; font-size:21px; letter-spacing:.01em; }
-  .brand b { color:var(--accent); font-weight:600; }
-  .nav-inner .spacer { flex:1; }
-  .nav-tag { font-family:var(--mono); font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); }
+  .nav-inner { gap:16px; padding:18px 0; }
+  .brand { font-size:21px; }
 
   /* Main */
   main { position:relative; z-index:2; padding:52px 0 80px; }
-
-  .eyebrow {
-    font-family:var(--mono); font-size:11px; letter-spacing:.26em; text-transform:uppercase;
-    color:var(--cyan); display:flex; align-items:center; gap:12px; margin-bottom:14px;
-  }
-  .eyebrow::before { content:""; width:28px; height:1px; background:linear-gradient(90deg,var(--cyan),transparent); }
+  .eyebrow { font-size:11px; margin-bottom:14px; }
+  .eyebrow::before { width:28px; }
 
   h1 {
     font-family:var(--display); font-weight:600; font-size:clamp(28px,3.5vw,42px);
@@ -158,7 +98,7 @@
   }
 
   .panel-card {
-    background:linear-gradient(180deg,var(--panel),var(--bg2));
+    background:linear-gradient(180deg,var(--panel),var(--bg-2));
     border:var(--edge); border-radius:4px; padding:24px;
   }
   .panel-card h3 {
@@ -190,24 +130,9 @@
 
   /* Action buttons */
   .action-stack { display:flex; flex-direction:column; gap:10px; }
-  .btn {
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    border-radius:2px; border:1px solid var(--line); padding:13px 20px;
-    font-family:var(--mono); font-size:12px; letter-spacing:.07em; text-transform:uppercase;
-    cursor:pointer; background:transparent; color:var(--ink);
-    transition:transform .15s, border-color .2s, background .2s, box-shadow .2s;
-    width:100%;
-  }
-  .btn:hover:not(:disabled) { transform:translateY(-1px); }
-  .btn:disabled { opacity:.35; cursor:not-allowed; }
-  .btn.solid {
-    background:var(--cyan); color:#031318; border-color:var(--cyan); font-weight:500;
-  }
-  .btn.solid:hover:not(:disabled) { box-shadow:0 10px 28px rgba(0,255,255,.25); }
+  .action-stack .btn { width:100%; justify-content:center; font-size:12px; padding:13px 20px; }
   .btn.ghost { color:var(--cyan); border-color:rgba(0,255,255,.4); }
   .btn.ghost:hover:not(:disabled) { background:rgba(0,255,255,.06); border-color:var(--cyan); }
-  .btn .arw { transition:transform .2s; }
-  .btn:hover:not(:disabled) .arw { transform:translateX(4px); }
 
   /* Feedback banner */
   .feedback {
@@ -267,10 +192,7 @@
     .wrap { padding:0 16px; }
     main { padding:36px 0 60px; }
   }
-  @media (prefers-reduced-motion:reduce) {
-    .grain { animation:none; }
-    .btn { transition:none; }
-  }
+  /* prefers-reduced-motion handled by neon.css */
 </style>
 </head>
 <body>

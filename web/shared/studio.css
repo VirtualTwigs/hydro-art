@@ -43,7 +43,7 @@ input[type="range"] { accent-color: var(--accent-text); }
 .seg button + button { border-left: 0; }
 .seg button:hover { color: var(--ink); background: #e5eee9; }
 .seg button.active { background: var(--accent-text); border-color: var(--accent-text); color: #fff; font-weight: 700; }
-.btn { background: transparent; color: var(--accent-text); border-color: var(--accent-text); border-radius: 3px; padding: 10px; font: 12px var(--ui-mono); }
+.btn { width: 100%; background: transparent; color: var(--accent-text); border-color: var(--accent-text); border-radius: 3px; padding: 10px; font: 12px var(--ui-mono); }
 .btn:hover { background: #236c6a12; }.btn.solid { background: var(--accent-text); color: #fff; border-color: var(--accent-text); }
 .btn.solid:hover { background: #174f4e; }.btn.ghost { color: var(--muted); border-color: var(--line); }.btn.ghost:hover { color: var(--ink); background: #e5e6dd; }
 .tag { border-color: var(--accent-dim); color: var(--accent-text); border-radius: 2px; font: 9px var(--ui-mono); }
