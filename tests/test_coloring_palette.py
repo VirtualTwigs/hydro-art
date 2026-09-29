@@ -1,4 +1,4 @@
-"""Tests for the neon palette + palette config validation (Item #7, TG1)."""
+"""Tests for palettes + palette config validation (Item #7, TG1)."""
 
 import re
 
@@ -44,3 +44,19 @@ def test_unknown_palette_raises_config_error():
 def test_default_palette_validates_and_survives():
     settings = build_settings({**DEFAULTS})
     assert settings.palette == "neon"
+
+
+def test_cream_palette_has_twelve_valid_hex_colors():
+    cream = PALETTES["cream"]
+    assert len(cream) == 12
+    assert all(_HEX.match(color) for color in cream)
+    assert len(set(cream)) == 12
+
+
+def test_cream_palette_in_allowlist():
+    assert "cream" in SUPPORTED_PALETTES
+
+
+def test_cream_palette_produces_valid_settings():
+    settings = build_settings({**DEFAULTS, "palette": "cream"})
+    assert settings.palette == "cream"

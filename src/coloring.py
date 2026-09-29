@@ -50,6 +50,20 @@ PALETTES: dict[str, tuple[str, ...]] = {
         "#00e0d1",  # turquoise
         "#00ff5f",  # green
     ),
+    "cream": (
+        "#6b4226",  # burnt umber
+        "#8b5e3c",  # raw sienna
+        "#a0522d",  # sienna
+        "#7b6348",  # dark tan
+        "#5c4033",  # chocolate
+        "#946b4a",  # copper
+        "#4a3728",  # espresso
+        "#b8860b",  # dark goldenrod
+        "#7a6652",  # warm gray
+        "#8b7355",  # khaki brown
+        "#6e5c3b",  # olive umber
+        "#a67b5b",  # café au lait
+    ),
 }
 
 

@@ -142,7 +142,7 @@ SUPPORTED_HUC_LEVELS: tuple[str, ...] = (
 
 #: Named color palettes (PRD section 16), user selectable. Palette colors live
 #: in :mod:`src.coloring`; this allowlist gates the ``palette`` config value.
-SUPPORTED_PALETTES: tuple[str, ...] = ("neon",)
+SUPPORTED_PALETTES: tuple[str, ...] = ("neon", "cream")
 
 #: Color art-direction modes (roadmap #23). ``watershed`` = deterministic
 #: high-contrast palette per HUC group (default, unchanged); ``single`` = one
