@@ -97,5 +97,5 @@ per group, run ONLY those, then implement). `tools/` items are non-offline
   += license-free climate subsection with `nclimgrid_flow.py`/`nclimgrid_fetch.py` +
   default source note); roadmap #60 ticked. `HANDOFF.md` + `implementation/report.md`
   pending.
-- [ ] 6.4 Write `agent-os/retrospectives/2026-09-01-epoch-14-license-free-climate.md`
-  graded against `planning/pre-analysis.md`.
+- [x] 6.4 Write `agent-os/retrospectives/2026-09-01-epoch-14-license-free-climate.md`
+  graded against `planning/pre-analysis.md`. *(Written; all 8 watch-list items graded.)*

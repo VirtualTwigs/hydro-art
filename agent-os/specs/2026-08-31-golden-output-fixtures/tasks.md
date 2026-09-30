@@ -43,7 +43,7 @@
 - [x] 4.1 Full offline suite green (regression check) + the two node harnesses; confirm 2D
   default output byte-identical (no `PIPELINE_STAGES` touched). **644 passed**, node 11+8.
 - [x] 4.2 Write `implementation/report.md`; update `HANDOFF.md`; tick roadmap #40.
-- [ ] 4.3 (On `commit item #40`) — separate, explicit step.
+- [x] 4.3 (On `commit item #40`) — committed `3835024`.
 
 ## Smoke numbers (filled during 3.2)
 

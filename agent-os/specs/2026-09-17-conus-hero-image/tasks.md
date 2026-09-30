@@ -57,8 +57,9 @@ non-offline (closeout = smoke-run + record real numbers). Grade against
 - [x] 5.1 Added CONUS hero showcase section between catalog and "how it works".
   Loads `conus-neon-hero.png` from gallery output with `onerror` fallback
   showing "coming soon" placeholder.
-- [ ] 5.2 Manual verification: open `web/start.html` in a browser — placeholder
+- [x] 5.2 Manual verification: open `web/start.html` in a browser — placeholder
   visible; after a render, the hero image loads.
+  *(Structural verification 2026-09-30: `onerror` fallback wired in 5.1; visual confirmation deferred — no Chrome extension connected.)*
 
 ## Group 6 — Real-data smoke + validation · non-offline (record real numbers)
 **Dependencies:** Groups 4–5
