@@ -169,7 +169,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   Spec `agent-os/specs/2026-08-31-golden-output-fixtures/`. **#41 (real-data smoke harness)
   remains.** Uncommitted: `src/raster.py`, `src/determinism.py`, `tools/verify_determinism.py`,
   `tests/{test_raster,test_determinism}.py`, `tests/fixtures/golden/registry.json`, spec +
-  roadmap/HANDOFF edits (commit pending — separate `commit item #40`).
+  roadmap/HANDOFF edits (committed `3835024`).
 - **Epoch 12 DONE (2026-08-31) — watershed report analytics (#48–#55).** Promoted the
   one-off `notebooks/salmon_creek_yoy.ipynb` into a reusable, credible watershed report.
   Spec `agent-os/specs/2026-08-30-watershed-report-analytics/`. One pure numpy-only
@@ -200,7 +200,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   gate:** no PRISM-derived report/animation ships commercially until the PRISM arrangement
   is documented. Uncommitted: the #50 reach-snapping additions to `tools/{report_common,
   nwis_gauge,build_watershed_report}.py` + `notebooks/salmon_creek_yoy.ipynb` + the new
-  retro/report + roadmap/HANDOFF edits (commit pending).
+  retro/report + roadmap/HANDOFF edits (committed `7576162`).
 - **Epoch 10 partial — roadmap reconciled (2026-08-31).** Commit `87c64fd` (2026-08-30)
   landed #39 (determinism verifier: `src/determinism.py` core + `tools/verify_determinism.py`),
   #42-offline (`tests/test_dem_alignment.py` mosaic-before-warp #32 guard on hand-built
@@ -212,7 +212,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 
 ## Current state (2026-08-30)
 
-- **Epoch 11.5 #56/#57 fulfillment core — implemented, commit pending.** The
+- **Epoch 11.5 #56/#57 fulfillment core — implemented (committed `a644c91`).** The
   reproducible, rights-compliant **order → deliverable plan → manifest** core for
   made-to-order county watershed prints (Revenue Validation gate). Spec
   `agent-os/specs/2026-08-30-order-fulfillment/`. New **`src/fulfillment.py`** (stdlib-only,
@@ -331,7 +331,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   deliberate non-goal, not a gap; this CLI *is* the real entry point.** With this,
   every #21 concern (CA+Idaho states, tile-budget, resumable jobs, portable manifests,
   real acquisition entry point) is met.
-- **#21 Region expansion → Idaho — implemented, commit pending.** Adds Idaho as a
+- **#21 Region expansion → Idaho — implemented (committed in Generation 1).** Adds Idaho as a
   fourth supported region (the first of #21's two remaining directions). HUC4 basins
   derived from local WBD via `tools/derive_state_huc4.py Idaho --min-overlap-frac 0.01`
   → `("1701", "1704", "1705", "1706")` (Snake system + panhandle, all HU2 region 17;
@@ -383,9 +383,9 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   to the direct `Pipeline` build, with **no downloads triggered**. Tests:
   `tests/test_cache.py` (+4), `tests/test_acquisition_integration.py` (+1),
   new `tests/test_serve.py` (+3). Suite: **452 passing** (+8), no regressions.
-- **#22 Print/experience modes — web-delivery slice implemented, commit pending; completes #22
+- **#22 Print/experience modes — web-delivery slice implemented (committed in Generation 1); completes #22
   (hillshade `a0674c4`, camera paths `d22a0d1`).** #22 is `XL` and spans three concerns; all three
-  offline slices have now shipped. **(3) Web delivery** (commit pending): new pure module
+  offline slices have now shipped. **(3) Web delivery** (committed in Generation 1): new pure module
   `src/delivery.py` (same spec `agent-os/specs/2026-08-12-print-experience-modes/`) packages the two
   prior products — a hillshade `RasterGrid` + a camera path of `CameraPose`s — into one stable,
   browser-loadable **experience document**: `hillshade_layer(grid)` (row-major `shade`, nodata→`None`,
@@ -408,7 +408,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   edge-replicated borders keep the input shape, nodata is **never invented** (a cell or its
   8-neighborhood touching nodata → output sentinel), `z_factor` is shading-only, boundary-validated
   (`HillshadeError`), deterministic (numpy + `src.raster`/`src.elevation` only). Tested in
-  `tests/test_hillshade.py` (8 tests). **(2) Animation/camera paths** (commit pending): new pure module
+  `tests/test_hillshade.py` (8 tests). **(2) Animation/camera paths** (committed in Generation 1): new pure module
   `src/camera.py` (same spec `agent-os/specs/2026-08-12-print-experience-modes/`) interpolates
   `scene.CameraPreset` keyframes into a tuple of `CameraPose` samples — `interpolate_camera(a, b, t)`
   lerps position/target/fov + normalized-lerps the up vector; `camera_path(keyframes, *,
@@ -696,8 +696,7 @@ User drives with two commands:
 
 ## Status
 All 10 roadmap items implemented — the PRD §8 pipeline runs end-to-end with no
-stubs. Items 1–9 committed; **item #10 commit pending** (awaiting "commit item
-#10"). Full suite: 147 tests passing (as of item #10).
+stubs. All 10 items committed. Full suite: 147 tests passing (as of item #10).
 
 | # | Item | State |
 |---|------|-------|
@@ -710,7 +709,7 @@ stubs. Items 1–9 committed; **item #10 commit pending** (awaiting "commit item
 | 7 | Deterministic basin coloring | committed (31f93ca) |
 | 8 | Layered SVG rendering | committed (3c3df62) |
 | 9 | Optional glow & SVG optimization | committed (06869ba) |
-| 10 | Multi-format export & reproducibility | implemented; commit pending |
+| 10 | Multi-format export & reproducibility | committed |
 
 ## Key conventions
 - Run tests: `.venv/bin/python -m pytest -q`
