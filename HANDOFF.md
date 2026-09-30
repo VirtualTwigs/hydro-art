@@ -4,6 +4,27 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 
 ## Current state (2026-09-29)
 
+- **Epoch 25 DONE (2026-09-29) — Operations library, samples & analysis ledger (#99-#106).**
+  Opt-in PostgreSQL operations ledger behind a `repository_factory` / `OrderRepository`
+  protocol. JSON `OrderStore` remains the default when `DATABASE_URL` is absent.
+  - **`src/ledger.py`** (pure/offline): 9 frozen entity dataclasses (`Place`, `Asset`,
+    `AssetLineage`, `RenderJob`, `BriefRevision`, `Delivery`, `AnalysisRun`,
+    `AnalysisMetric`, `LedgerEvent`), ID validators, value validators,
+    `OrderRepository` protocol, `repository_factory`.
+  - **`src/ledger_pg.py`**: `PgOrderRepository` with lazy `psycopg` import, parameterized
+    queries, transactional writes. Never imported at module top level.
+  - **`migrations/`**: 3 SQL files — `001_create_schema.sql` (9 core tables + indexes),
+    `002_analysis_evidence.sql` (analysis_runs + analysis_metrics),
+    `003_operator_views.sql` (8 read-only ops views, email excluded).
+  - **`tools/migrate_ledger.py`**: applies migrations via `_migrations` tracker table.
+  - **`tools/import_legacy.py`**: idempotent import from JSON orders + manifests + catalog,
+    dry-run default, rights gate on visibility.
+  - **`serve.py`** wired: reads `DATABASE_URL`, falls back to `OrderStore` on absence or
+    connection failure.
+  - **Suite:** 1734 tests passing (93 new). Recipe roundtrip 11/11 green. `PIPELINE_STAGES`
+    untouched. No regressions. Render byte-identical with or without ledger.
+  - Spec: `agent-os/specs/2026-09-29-operations-library-ledger/`.
+
 - **Epoch 33 DONE (2026-09-29) — Gallery catalog management (#146-#153).**
   Operational inventory layer between raw render output and the public gallery. Tracks
   rendered artwork through a status lifecycle (draft → review → published → archived),

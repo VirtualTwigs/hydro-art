@@ -27,6 +27,7 @@ from rich.console import Console
 
 from src.email_delivery import APP_PASSWORD_ENV, SmtpSender
 from src.jobs import JobRunner
+from src.ledger import LedgerError, repository_factory
 from src.orders import OrderStore
 from src.server import serve
 from src.storage import (
@@ -102,6 +103,36 @@ def _serve_roots(
     )
 
 
+def _build_order_store(
+    orders_dir: Path,
+    console: Console,
+) -> object:
+    """Build the order repository, using DATABASE_URL when available.
+
+    Falls back to JSON ``OrderStore`` when ``DATABASE_URL`` is not set or
+    when the PostgreSQL adapter cannot connect. The render pipeline is never
+    aborted by a ledger failure.
+    """
+    database_url = os.environ.get("DATABASE_URL")
+    if database_url:
+        try:
+            repo = repository_factory(database_url)
+            console.print(
+                "[dim]order store:[/] [green]PostgreSQL[/] "
+                f"({database_url.split('@')[-1] if '@' in database_url else '(local)'})"
+            )
+            return repo
+        except LedgerError as exc:
+            console.print(
+                f"[yellow]PostgreSQL unavailable ({exc}), "
+                "falling back to JSON store.[/]"
+            )
+
+    store = OrderStore(orders_dir)
+    console.print(f"[dim]order store:[/] {orders_dir}")
+    return store
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the hydro-art control surface.")
     parser.add_argument("--host", default="127.0.0.1")
@@ -147,13 +178,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             output_dir=roots.output,
         )
     )
-    order_store = OrderStore(roots.output / "orders")
+    order_store = _build_order_store(roots.output / "orders", console)
     email_sender = SmtpSender()
     web_root = Path(args.web_root).resolve() if args.web_root else WEB_ROOT
     url = f"http://{args.host}:{args.port}/"
     console.print(f"[bold green]Control surface:[/] {url}  (Ctrl-C to stop)")
     console.print(f"[dim]web root:[/] {web_root}")
-    console.print(f"[dim]order store:[/] {order_store._dir}")
     console.print(
         f"[dim]email:[/] {'[green]configured[/]' if email_sender.configured else '[yellow]not configured[/] (set ' + APP_PASSWORD_ENV + ')'}"
     )

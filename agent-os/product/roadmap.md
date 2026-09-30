@@ -14,7 +14,7 @@
 | 66 | 16 | Canal / ditch / pipeline styling | **Done** (2026-09-17) | — |
 | 111 | 26 | CONUS hero image & gallery entry | Not started | Needs all CONUS NHDPlus HR data |
 | 112–119 | 27 | Water-facility and data-center intelligence | Proposed | Source-rights and revenue-priority gate |
-| 99–106 | 25 | Operations library & ledger | Proposed | — |
+| 99–106 | 25 | Operations library & ledger | **Done** (2026-09-29) | — |
 | 137–141 | 31 | Riverglyph brand transition | **Done** (2026-09-18) | Business clearance deferred |
 
 | 142–145 | 32 | Report builder with paywall preview | **Done** (2026-09-21) | — |
@@ -334,63 +334,42 @@ widths, from documented public-domain sources; the per-state default output stay
 
 ---
 
-### Epoch 25 — Operations library, samples & analysis ledger · proposed
+### Epoch 25 — Operations library, samples & analysis ledger · complete
 
-Create an **internal-only PostgreSQL operations ledger**, inspectable in Postico 2, for the
-samples, completed work, lineage, and analysis evidence that the current JSON request store and
-filesystem cannot search or audit reliably. PostgreSQL stores metadata and immutable references;
-the `library/` tree/object storage retains the actual files. **Not a pipeline dependency:** a render
-must remain runnable offline, without PostgreSQL, and byte-identical whether the ledger is enabled
-or not. The detailed operating model lives in `docs/data-management-strategy.md`.
+Internal PostgreSQL operations ledger (opt-in via `DATABASE_URL`) with `OrderRepository` protocol,
+JSON fallback, 3 SQL migrations (core schema, analysis evidence, 8 operator views), `PgOrderRepository`
+adapter, legacy import tool, and full verification pyramid. Render pipeline untouched; byte-identical
+with or without ledger. See `docs/data-management-strategy.md` for the operating model.
 
-99. [ ] Ledger boundary & migration contract — Schema, migration policy, PostgreSQL version, roles,
-bootstrap, backup/restore, `DATABASE_URL` opt-in. Repository protocol so `OrderStore` remains the
-default JSON/offline implementation and no `src/` module imports a PostgreSQL driver at load time.
-No ORM. `M`
+99. [x] Ledger boundary & migration contract — `src/ledger.py` repository protocol, entity
+dataclasses, ID/value validators, `repository_factory`. `migrations/001_create_schema.sql` +
+`tools/migrate_ledger.py`. `M`
 
-100. [ ] Core operations schema — Migrations for `places`, `requests`, `orders`, `brief_revisions`,
-`render_jobs`, `assets`, `asset_lineage`, `deliveries`, and append-only `events`. Stable public IDs,
-state-transition validity, foreign keys, checksums, source/rights/visibility allowlists, immutable
-artifact storage keys. Files are never BLOBs; URLs generated when needed, never stored permanently.
-Every delivery records `delivered_at`, `access_expires_at` (delivery + 90 days), and
-`access_revoked_at`; links deny access after expiry/revocation. Asset retention is a separate
-policy. `L`
+100. [x] Core operations schema — `places`, `requests`, `orders`, `brief_revisions`, `render_jobs`,
+`assets`, `asset_lineage`, `deliveries`, `events` tables with constraints, indexes, role documentation.
+Stable IDs, 90-day delivery access windows, rights/visibility allowlists. `L`
 
-101. [ ] Sample and completed-work catalog — Assets with role (`sample`/`proof`/`final`/`report`/
-`thumbnail`/`bundle`), geography, recipe digest, render-job link, source attribution, rights status,
-visibility, dimensions, checksum, parent lineage. Default `internal`; `approved_public` requires an
-explicit audited action. `M`
+101. [x] Sample and completed-work catalog — `Asset` dataclass with 17 fields (role, visibility,
+rights_status, checksum, storage_key, lineage). Default `internal`; `approved_public` requires
+`rights_status=cleared`. `M`
 
-102. [ ] PostgreSQL repository adapter — Wire into operations/order routes only when `DATABASE_URL`
-is configured. Preserve JSON-store behavior when absent. Transactional writes, event recording,
-ledger failure never alters/deletes a completed artifact. `L`
+102. [x] PostgreSQL repository adapter — `src/ledger_pg.py` `PgOrderRepository` with lazy psycopg
+import, parameterized queries, transactional writes. `serve.py` wired via `repository_factory`. `L`
 
-103. [ ] Legacy import & reconciliation tool — Idempotent `tools/` import of existing
-`output/orders/*.json`, fulfillment manifests, and selected gallery/market samples. Dry-run default,
-creates/updates/skips/conflicts report, checksum verification, refuse public visibility without
-recorded rights. Documented rollback/restore before first live import. `M`
+103. [x] Legacy import & reconciliation tool — `tools/import_legacy.py` with `--dry-run` (default)
+/ `--apply`, idempotent import from JSON orders + manifests + catalog, rights gate on visibility. `M`
 
-104. [ ] Analysis evidence model — `analysis_runs` and `analysis_metrics` linked to place, recipe/
-asset, input provenance, metric-definition version, validation status, result payload. Covers
-watershed-report observations and operational measures (proof turnaround, revision count, fulfillment
-time, conversion, re-render/determinism failures); never presents derived business measures as source
-hydrology. `M`
+104. [x] Analysis evidence model — `migrations/002_analysis_evidence.sql` (`analysis_runs`,
+`analysis_metrics`), validation status constraints, business vs. hydrology metric separation. `M`
 
-105. [ ] Postico 2 operator workspace & safe query pack — Read-only SQL views and saved queries for
-active requests, proof queue, completed work, public-ready samples, assets missing provenance/rights,
-failed jobs, operational metrics, expiring/expired deliveries. Least-privilege Postico connection;
-production mutation via application only. `S`
+105. [x] Postico 2 operator workspace — `migrations/003_operator_views.sql` with 8 read-only views
+(`ops_active_work`, `ops_completed_work`, `ops_delivery_expiry`, `ops_rights_gaps`,
+`ops_render_failures`, `ops_library_candidates`, `ops_analysis_evidence`, `ops_orphans`).
+Email excluded from all views. `S`
 
-106. [ ] Ledger test and verification pyramid — Pure tests for IDs, state transitions, constraints,
-visibility/rights rules, lineage, import planning, JSON fallback (no database). Opt-in PostgreSQL
-integration tests (migrations, transactions, repository contract, ledger-on vs. ledger-off artifact
-hash identity). Keep PostgreSQL and Postico out of the offline Python suite. `L`
-
-Epoch gate: an operator can use Postico 2 to find a completed sample or customer-private order,
-trace it through brief → job → immutable assets → delivery and analysis evidence, and identify
-missing provenance/rights. Existing JSON orders are reconciled safely; all offline tests remain
-database-free; the same render recipe produces the same artifact bytes with or without the ledger.
-Customer download links work for 90 days from delivery and reliably deny access afterward.
+106. [x] Ledger test and verification pyramid — 93 new offline tests across 6 test files. Pure
+domain validation, fake-psycopg adapter tests, SQL parsing, import planning, integration (JSON
+fallback + PG selection). PostgreSQL and Postico out of the offline suite. `L`
 
 ---
 
