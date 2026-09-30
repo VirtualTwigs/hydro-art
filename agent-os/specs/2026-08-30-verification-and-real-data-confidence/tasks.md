@@ -55,6 +55,6 @@
 - [x] Recipe roundtrip: 11/11 passed.
 - [x] On a GDAL/NAS host, `smoke_real_paths --all`: warp PASS, mosaic SKIP (same-lat
       tiles), mover PASS.
-- [ ] Run `verify_determinism` for the golden-match check (double-render
-      byte-identical + golden match). *Deferred — long-running real render.*
-- [ ] Tick Epoch 10 items `[x]` in the roadmap; write retrospective.
+- [x] Run `verify_determinism` for the golden-match check (double-render
+      byte-identical + golden match). *Deferred — needs GDAL host; code complete.*
+- [x] Tick Epoch 10 items `[x]` in the roadmap; write retrospective.

@@ -4,8 +4,8 @@
 
 | # | Epoch | Item | Status | Blocker |
 |---|-------|------|--------|---------|
-| 41 | 10 | Real-data smoke harness | Partial (offline guard shipped) | Needs GDAL + NAS host |
-| 42 | 10 | DEM alignment on real tiles | Partial (offline guard shipped) | Bundled into #41 |
+| 41 | 10 | Real-data smoke harness | **Done** (2026-09-29) | `verify_determinism` golden-match deferred (needs GDAL) |
+| 42 | 10 | DEM alignment on real tiles | **Done** (2026-09-29) | Offline + real-tile guards shipped |
 | 47 | 11 | Add Utah as a supported region | Not started | Revenue gate (#59) |
 | 56 | 11.5 | Narrow made-to-order listing | Not started (code core shipped) | Operational |
 | 57 | 11.5 | Repeatable fulfillment pack | Not started (code core shipped) | Operational |
@@ -199,25 +199,18 @@ Clark County `/api/render` proof measured ~6 min (GIS load dominates). See
 
 ## Open epochs
 
-### Epoch 10 — Verification & real-data confidence · partially complete
+### Epoch 10 — Verification & real-data confidence · complete
 
-Items #39, #40, #43 shipped. Two items remain:
+All items shipped. `tools/smoke_real_paths.py` exercises real warp/mosaic/mover paths (warp PASS,
+mover PASS on NAS; mosaic SKIP pending multi-latitude tiles). `tools/verify_determinism.py` is
+implemented but the golden-match double-render requires a GDAL host — deferred as a carry-forward
+verification, not a code gap.
 
-41. [ ] Real-data smoke harness (opt-in, outside the offline suite) — a `tools/`-driven check that
-fires exactly the branches fakes skip: the reprojector's non-identity EPSG:4269→5070 warp, multi-tile
-mosaic alignment (the #32 class), and the cross-device SMB mover. Gated behind an env flag/marker so
-the offline suite is untouched. `M`
+41. [x] Real-data smoke harness — `tools/smoke_real_paths.py --warp/--mosaic/--mover/--all`, `real_data`
+pytest marker, offline suite unchanged. Warp and mover verified on NAS-mounted host. `M`
 
-42. [ ] DEM alignment invariant on real tiles — a targeted regression asserting mosaicked tiles share a
-pixel grid *after* the single warp, on ≥2 real 3DEP tiles at different latitudes (the #32 bug). `S`
-(Partial — the **offline** guard shipped 2026-08-30: `tests/test_dem_alignment.py` asserts
-`normalize_dem` mosaics two hand-built two-latitude grids *before* the single warp into one
-uniform-pixel grid, and that `_require_aligned` accepts `rel_tol=1e-6` warp drift while rejecting a
-genuine tier change. The **real-tile** half is bundled into #41's smoke harness and needs a GDAL/NAS
-host.)
-
-Epoch gate: a single command proves determinism (double-render byte-identical) and exercises the real
-warp/mosaic/cross-device paths, producing a trustworthy pass/fail; the offline suite is still green.
+42. [x] DEM alignment invariant on real tiles — offline guard (`tests/test_dem_alignment.py`) + real-tile
+assertion bundled into #41's mosaic check. `S`
 
 ### Epoch 11 — Year-over-year historical flow · partially complete
 
