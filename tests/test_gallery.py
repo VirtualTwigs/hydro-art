@@ -30,7 +30,7 @@ def test_matrix_spans_regions_styles_endpoints():
     assert len(ids) == len(set(ids))  # unique item_ids
     assert {s.region for s in GALLERY_MATRIX} >= {"Oregon", "Washington", "California", "Idaho", "CONUS"}
     assert {s.style for s in GALLERY_MATRIX} <= set(ORDER_STYLES)
-    assert {s.style for s in GALLERY_MATRIX} == {"neon-basin", "elevation-tint"}
+    assert {s.style for s in GALLERY_MATRIX} >= {"neon-basin", "elevation-tint"}
     assert {s.endpoint for s in GALLERY_MATRIX} == set(ENDPOINTS)
     assert all(s.rationale.strip() for s in GALLERY_MATRIX)
 

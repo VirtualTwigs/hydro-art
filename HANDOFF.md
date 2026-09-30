@@ -1,6 +1,41 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-09-18, Epoch 31 implementation complete (Riverglyph brand transition, #137-#141); Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+_Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#153); Epoch 32 complete (report builder with paywall preview, #142-#145); Epoch 31 complete (Riverglyph brand transition, #137-#141); Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+
+## Current state (2026-09-29)
+
+- **Epoch 33 DONE (2026-09-29) — Gallery catalog management (#146-#153).**
+  Operational inventory layer between raw render output and the public gallery. Tracks
+  rendered artwork through a status lifecycle (draft → review → published → archived),
+  auto-generates thumbnails on ingest, supports structured gallery sections, and versions
+  entries when re-rendered.
+  - **`src/catalog.py`** (pure/offline): `CatalogEntry` frozen dataclass (18 fields),
+    `GallerySection` (4 predefined sections: Featured, By Region, Seasonal, Limited
+    Edition), `CatalogStore` (in-memory + JSON persistence, CRUD, filtering by
+    status/region/section/tag), `STATUS_TRANSITIONS` enforcement, `artwork_key` 5-tuple
+    identity, `build_entry_id` deterministic slug, `validate_entry`, versioning with
+    auto-archive of prior published, `public_entries`/`public_gallery` export (latest
+    published per key, grouped by section), `seed_from_gallery_matrix`.
+  - **`tools/catalog.py`** (operator CLI): `ingest` (batch scan + SHA-256 hashing + PIL
+    thumbnail generation), `list`, `review`, `publish`, `reject`, `archive`, `update`,
+    `export-public` (→ `web/data/gallery.json`), `seed`.
+  - **`web/gallery.html`** upgraded: tries curated `data/gallery.json` first (structured
+    sections with headings, descriptions, thumbnails, metadata, "Order" links); falls back
+    to raw output browser when file missing.
+  - **`web/data/`** created with `.gitkeep` for static export.
+  - **Suite:** 1641 tests passing (48 new catalog tests). Recipe roundtrip 11/11 green.
+    `PIPELINE_STAGES` untouched. No regressions.
+  - Spec: `agent-os/specs/2026-09-29-gallery-catalog-management/`.
+  - Retrospective: `agent-os/retrospectives/2026-09-29-epoch-33-gallery-catalog-management.md`.
+
+- **Epoch 32 DONE (2026-09-21) — Report builder with paywall preview (#142-#145).**
+  Two-panel report builder: config sidebar (state/county/basin picker, year range, 10
+  section toggles, delivery format) + live-updating sample preview with paywall fade on
+  lower sections. Facility listing (~130 entries across ~30 HUC4 basins). Order form gained
+  URL-param pre-fill + product alias normalization. 25 Playwright e2e tests. 12-issue UX
+  audit fix. Suite 1151 green.
+  - Spec: `agent-os/specs/2026-09-21-report-builder-paywall/`.
+  - Retrospective: `agent-os/retrospectives/2026-09-21-epoch-32-report-builder-paywall.md`.
 
 ## Current state (2026-09-18)
 

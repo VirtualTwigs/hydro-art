@@ -18,7 +18,7 @@
 | 137–141 | 31 | Riverglyph brand transition | **Done** (2026-09-18) | Business clearance deferred |
 
 | 142–145 | 32 | Report builder with paywall preview | **Done** (2026-09-21) | — |
-| 146–153 | 33 | Gallery catalog management | In progress | — |
+| 146–153 | 33 | Gallery catalog management | **Done** (2026-09-29) | — |
 
 **Revenue gate timing:** measure #59 for 60 days from the actual listing go-live date. The
 2026-08-30 planning window did not start the measurement clock; record the launch date in the
@@ -618,7 +618,7 @@ location pre-filled.
 
 ---
 
-### Epoch 33 — Gallery catalog management · in progress
+### Epoch 33 — Gallery catalog management · complete
 
 Operational inventory layer between raw render output and the public gallery. Tracks
 every rendered artwork through a status lifecycle (draft → review → published → archived),
@@ -626,14 +626,14 @@ auto-generates thumbnails on ingest, supports structured gallery sections (Featu
 By Region, etc.), and versions entries when re-rendered. Operator-facing CLI
 (`tools/catalog.py`) manages the catalog; public gallery reads a static JSON export.
 
-146. [ ] `CatalogEntry` dataclass + status lifecycle (draft/review/published/archived/rejected) + `CatalogStore` JSON persistence. `M`
-147. [ ] Ingest command — scan output directory, hash deliverables, auto-generate thumbnails (PIL resize), create draft entries. Batch by default, `--entry-id` for single. `M`
-148. [ ] Status transitions + operator CLI (`tools/catalog.py`) — list/filter, review/publish/reject/archive, update metadata (title/description/tags/sort-order). `M`
-149. [ ] Structured gallery sections — `GallerySection` (Featured/By Region/Seasonal/Limited Edition), section assignment on publish, deterministic ordering. `S`
-150. [ ] Versioning — re-render detection by region+county+style+endpoint+size key, version bumps preserving history, "latest published" resolution. `S`
-151. [ ] Public export — `catalog.py export-public` writes `web/data/gallery.json` (published entries only, structured by section), seed from existing `GALLERY_MATRIX`. `S`
-152. [ ] Web gallery upgrade — `web/gallery.html` reads `web/data/gallery.json`, renders structured sections with thumbnails + metadata, replaces raw output browser. `M`
-153. [ ] Epoch close — full suite green, implementation report, retrospective. `XS`
+146. [x] `CatalogEntry` dataclass + status lifecycle (draft/review/published/archived/rejected) + `CatalogStore` JSON persistence. `M`
+147. [x] Ingest command — scan output directory, hash deliverables, auto-generate thumbnails (PIL resize), create draft entries. Batch by default, `--entry-id` for single. `M`
+148. [x] Status transitions + operator CLI (`tools/catalog.py`) — list/filter, review/publish/reject/archive, update metadata (title/description/tags/sort-order). `M`
+149. [x] Structured gallery sections — `GallerySection` (Featured/By Region/Seasonal/Limited Edition), section assignment on publish, deterministic ordering. `S`
+150. [x] Versioning — re-render detection by region+county+style+endpoint+size key, version bumps preserving history, "latest published" resolution. `S`
+151. [x] Public export — `catalog.py export-public` writes `web/data/gallery.json` (published entries only, structured by section), seed from existing `GALLERY_MATRIX`. `S`
+152. [x] Web gallery upgrade — `web/gallery.html` reads `web/data/gallery.json`, renders structured sections with thumbnails + metadata, replaces raw output browser. `M`
+153. [x] Epoch close — full suite green, implementation report, retrospective. `XS`
 
 Epoch gate: operator can ingest renders, curate through the status lifecycle, and
 export a structured public gallery — all from the CLI, no hand-editing JSON.

@@ -1,0 +1,129 @@
+{
+  "schema": "hydro-art/catalog-public@1",
+  "sections": [
+    {
+      "description": "Our best work, front and center.",
+      "display_name": "Featured",
+      "entries": [
+        {
+          "county": null,
+          "deliverables": [],
+          "description": "Continental hero \u2014 every major river basin in the contiguous US.",
+          "endpoint": "digital_image",
+          "entry_id": "conus-neon-hero",
+          "region": "CONUS",
+          "render_hash": "",
+          "rendered_at": "",
+          "section": "featured",
+          "size": null,
+          "sort_order": 2,
+          "sources": [],
+          "status": "published",
+          "style": "neon-basin",
+          "tags": [],
+          "thumbnail": null,
+          "title": "Continental US Rivers",
+          "version": 1
+        }
+      ],
+      "section_id": "featured",
+      "sort_order": 0
+    },
+    {
+      "description": "Explore river art by state.",
+      "display_name": "By Region",
+      "entries": [
+        {
+          "county": "Wahkiakum",
+          "deliverables": [],
+          "description": "Archival hypsometric terrain print at gallery size (24x36).",
+          "endpoint": "print_image",
+          "entry_id": "wa-elev-print",
+          "region": "Washington",
+          "render_hash": "",
+          "rendered_at": "",
+          "section": "by-region",
+          "size": "24x36",
+          "sort_order": 1,
+          "sources": [],
+          "status": "published",
+          "style": "elevation-tint",
+          "tags": [],
+          "thumbnail": null,
+          "title": "Washington Elevation Print",
+          "version": 1
+        },
+        {
+          "county": "Blaine",
+          "deliverables": [],
+          "description": "Elevation-mono treatment carried to a fourth region \u2014 range across styles.",
+          "endpoint": "digital_image",
+          "entry_id": "id-elev-digital",
+          "region": "Idaho",
+          "render_hash": "",
+          "rendered_at": "",
+          "section": "by-region",
+          "size": null,
+          "sort_order": 2,
+          "sources": [],
+          "status": "published",
+          "style": "elevation-tint",
+          "tags": [],
+          "thumbnail": null,
+          "title": "Idaho Elevation Digital",
+          "version": 1
+        },
+        {
+          "county": "Wahkiakum",
+          "deliverables": [],
+          "description": "Watershed analytics report \u2014 the data-story deliverable.",
+          "endpoint": "report",
+          "entry_id": "wa-neon-report",
+          "region": "Washington",
+          "render_hash": "",
+          "rendered_at": "",
+          "section": "by-region",
+          "size": null,
+          "sort_order": 3,
+          "sources": [],
+          "status": "published",
+          "style": "neon-basin",
+          "tags": [],
+          "thumbnail": null,
+          "title": "Wahkiakum Watershed Report",
+          "version": 1
+        }
+      ],
+      "section_id": "by-region",
+      "sort_order": 10
+    },
+    {
+      "description": "Seasonal and time-limited editions.",
+      "display_name": "Seasonal",
+      "entries": [
+        {
+          "county": "Shasta",
+          "deliverables": [],
+          "description": "Year-in-motion seasonality \u2014 flow disaggregated across the calendar year.",
+          "endpoint": "animation",
+          "entry_id": "ca-neon-animation",
+          "region": "California",
+          "render_hash": "",
+          "rendered_at": "",
+          "section": "seasonal",
+          "size": null,
+          "sort_order": 1,
+          "sources": [],
+          "status": "published",
+          "style": "neon-basin",
+          "tags": [],
+          "thumbnail": null,
+          "title": "Shasta Flow Animation",
+          "version": 1
+        }
+      ],
+      "section_id": "seasonal",
+      "sort_order": 20
+    }
+  ]
+}

@@ -154,7 +154,7 @@ def build_endpoint_request(payload, *, styles=ORDER_STYLES, sizes=SIZES) -> Endp
         raise EndpointError(f"Unsupported region {region!r}. Choose one of: {valid}.")
 
     county = str(payload.get("county") or "").strip()
-    if not county and region != "CONUS":
+    if not county and region != "CONUS" and region not in SUPPORTED_REGIONS:
         raise EndpointError("county must be a non-empty name.")
 
     endpoint = payload.get("endpoint")

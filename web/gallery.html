@@ -99,6 +99,14 @@
   }
   .lightbox .lb-actions { display: flex; gap: 8px; margin-top: 10px; }
   .lightbox .lb-actions .btn { width: auto; padding: 7px 18px; margin: 0; }
+  /* ---------- Curated gallery sections ---------- */
+  .gallery-section { margin-bottom: 32px; }
+  .section-heading { font-size: 20px; margin: 0 0 4px; color: var(--ink); }
+  .section-desc { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+  .entry-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .entry-desc { color: var(--muted); font-size: 12px; margin-bottom: 6px; line-height: 1.4; }
+  .entry-meta { color: var(--muted); font-size: 11px; margin-bottom: 8px; }
+
   .lightbox .lb-nav {
     position: absolute; top: 50%; transform: translateY(-50%);
     background: rgba(0,0,0,.5); border: 1px solid var(--line);
@@ -113,29 +121,34 @@
 <body>
 <header class="gallery-head">
   <h1 class="brand">Riverglyph</h1>
-  <div class="sub" id="subtitle">Output gallery</div>
+  <div class="sub" id="subtitle">Gallery</div>
   <div class="spacer"></div>
   <div class="sub" id="count"></div>
 </header>
 
-<div class="toolbar" id="toolbar">
-  <div class="filter-group">
-    <label>Format:</label>
-    <select id="filterFmt">
-      <option value="">All</option>
-      <option value="png">PNG</option>
-      <option value="svg">SVG</option>
-      <option value="pdf">PDF</option>
-    </select>
-  </div>
-  <div class="spacer"></div>
-  <span class="sel-count" id="selCount"></span>
-  <button class="btn" id="btnSelectAll">Select all</button>
-  <button class="btn" id="btnClearSel">Clear</button>
-  <button class="btn solid" id="btnDownload" disabled>Download selected</button>
-</div>
+<!-- Curated gallery (shown when data/gallery.json exists) -->
+<div id="curatedGallery" style="display:none;"></div>
 
-<div class="grid" id="grid"></div>
+<!-- Raw output browser (fallback when no curated gallery) -->
+<div id="rawBrowser" style="display:none;">
+  <div class="toolbar" id="toolbar">
+    <div class="filter-group">
+      <label>Format:</label>
+      <select id="filterFmt">
+        <option value="">All</option>
+        <option value="png">PNG</option>
+        <option value="svg">SVG</option>
+        <option value="pdf">PDF</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <span class="sel-count" id="selCount"></span>
+    <button class="btn" id="btnSelectAll">Select all</button>
+    <button class="btn" id="btnClearSel">Clear</button>
+    <button class="btn solid" id="btnDownload" disabled>Download selected</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
 
 <!-- Lightbox -->
 <div class="lightbox" id="lightbox">
@@ -159,7 +172,130 @@
   var selected = new Set();   // set of filenames
   var lbIndex = -1;           // current lightbox index in filtered[]
 
+  // ---- Curated gallery rendering ----
+
+  function renderCuratedGallery(data) {
+    var container = $("curatedGallery");
+    container.style.display = "";
+    container.innerHTML = "";
+    var sections = data.sections || [];
+    var totalEntries = 0;
+
+    sections.forEach(function (section) {
+      if (!section.entries || !section.entries.length) return;
+      totalEntries += section.entries.length;
+
+      var sec = document.createElement("section");
+      sec.className = "gallery-section";
+
+      var heading = document.createElement("h2");
+      heading.className = "section-heading";
+      heading.textContent = section.display_name;
+      sec.appendChild(heading);
+
+      if (section.description) {
+        var desc = document.createElement("p");
+        desc.className = "section-desc";
+        desc.textContent = section.description;
+        sec.appendChild(desc);
+      }
+
+      var grid = document.createElement("div");
+      grid.className = "grid";
+
+      section.entries.forEach(function (entry) {
+        var card = document.createElement("div");
+        card.className = "card";
+
+        var thumb = document.createElement("div");
+        thumb.className = "thumb";
+        if (entry.thumbnail) {
+          var img = document.createElement("img");
+          img.src = entry.thumbnail;
+          img.alt = entry.title;
+          img.loading = "lazy";
+          thumb.appendChild(img);
+        } else {
+          var noP = document.createElement("div");
+          noP.className = "no-preview";
+          noP.textContent = "Preview coming soon";
+          thumb.appendChild(noP);
+        }
+        card.appendChild(thumb);
+
+        var info = document.createElement("div");
+        info.className = "info";
+
+        var title = document.createElement("div");
+        title.className = "entry-title";
+        title.textContent = entry.title;
+        info.appendChild(title);
+
+        if (entry.description) {
+          var entryDesc = document.createElement("div");
+          entryDesc.className = "entry-desc";
+          entryDesc.textContent = entry.description;
+          info.appendChild(entryDesc);
+        }
+
+        var meta = document.createElement("div");
+        meta.className = "entry-meta";
+        var parts = [entry.region];
+        if (entry.county) parts.push(entry.county);
+        parts.push(entry.style);
+        meta.textContent = parts.join(" \u00b7 ");
+        info.appendChild(meta);
+
+        var actions = document.createElement("div");
+        actions.className = "actions";
+        var orderBtn = document.createElement("a");
+        orderBtn.className = "btn solid";
+        orderBtn.textContent = "Order";
+        orderBtn.href = "order.html?region=" + encodeURIComponent(entry.region)
+          + (entry.county ? "&county=" + encodeURIComponent(entry.county) : "")
+          + "&style=" + encodeURIComponent(entry.style);
+        actions.appendChild(orderBtn);
+        info.appendChild(actions);
+
+        card.appendChild(info);
+        grid.appendChild(card);
+      });
+
+      sec.appendChild(grid);
+      container.appendChild(sec);
+    });
+
+    $("count").textContent = totalEntries + " piece(s)";
+    if (!totalEntries) {
+      container.innerHTML = '<div class="empty">Gallery coming soon.</div>';
+    }
+  }
+
   // ---- Data fetching ----
+
+  function fetchCuratedGallery() {
+    fetch("data/gallery.json")
+      .then(function (r) {
+        if (!r.ok) throw new Error("not found");
+        return r.json();
+      })
+      .then(function (data) {
+        if (data.sections && data.sections.length) {
+          renderCuratedGallery(data);
+        } else {
+          fallbackToOutputBrowser();
+        }
+      })
+      .catch(function () {
+        fallbackToOutputBrowser();
+      });
+  }
+
+  function fallbackToOutputBrowser() {
+    $("rawBrowser").style.display = "";
+    $("subtitle").textContent = "Output gallery";
+    fetchOutputs();
+  }
 
   function fetchOutputs() {
     fetch("/api/gallery/outputs")
@@ -413,7 +549,7 @@
   });
 
   // ---- Boot ----
-  fetchOutputs();
+  fetchCuratedGallery();
 })();
 </script>
 </body>

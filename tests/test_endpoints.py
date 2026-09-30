@@ -75,7 +75,6 @@ def test_build_accepts_valid_request_per_endpoint(endpoint, extra):
     [
         ({"request_id": ""}, "request_id"),
         ({"region": "Atlantis"}, "region"),
-        ({"county": "  "}, "county"),
         ({"endpoint": "hologram"}, "endpoint"),
         ({"style": "made-up"}, "style"),
         ({"endpoint": "digital_image", "formats": ["gif"]}, "format"),
@@ -238,10 +237,21 @@ def test_conus_request_accepted_without_county():
     assert req.county == ""
 
 
-def test_non_conus_still_requires_county():
-    """Non-CONUS regions still require a non-empty county."""
-    with pytest.raises(EndpointError, match="county"):
-        build_endpoint_request(_payload(region="Oregon", county=""))
+def test_supported_state_accepts_empty_county():
+    """Supported states accept county=None for state-level renders."""
+    req = build_endpoint_request(_payload(region="Oregon", county=None))
+    assert isinstance(req, EndpointRequest)
+    assert req.region == "Oregon"
+    assert req.county == ""
+
+
+def test_state_level_stem_has_no_double_dash():
+    """State-level request stem is clean (no empty county segment)."""
+    req = build_endpoint_request(_payload(region="Oregon", county=None))
+    plan = endpoint_plan(req)
+    for d in plan.items:
+        assert "--" not in d.filename
+        assert "oregon" in d.filename.lower()
 
 
 def test_conus_stem_has_no_double_dash():

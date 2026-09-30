@@ -1,6 +1,33 @@
 {
   "assets": [
     {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "ca-elev-state_california_elevation-tint_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "ca-elev-state_california_elevation-tint_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "ca-elev-state",
+      "rationale": "California elevation peak \u2014 Sierra Nevada headwaters white-to-blue.",
+      "region": "California",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
       "county": "Shasta",
       "deliverables": [
         {
@@ -31,6 +58,33 @@
       "county": null,
       "deliverables": [
         {
+          "filename": "co-cream-state_colorado_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "co-cream-state_colorado_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "co-cream-state",
+      "rationale": "Colorado cream poster \u2014 Rocky Mountain headwaters in earth tones.",
+      "region": "Colorado",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
           "filename": "conus-neon-hero_conus_neon-basin_digital.svg",
           "fmt": "svg",
           "height_px": null,
@@ -53,6 +107,168 @@
       "region": "CONUS",
       "sellable": true,
       "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "de-neon-state_delaware_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "de-neon-state_delaware_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "de-neon-state",
+      "rationale": "Delaware neon \u2014 compact Atlantic seaboard state.",
+      "region": "Delaware",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "fl-neon-animation_florida_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "fl-neon-animation_florida_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "fl-neon-animation",
+      "rationale": "Florida year-cycle \u2014 wet/dry season tropical hydrology.",
+      "region": "Florida",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "ga-cream-state_georgia_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "ga-cream-state_georgia_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "ga-cream-state",
+      "rationale": "Georgia cream poster \u2014 Southeastern Piedmont river density.",
+      "region": "Georgia",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "ga-neon-animation_georgia_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "ga-neon-animation_georgia_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "ga-neon-animation",
+      "rationale": "Georgia year-cycle \u2014 subtropical rain-driven flow pattern.",
+      "region": "Georgia",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "hi-neon-state_hawaii_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "hi-neon-state_hawaii_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "hi-neon-state",
+      "rationale": "Hawaii neon \u2014 island volcanic hydrology, unique among states.",
+      "region": "Hawaii",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "ia-cream-state_iowa_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "ia-cream-state_iowa_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "ia-cream-state",
+      "rationale": "Iowa cream \u2014 warm earth-tone palette on ivory, first cream render.",
+      "region": "Iowa",
+      "sellable": true,
+      "style": "cream-basin"
     },
     {
       "county": "Blaine",
@@ -82,6 +298,330 @@
       "style": "elevation-tint"
     },
     {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "id-elev-state_idaho_elevation-tint_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "id-elev-state_idaho_elevation-tint_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "id-elev-state",
+      "rationale": "Idaho elevation peak \u2014 mountainous Salmon River country.",
+      "region": "Idaho",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "id-neon-animation_idaho_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "id-neon-animation_idaho_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "id-neon-animation",
+      "rationale": "Idaho year-cycle \u2014 Salmon River snowmelt pulse.",
+      "region": "Idaho",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "in-cream-state_indiana_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "in-cream-state_indiana_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "in-cream-state",
+      "rationale": "Indiana cream poster \u2014 Wabash/White River network in warm tones.",
+      "region": "Indiana",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "ks-neon-state_kansas_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "ks-neon-state_kansas_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "ks-neon-state",
+      "rationale": "Kansas state neon \u2014 Great Plains watershed structure.",
+      "region": "Kansas",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "me-cream-state_maine_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "me-cream-state_maine_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "me-cream-state",
+      "rationale": "Maine cream poster \u2014 Penobscot/Kennebec headwaters.",
+      "region": "Maine",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "mn-cream-state_minnesota_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "mn-cream-state_minnesota_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "mn-cream-state",
+      "rationale": "Minnesota cream poster \u2014 10,000 lakes state in earth tones.",
+      "region": "Minnesota",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "mn-elev-state_minnesota_elevation-tint_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "mn-elev-state_minnesota_elevation-tint_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "mn-elev-state",
+      "rationale": "Minnesota elevation \u2014 subtle Great Plains-to-Boundary Waters gradient.",
+      "region": "Minnesota",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "mn-neon-animation_minnesota_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "mn-neon-animation_minnesota_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "mn-neon-animation",
+      "rationale": "Minnesota year-cycle \u2014 spring snowmelt swell to frozen winter silence.",
+      "region": "Minnesota",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "nv-cream-state_nevada_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "nv-cream-state_nevada_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "nv-cream-state",
+      "rationale": "Nevada cream poster \u2014 Great Basin sparse hydrology.",
+      "region": "Nevada",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "oh-neon-animation_ohio_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "oh-neon-animation_ohio_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "oh-neon-animation",
+      "rationale": "Ohio year-cycle \u2014 Great Lakes/Ohio River basin seasonality.",
+      "region": "Ohio",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Multnomah",
+      "deliverables": [
+        {
+          "filename": "or-multnomah-neon_oregon-multnomah_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "or-multnomah-neon_oregon-multnomah_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "or-multnomah-neon",
+      "rationale": "Multnomah County (Portland) \u2014 urban/suburban river confluence.",
+      "region": "Oregon",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "or-neon-animation_oregon_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "or-neon-animation_oregon_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "or-neon-animation",
+      "rationale": "Oregon year-cycle \u2014 Coast Range rain vs. Cascades snowmelt.",
+      "region": "Oregon",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
       "county": "Deschutes",
       "deliverables": [
         {
@@ -107,6 +647,338 @@
       "region": "Oregon",
       "sellable": true,
       "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "or-neon-state_oregon_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "or-neon-state_oregon_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "or-neon-state",
+      "rationale": "Oregon state neon \u2014 Pacific Northwest companion piece.",
+      "region": "Oregon",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "sd-cream-state_south dakota_cream-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "sd-cream-state_south dakota_cream-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "sd-cream-state",
+      "rationale": "South Dakota cream poster \u2014 Missouri/James River plains.",
+      "region": "South Dakota",
+      "sellable": true,
+      "style": "cream-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "tx-neon-animation_texas_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "tx-neon-animation_texas_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "tx-neon-animation",
+      "rationale": "Texas year-cycle \u2014 arid west vs. humid east contrast.",
+      "region": "Texas",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "tx-neon-state_texas_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "tx-neon-state_texas_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "tx-neon-state",
+      "rationale": "Texas state neon \u2014 largest contiguous US state by river miles.",
+      "region": "Texas",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-3d_washington-clark_elevation-tint_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-3d_washington-clark_elevation-tint_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-3d",
+      "rationale": "Clark County 3D elevation \u2014 terrain context for the flagship county.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-almanac_washington-clark_museum-almanac_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-almanac_washington-clark_museum-almanac_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-almanac",
+      "rationale": "Museum almanac \u2014 seasonal flow narrative as editorial broadsheet.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-almanac"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-compass_washington-clark_museum-compass_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-compass_washington-clark_museum-compass_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-compass",
+      "rationale": "Museum compass \u2014 watershed orientation and basin compass rose.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-compass"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-divide_washington-clark_museum-divide_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-divide_washington-clark_museum-divide_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-divide",
+      "rationale": "Museum divide \u2014 drainage divide and ridge-line anatomy.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-divide"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-index_washington-clark_museum-index_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-index_washington-clark_museum-index_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-index",
+      "rationale": "Museum index \u2014 hydrographic index plate with named streams.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-index"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-neon_washington-clark_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-neon_washington-clark_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-neon",
+      "rationale": "Clark County \u2014 the original development testbed, dense suburban hydro.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-neon-print_washington-clark_neon-basin_print.png",
+          "fmt": "png",
+          "height_px": 7200,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 5400
+        },
+        {
+          "filename": "wa-clark-neon-print_washington-clark_neon-basin_print.pdf",
+          "fmt": "pdf",
+          "height_px": 7200,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 5400
+        },
+        {
+          "filename": "wa-clark-neon-print_washington-clark_neon-basin_print.tiff",
+          "fmt": "tiff",
+          "height_px": 7200,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 5400
+        }
+      ],
+      "endpoint": "print_image",
+      "item_id": "wa-clark-neon-print",
+      "rationale": "Clark County neon print \u2014 the signature wall piece at 18x24.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Clark",
+      "deliverables": [
+        {
+          "filename": "wa-clark-specimen_washington-clark_museum-specimen_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-clark-specimen_washington-clark_museum-specimen_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-clark-specimen",
+      "rationale": "Museum specimen \u2014 botanical-plate style elevation study.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-specimen"
     },
     {
       "county": "Wahkiakum",
@@ -144,6 +1016,60 @@
       "style": "elevation-tint"
     },
     {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "wa-elev-state_washington_elevation-tint_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-elev-state_washington_elevation-tint_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-elev-state",
+      "rationale": "Washington elevation \u2014 Cascades summit-to-sea hypsometric gradient.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "elevation-tint"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "wa-neon-animation_washington_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-neon-animation_washington_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "wa-neon-animation",
+      "rationale": "Washington year-cycle \u2014 Cascades snowpack-driven seasonal flow.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
       "county": "Wahkiakum",
       "deliverables": [
         {
@@ -169,6 +1095,257 @@
       "region": "Washington",
       "sellable": true,
       "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "wa-neon-state_washington_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-neon-state_washington_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-neon-state",
+      "rationale": "Full Washington state neon-basin \u2014 the original flagship state.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": null,
+      "deliverables": [
+        {
+          "filename": "wa-neon-yoy_washington_neon-basin_motion.gif",
+          "fmt": "gif",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-neon-yoy_washington_neon-basin_motion.mp4",
+          "fmt": "mp4",
+          "height_px": null,
+          "kind": "motion",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "animation",
+      "item_id": "wa-neon-yoy",
+      "rationale": "Washington 10-year flow \u2014 decade of drought/flood visible as animation.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-almanac_washington-pacific_museum-almanac_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-pacific-almanac_washington-pacific_museum-almanac_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-pacific-almanac",
+      "rationale": "Pacific County almanac \u2014 coastal seasonal flow editorial.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-almanac"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-compass_washington-pacific_museum-compass_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-pacific-compass_washington-pacific_museum-compass_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-pacific-compass",
+      "rationale": "Pacific County compass \u2014 coastal basin orientation.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-compass"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-divide_washington-pacific_museum-divide_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-pacific-divide_washington-pacific_museum-divide_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-pacific-divide",
+      "rationale": "Pacific County divide \u2014 Willapa Hills drainage anatomy.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-divide"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-index_washington-pacific_museum-index_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-pacific-index_washington-pacific_museum-index_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-pacific-index",
+      "rationale": "Pacific County index \u2014 named stream reference plate.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-index"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-neon_washington-pacific_neon-basin_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-pacific-neon_washington-pacific_neon-basin_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-pacific-neon",
+      "rationale": "Pacific County \u2014 coastal rain-fed river network.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-neon-print_washington-pacific_neon-basin_print.png",
+          "fmt": "png",
+          "height_px": 7200,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 5400
+        },
+        {
+          "filename": "wa-pacific-neon-print_washington-pacific_neon-basin_print.pdf",
+          "fmt": "pdf",
+          "height_px": 7200,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 5400
+        },
+        {
+          "filename": "wa-pacific-neon-print_washington-pacific_neon-basin_print.tiff",
+          "fmt": "tiff",
+          "height_px": 7200,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": 5400
+        }
+      ],
+      "endpoint": "print_image",
+      "item_id": "wa-pacific-neon-print",
+      "rationale": "Pacific County neon print \u2014 coastal river art at 18x24.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "neon-basin"
+    },
+    {
+      "county": "Pacific",
+      "deliverables": [
+        {
+          "filename": "wa-pacific-specimen_washington-pacific_museum-specimen_digital.svg",
+          "fmt": "svg",
+          "height_px": null,
+          "kind": "vector",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-pacific-specimen_washington-pacific_museum-specimen_digital.png",
+          "fmt": "png",
+          "height_px": null,
+          "kind": "raster",
+          "sha256": null,
+          "width_px": null
+        }
+      ],
+      "endpoint": "digital_image",
+      "item_id": "wa-pacific-specimen",
+      "rationale": "Pacific County specimen \u2014 coastal river system botanical plate.",
+      "region": "Washington",
+      "sellable": true,
+      "style": "museum-specimen"
     }
   ],
   "attribution": "USGS NHD \u00b7 USGS NHDPlus HR \u00b7 USGS WBD",
