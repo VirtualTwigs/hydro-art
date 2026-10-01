@@ -19,8 +19,12 @@ self-contained `file://`-safe vanilla JS/HTML with no build step.
 - The **entire pytest suite runs fully offline**: no GDAL, no network, no real
   datasets.
 - `src/` and `tests/` **never import GDAL-backed libs at module top level**
-  (`geopandas`, `pyogrio`, `rasterio`, `shapely`). Keep them **lazy-imported
-  behind injected seams** (`Downloader`, `LayerLoader`, `RasterReader`, …).
+  (`geopandas`, `pyogrio`, `rasterio`). Keep them **lazy-imported behind
+  injected seams** (`Downloader`, `LayerLoader`, `RasterReader`, …).
+  `shapely` (GEOS-backed, no GDAL) *is* allowed at top-level in
+  geometry/selection/QA modules (`geometry`, `projection`, `clipping`,
+  `waterbody_selection`, `areal_selection`, `hydro_structure_selection`,
+  `hydro_structure_qa`); classification modules stay import-free.
 - Every `src/<name>.py` has a matching `tests/test_<name>.py`; pipeline
   integration tests are `tests/test_*_pipeline.py`.
 - Tests inject fakes + hand-built shapely/graph/numpy inputs. They must not
@@ -53,7 +57,9 @@ self-contained `file://`-safe vanilla JS/HTML with no build step.
 - **`PIPELINE_STAGES` is fixed and 2D-only.** The DEM/terrain/3D, flow, report,
   and fulfillment subsystems are **parallel** modules **not** wired into it.
   Do not add stages or wire parallel subsystems into the pipeline unless the
-  spec explicitly targets that. (Exception already integrated: waterbodies.)
+  spec explicitly targets that. (Exceptions already integrated: waterbodies,
+  natural water features, and hydro structures — all additive, disabled by
+  default, byte-identical when off.)
 - **Validate at the boundary, fail fast.** `build_settings` (`src/config.py`)
   validates every field against allowlists → `ConfigError`. Add a region /
   projection / palette / source by extending the relevant allowlist there.

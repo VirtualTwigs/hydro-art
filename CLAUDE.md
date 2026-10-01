@@ -58,7 +58,13 @@ generate_svg → optimize_svg → export
 
 Each stage is `Stage(name, run)` where `run(ctx: RunContext) -> None`. All 12 implemented; the stub mechanism (`_STAGE_FUNCS.get(name, _stub(name))`) remains so a new stage is wired by adding its function.
 
-**This 12-stage pipeline is 2D-only.** The elevation/DEM/terrain/3D, flow, report, and fulfillment subsystems are **parallel** pure/offline modules **not** wired into `PIPELINE_STAGES` and not run by `build.py` — a second data model sharing CRS conventions with its own `tools/` entry points. Exceptions that *do* integrate: waterbodies (Epoch 1.5), natural water features (Epoch 15), and hydro structures (Epoch 16) — `validate` additively loads the `NHDWaterbody` polygon layer when `settings.waterbodies.enabled` **or** `settings.areal_features.enabled` **or** `settings.hydro_structures.enabled`, the `NHDPoint` layer when `settings.point_features.enabled` **or** `settings.hydro_structures.enabled`, and the `NHDLine` layer when `settings.hydro_structures.enabled`; `generate_svg` selects all of these (outline layers, areal fills, point glyphs, engineered structures). All additive loads are gated on both the setting AND loader support, so river-only/disabled builds stay byte-identical.
+**This 12-stage pipeline is 2D-only.** The elevation/DEM/terrain/3D, flow, report, and fulfillment subsystems are **parallel** pure/offline modules **not** wired into `PIPELINE_STAGES` and not run by `build.py` — a second data model sharing CRS conventions with its own `tools/` entry points. Three feature layers *do* integrate additively into the pipeline (all disabled by default → byte-identical default build):
+
+- **Waterbodies** (Epoch 1.5): `validate` loads `NHDWaterbody` polygons when `settings.waterbodies.enabled` or `settings.areal_features.enabled` or `settings.hydro_structures.enabled`; `generate_svg` renders outline layers.
+- **Natural water features** (Epoch 15): `validate` loads `NHDPoint` when `settings.point_features.enabled` or `settings.hydro_structures.enabled`; `generate_svg` renders areal fills and point glyphs.
+- **Hydro structures** (Epoch 16): `validate` loads `NHDLine` when `settings.hydro_structures.enabled`; `generate_svg` renders engineered structures.
+
+All additive loads are gated on both the setting AND loader support, so river-only/disabled builds stay byte-identical.
 
 Key structural rules (preserve):
 
@@ -72,7 +78,7 @@ Key structural rules (preserve):
 
 **The entire test suite runs fully offline — no GDAL, no network, no real datasets.** Preserve when adding code:
 
-- `src/` and `tests/` never import GDAL-backed I/O libs (`geopandas`/`pyogrio`/`rasterio`) at module top-level — keep them lazy-imported behind seams (`rasterio` is optional, never imported at `src/` load). `shapely` (GEOS-backed geometry, no GDAL) *is* allowed at top-level and appears there in the geometry/selection/QA modules (`clipping`, `waterbody_selection`, `areal_selection`, `hydro_structure_selection`, `hydro_structure_qa`); the classification modules stay import-free so they run without even shapely.
+- `src/` and `tests/` never import GDAL-backed I/O libs (`geopandas`/`pyogrio`/`rasterio`) at module top-level — keep them lazy-imported behind seams (`rasterio` is optional, never imported at `src/` load). `shapely` (GEOS-backed geometry, no GDAL) *is* allowed at top-level and appears there in the geometry/selection/QA modules (`geometry`, `projection`, `clipping`, `waterbody_selection`, `areal_selection`, `hydro_structure_selection`, `hydro_structure_qa`); the classification modules stay import-free so they run without even shapely.
 - `src/` never imports `web/` or `tools/`; the dependency runs one way, `tools/ → src/`. `tools/` and `notebooks/` import GIS eagerly and read real data, so they live outside the suite.
 - Every `src/<name>.py` has a matching `tests/test_<name>.py`; pipeline-integration tests are `tests/test_*_pipeline.py`. Run only relevant tests per task group; full suite at the end.
 
@@ -82,9 +88,14 @@ Three categories of modules live in `src/` — know which you're touching:
 
 1. **Pipeline-integrated** (wired into `PIPELINE_STAGES`, run by `build.py`): the core 2D modules (config → cli → datasets → download/cache → loading → geometry → crs → projection → clipping → counties → graph → ordering → watersheds → coloring → rendering → optimize → export), plus the three additive feature layers — waterbodies (`waterbodies`/`waterbody_selection`), natural water features (`point_features`/`areal_features`/`areal_selection`), and hydro structures (`hydro_structures`/`hydro_structure_selection`/`hydro_structure_qa`). All additive layers are disabled by default → byte-identical default build.
 
-2. **Parallel subsystems** (pure/deterministic/offline, **not** in `PIPELINE_STAGES`; real renders via `tools/`): elevation/DEM/terrain/3D, flow disaggregation (`monthly_flow`/`historical_flow`/`climate_grid`), watershed report (`flow_metrics`), order fulfillment, production endpoints/gallery/release, determinism/bookkeeping, offline packaging, web backend (`jobs`/`server`), external storage.
+2. **Parallel subsystems** (pure/deterministic/offline, **not** in `PIPELINE_STAGES`; real renders via `tools/`):
+   - **3D / terrain:** `dem`/`elevation`/`hydro_z`/`raster`/`raster_io`/`terrain`/`hillshade`/`compositing`/`scene`/`camera`/`mesh`/`export3d`
+   - **Flow / climate:** `monthly_flow`/`historical_flow`/`climate_grid`/`flow_metrics`/`flowline_channels`
+   - **Commerce / fulfillment:** `orders`/`ledger`/`ledger_pg`/`payment`/`shipping`/`delivery`/`email_delivery`/`print_vendor`/`proof`/`trip_overlay`/`fulfillment`/`preview`
+   - **Production / ops:** `endpoints`/`catalog`/`gallery`/`release`/`manifest`/`changelog`/`analytics`/`accuracy`
+   - **Infrastructure:** `determinism`/`status`/`unfinished`/`packaging`/`storage`/`jobs`/`server`
 
-3. **Classification modules** (FType/FCode policy tables only — no geometry, no GIS imports, run without even shapely): `waterbodies`, `point_features`, `areal_features`, `hydro_structures`. Each feature taxonomy is **complementary and disjoint** — every NHD polygon/point is classified by exactly one taxonomy.
+3. **Classification modules** (FType/FCode policy tables only — no geometry, no GIS imports, run without even shapely): `waterbodies`, `point_features`, `areal_features`, `hydro_structures`, `flowline_channels`. Each feature taxonomy is **complementary and disjoint** — every NHD polygon/point/flowline is classified by exactly one taxonomy.
 
 Key integration rules:
 - `crs.py:INTERNAL_CRS` (`"EPSG:5070"`) is the single source — import it, never inline the literal.
@@ -120,4 +131,6 @@ Self-contained HTML/JS (no build step, `file://`-safe). `studio.html` is the can
 - **`ruff` may not be in `.venv`** — declared as an optional dev dep (`pip install -e '.[dev]'`) but not in `requirements.txt`; `pip install ruff` if missing.
 - **DEM/terrain/3D is not wired into `PIPELINE_STAGES`.** `color_by=elevation` and non-annual `--months` ship as real `build.py` flags but **fail fast** in the 2D pipeline; real renders come from `tools/render_state_mono.py` / `tools/render_monthly.py`.
 - **`src/raster.py` mosaic-before-warp** — each 1° 3DEP tile warped independently drifts resolution with latitude; `_require_aligned` uses a *relative* pixel-size tolerance. Don't "simplify" to warp-then-mosaic.
+- **`SOURCE_DATE_EPOCH=0` for determinism.** External rasterizers (`rsvg-convert`, PDF generators) embed timestamps that break byte-identical output. Pin `SOURCE_DATE_EPOCH=0` in the environment when invoking them.
+- **`ledger_pg.py` and PostgreSQL.** The commerce subsystem has an optional PostgreSQL persistence layer (`ledger_pg`) using `psycopg` (v3), lazy-imported behind the `OrderRepository` protocol. Extend via the protocol, don't duplicate.
 - **Rights gate (commercial data).** USGS NHDPlus/NHD/WBD are federal public domain — free to sell, but record source + attribution per asset. Climate defaults to **nClimGrid-Monthly** (public domain, sellable with attribution); **PRISM is not public domain — never ship a `--climate-source prism` asset commercially** (A/B only). `fulfillment.assert_sellable` enforces this.

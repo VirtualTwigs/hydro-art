@@ -48,7 +48,7 @@ Technical stack for the Hydrographic Vector Art Generator. Choices are driven by
 
 ### Deployment & Infrastructure
 - **Distribution:** Open-source Python package / repository; runs locally via single command
-- **CI/CD:** GitHub Actions recommended (run pytest + linting) — not yet configured
+- **CI/CD:** GitHub Actions — two workflows: `ci.yml` (offline suite + coverage gate + recipe roundtrip) and `reproducibility.yml` (determinism/release gate)
 
 ### Notes
 - **No database:** the pipeline is file-based; hydrography is loaded from downloaded datasets into in-memory GeoDataFrames/graphs.

@@ -75,6 +75,31 @@ Write the user's exact, unmodified description to
 `$SPEC_PATH/planning/initialization.md`. Leave `implementation/` and
 `verification/` empty for the implementation and verifier agents.
 
+### Step 3b: Create Pre-Analysis Stub
+
+Create `$SPEC_PATH/planning/pre-analysis.md` with this template:
+
+```markdown
+# Pre-Analysis
+
+_Written before implementation begins. Graded in the retrospective._
+
+## Predictions
+
+1. **Estimated complexity:** [low / medium / high]
+2. **Modules touched:** [list expected src/ and tools/ files]
+3. **Risk areas:** [what could go wrong or take longer than expected]
+4. **Pipeline impact:** [none / additive-disabled-by-default / stage change]
+
+## Open questions
+
+- [anything unclear that the spec should resolve before implementation]
+```
+
+This stub is **mandatory** — every epoch gets graded against its pre-analysis
+in the retrospective. Even three bullet-point predictions are enough to convert
+a narrative retro into a graded one.
+
 ### Step 4: Output Confirmation
 
 Return or output the following:
@@ -83,8 +108,9 @@ Return or output the following:
 Spec folder initialized: `[spec-path]`
 
 Structure created:
-- planning/          - requirements, spec, pre-analysis
-- planning/initialization.md - the raw idea (saved verbatim)
+- planning/              - requirements, spec, pre-analysis
+- planning/initialization.md  - the raw idea (saved verbatim)
+- planning/pre-analysis.md    - predictions to grade in retrospective
 - implementation/    - implementation reports
 - verification/      - verification reports
 

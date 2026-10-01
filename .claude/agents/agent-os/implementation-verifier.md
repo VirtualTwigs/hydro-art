@@ -73,6 +73,18 @@ Open `agent-os/product/roadmap.md`; tick items this spec completed with `- [x]`.
 If an item is only partially met, leave it `[ ]` with an evidence note rather
 than over-claiming.
 
+### Step 3b: UI-wiring check
+
+If this spec ships a new backend module with a user-facing surface (new config
+fields, new CLI flags, new order/fulfillment features), verify that the
+corresponding UI entry point is wired — web form field, CLI help text, or
+`tools/` script. If the UI is not wired, flag it explicitly:
+
+- **Wired now** — note where.
+- **Deferred** — add it as item #N+1 on the roadmap (not a carry-forward).
+
+This prevents the recurring pattern of tested-but-unreachable backend features.
+
 ### Step 4: Run the offline suite
 
 ```bash
@@ -105,16 +117,19 @@ Create `agent-os/specs/[this-spec]/verifications/final-verification.md`:
 - Determinism / PIPELINE_STAGES unchanged / 2D byte-identical: ✅/⚠️/❌/carry-forward
 - Rights gate: ✅/⚠️/N/A
 
-## 3. Documentation & Bookkeeping
+## 3. UI-Wiring Check
+- New backend surfaces reachable by users: ✅/⚠️ deferred/N/A
+
+## 4. Documentation & Bookkeeping
 - implementation/report.md: ✅/⚠️
 - HANDOFF.md updated: ✅/⚠️
 - CLAUDE.md + AGENTS.md updated: ✅/⚠️
 - Retrospective (if epoch close): ✅/⚠️/N/A
 
-## 4. Roadmap Updates
+## 5. Roadmap Updates
 [items ticked, or partial with evidence note]
 
-## 5. Test Suite Results
+## 6. Test Suite Results
 - Total / Passing / Failing: [counts]
 - Node roundtrip: [pass/fail/N-A]
 - Failed tests: [list or "none"]

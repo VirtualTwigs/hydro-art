@@ -58,6 +58,10 @@ review even if tests pass.
 - Run ONLY the tests you wrote for this group (e.g.
   `.venv/bin/python -m pytest -q tests/test_<name>.py`) — not the full suite.
 - If you touched `web/shared/hydro-ux.js`, run `node tests/test_recipe_roundtrip.cjs`.
+- **If you created or modified a `tools/*.py` script**, run
+  `python tools/<name>.py --help` directly (not through pytest) to verify the
+  `sys.path` and imports work outside pytest's auto-path. This catches a
+  recurring class of import bugs that pytest masks.
 - Confirm your new module imports with no GDAL in `sys.modules` if it feeds an
   `src/` seam.
 - Do NOT commit. Committing is a separate, explicit user step.
