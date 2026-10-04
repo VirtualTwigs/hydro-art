@@ -53,10 +53,16 @@ source (e.g. `tools/render_state_svg.py`, `tools/render_county_clip.py`,
 the container — no rebuild needed. Only the staged files are exposed under
 `/output/` (no NAS, no listing of other renders).
 
+## Public, password-protected: riverglyph.enablesu.com
+
+riverglyph.enablesu.com publishes the **live** `serve.py` app (not this static
+image) behind Basic Auth via a Cloudflare Tunnel. See [`CLOUDFLARE.md`](CLOUDFLARE.md).
+
 ## Share it over Tailscale
 
 The stdlib server has **no auth and no TLS**, so keep it on your private tailnet
-(don't enable Tailscale Funnel / a public tunnel for this image).
+(don't enable Tailscale Funnel / a public tunnel for this image — the public
+route is `CLOUDFLARE.md`).
 
 Option A — Tailscale Serve (HTTPS + a clean name; recommended):
 ```bash

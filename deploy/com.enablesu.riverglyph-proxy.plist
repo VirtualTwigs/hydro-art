@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  TEMPLATE: install with `bash deploy/install-riverglyph.sh`, which fills in
+  __REPO__, __HOME__ and __CLOUDFLARED__ for the current Mac. See deploy/CLOUDFLARE.md.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.enablesu.riverglyph-proxy</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO__/.venv/bin/python</string>
+    <string>__REPO__/deploy/auth_proxy.py</string>
+    <string>--env-file</string>
+    <string>__REPO__/deploy/riverglyph.env</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__REPO__/deploy</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/riverglyph-proxy.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/riverglyph-proxy.log</string>
+</dict>
+</plist>

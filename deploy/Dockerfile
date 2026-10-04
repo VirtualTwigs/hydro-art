@@ -17,6 +17,10 @@ COPY web/ ./web/
 # Serve the customer landing at `/` — it's the first-touch page a visitor lands on.
 RUN cp web/start.html index.html
 
+# Basic-auth variant of the static server, used by the public riverglyph
+# deployment (deploy/docker-compose.riverglyph.yml overrides CMD to run it).
+COPY deploy/auth_server.py ./auth_server.py
+
 EXPOSE 8080
 
 # stdlib static server. Binds all interfaces INSIDE the container; the host and

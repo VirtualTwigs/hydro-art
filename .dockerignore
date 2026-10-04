@@ -42,3 +42,6 @@ assets/
 **/.DS_Store
 .idea/
 .vscode/
+
+# Never bake demo credentials into an image layer.
+deploy/riverglyph.env
