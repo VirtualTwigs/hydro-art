@@ -47,3 +47,10 @@ deploy/output/
 
 # riverglyph public demo credentials (deploy/gen-riverglyph-credentials.sh)
 deploy/riverglyph.env
+
+# Exception: commit the small landing-page WebPs start.html shows (built from
+# committed market-analysis/thumbs + notebooks/figures; see deploy/CLOUDFLARE.md).
+# Everything else under deploy/output/ (staged display SVGs) stays ignored.
+!deploy/output/
+deploy/output/*
+!deploy/output/landing/

@@ -69,7 +69,7 @@ Cloudflare splits visitors between them, and each Mac has its own orders.
    python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -e .
    ```
 3. **cloudflared:** `brew install cloudflared` (the desktop already has it).
-4. **Copy the files git doesn't carry** from the old Mac (AirDrop, `scp`, or a USB
+4. **Copy the files git doesn't carry** (the landing images *are* in git) from the old Mac (AirDrop, `scp`, or a USB
    drive; the first two are secrets, so don't email them or put them in a
    shared drive):
 
@@ -77,15 +77,23 @@ Cloudflare splits visitors between them, and each Mac has its own orders.
    |------------------|-----------------------------------|-----|
    | `~/.cloudflared/4c3ed387-005c-47e2-8d3a-7d25bbd0a131.json` | `~/.cloudflared/` | tunnel secret (the tunnel's identity) |
    | `deploy/riverglyph.env` | `deploy/` | the login passphrase (`chmod 600` it) |
-   | `deploy/output/landing/` | `deploy/output/landing/` | landing-page images (or rebuild: see *Landing-page images*) |
    | `output/orders/` | `output/orders/` | existing orders, if you want to keep them |
    | `cache/` | `cache/` | hydrography data `serve.py` renders from (large) |
+
+   **No copying needed for the tunnel secret** if the new Mac is logged in to
+   Cloudflare (`~/.cloudflared/cert.pem` exists). Download it there instead. Pass
+   the **UUID**, not the name, so `config.yml`'s `bridge-james` can't be picked up:
+   ```bash
+   cloudflared tunnel token --cred-file ~/.cloudflared/4c3ed387-005c-47e2-8d3a-7d25bbd0a131.json \
+     4c3ed387-005c-47e2-8d3a-7d25bbd0a131
+   ```
+   For the passphrase, you can instead run `bash deploy/gen-riverglyph-credentials.sh`
+   (this creates a **new** passphrase).
 
    Example with `scp` (from the new Mac, laptop reachable as `laptop.local`):
    ```bash
    scp laptop.local:.cloudflared/4c3ed387-005c-47e2-8d3a-7d25bbd0a131.json ~/.cloudflared/
    scp laptop.local:code/gms/hydro-art/deploy/riverglyph.env deploy/ && chmod 600 deploy/riverglyph.env
-   rsync -a laptop.local:code/gms/hydro-art/deploy/output/ deploy/output/
    rsync -a laptop.local:code/gms/hydro-art/output/orders/ output/orders/
    rsync -a laptop.local:code/gms/hydro-art/cache/ cache/
    ```
@@ -143,9 +151,10 @@ restart the proxy (see *Day-to-day*).
 ## Landing-page images
 
 `start.html` loads its images from `/output/…`. `serve.py` only serves `web/`,
-so the proxy serves `/output/*` itself from `deploy/output/` (git-ignored,
-read-only, behind the login). The NAS originals weren't available, so the
-current set (2026-10-04) was built from what's committed in the repo:
+so the proxy serves `/output/*` itself from `deploy/output/` (read-only, behind
+the login). The four `deploy/output/landing/*.webp` files are **committed**, so a
+fresh clone has them. The NAS originals weren't available, so this set
+(2026-10-04) was built from other committed files:
 
 | Page image | Built from |
 |------------|------------|
