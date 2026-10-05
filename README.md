@@ -1,16 +1,37 @@
 # hydro-art
 
-Hydrographic Vector Art Generator: turns public USGS hydrography (NHDPlus HR / NHD /
-WBD) into layered, neon-colored SVG river art. See `docs/PRD.md` for the product
-spec and `CLAUDE.md` / `AGENTS.md` for architecture and contributor rules.
+Hydrographic Vector Art Generator -- a Python 3.12+ CLI that turns public USGS hydrography data (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art.
 
-## Setup
+All 50 US states are supported. The pipeline is deterministic: identical inputs produce byte-identical output.
+
+## Prerequisites
+
+- **Python 3.12+** (active interpreter: 3.14)
+- **Node 18+** (only for the web recipe roundtrip test and Playwright e2e)
+- **GDAL** (only for real pipeline renders; the test suite runs fully offline without it)
+- Optional external tools: `svgo` (SVG optimizer), `rsvg-convert` (PNG/PDF rasterization)
+
+## Installation
 
 ```bash
+# Clone
+git clone https://github.com/VirtualTwigs/hydro-art.git
+cd hydro-art
+
+# Create virtualenv and install
 python3 -m venv .venv
-.venv/bin/pip install -e '.[dev]'          # core deps + ruff
-.venv/bin/pip install -r requirements.txt  # GIS stack (shapely, geopandas, pyogrio, …)
+
+# Core deps (enough for the offline test suite)
+.venv/bin/pip install -e .
+
+# Full GIS stack (needed for real renders)
+.venv/bin/pip install -r requirements.txt
+
+# Dev tools (pytest, ruff)
+.venv/bin/pip install -e '.[dev]'
 ```
+
+**Dependency split:** `pyproject.toml` declares the always-imported core (`pyyaml`, `rich`). The heavy GIS stack (`shapely`, `geopandas`, `pyogrio`, `numpy`, `networkx`, `rasterio`) lives in `requirements.txt` and is lazy-imported behind seams, keeping the test suite importable without GDAL.
 
 ## Running in development mode
 
@@ -20,19 +41,53 @@ points from source, and they pick up code changes on every restart.
 | Entry point | What it does |
 |---|---|
 | `serve.py` | Local web server for `web/` (studio, start, order pages) plus the `/api/*` routes. The "Run pipeline" button runs real renders. |
-| `build.py` | One-shot CLI render (`--region`, `--county`, `--palette`, …). |
+| `build.py` | One-shot CLI render (`--region`, `--county`, `--palette`, ...). |
+
+### Dev server (live pipeline renders)
+
+Serves the web control surface and exposes `/api/render` + `/api/jobs/<id>` routes. Requires the full GIS stack and pre-extracted datasets.
 
 ```bash
 .venv/bin/python -X dev serve.py                    # http://127.0.0.1:8765/
-.venv/bin/python -X dev serve.py --port 9000 --cache-dir cache
-.venv/bin/python -X dev build.py --region Washington --palette neon --glow --output svg
+.venv/bin/python -X dev serve.py --port 9000        # custom port
+.venv/bin/python -X dev serve.py --cache-dir cache  # override archive cache location
+.venv/bin/python -X dev serve.py --web-root .       # serve repo root (for e2e harness)
+.venv/bin/python -X dev serve.py --external-root /Volumes/home/data/hydro-art  # redirect all storage
 ```
 
 `-X dev` turns on [Python Development Mode](https://docs.python.org/3/library/devmode.html),
 which adds extra runtime checks, `ResourceWarning`s for unclosed files and sockets, and
 faulthandler tracebacks on crashes. It never changes rendered output.
 
-Things to know when running locally:
+### CLI pipeline
+
+```bash
+# Basic render
+.venv/bin/python build.py --region Washington --palette neon --glow --output svg pdf
+
+# County-scoped render
+.venv/bin/python build.py --region Washington --county "Clark County" --output svg
+
+# With config file (config.yaml)
+.venv/bin/python build.py
+
+# External storage root
+HYDRO_ART_EXTERNAL_ROOT=/Volumes/home/data/hydro-art .venv/bin/python build.py --region Oregon
+```
+
+Configuration precedence: `built-in defaults < config.yaml < CLI flags`.
+
+### Static demo container (no live rendering)
+
+Serves the web pages with pre-rendered SVGs. No GDAL needed.
+
+```bash
+bash deploy/stage-artifacts.sh                              # stage NAS artifacts locally
+docker compose -f deploy/docker-compose.yml up --build -d   # http://localhost:8080/
+docker compose -f deploy/docker-compose.yml down            # stop
+```
+
+### Things to know when running locally
 
 - **Datasets.** Archives are cached on the NAS (`/Volumes/home/data/incoming`) when it
   is mounted, and in local `cache/` when it isn't. If a dataset has already been
@@ -126,15 +181,110 @@ with `"connect": {"host": "127.0.0.1", "port": 5678}`).
 - **Front end.** Use the browser DevTools (Console and Network tabs) on
   `http://127.0.0.1:8765/`. The shared logic lives in `web/shared/hydro-ux.js`.
 
-## Tests
+## Test suites
+
+### Offline test suite (primary -- no GDAL, no network)
+
+The entire offline suite runs without GDAL, network access, or real datasets. This is the primary quality gate and runs in CI on every push/PR.
 
 ```bash
-.venv/bin/python -m pytest -q                        # full offline suite (no GDAL/network)
-.venv/bin/python -m pytest tests/test_config.py -k X # one test; add --pdb to drop into pdb on failure
-node tests/test_recipe_roundtrip.cjs                 # web recipe roundtrip
-.venv/bin/ruff check src tests                       # lint
+.venv/bin/python -m pytest -q                                # full suite
+.venv/bin/python -m pytest tests/test_config.py -q           # single file
+.venv/bin/python -m pytest tests/test_config.py::test_name   # single test
+.venv/bin/python -m pytest -v                                # verbose output
 ```
 
 `pytest --pdb` (post-mortem on failure) and `pytest --trace` (break at the start of each
-test) are the fastest way to debug a failing test. Playwright E2E tests are opt-in; see
-`CLAUDE.md` → Commands.
+test) are the fastest way to debug a failing test.
+
+### Coverage report
+
+Scoped to `src/` via `pyproject.toml`. GDAL/network/subprocess seam bodies are excluded (covered by injected fakes).
+
+```bash
+.venv/bin/python tools/coverage_report.py --fail-under 90   # gate (default threshold)
+.venv/bin/python tools/coverage_report.py --quiet            # report-only, no fail
+```
+
+### Linting
+
+```bash
+.venv/bin/ruff check src tests                     # lint check
+.venv/bin/ruff check src tests --fix               # auto-fix
+```
+
+If `ruff` is not in `.venv`, install it: `.venv/bin/pip install ruff`.
+
+### Web recipe roundtrip (Node)
+
+Validates that `web/shared/hydro-ux.js` stays Node-loadable and recipe encode/decode round-trips correctly. No npm dependencies needed.
+
+```bash
+node tests/test_recipe_roundtrip.cjs
+```
+
+### Determinism / release gate (requires GDAL + real data)
+
+Double-renders a region through the real pipeline and proves byte-identical output + golden-hash match. Requires the full GIS stack and pre-extracted datasets.
+
+```bash
+.venv/bin/python tools/verify_determinism.py --region Oregon   # double-render + hash compare
+.venv/bin/python tools/release_gate.py                          # full release gate (goldens + determinism)
+.venv/bin/python tools/release_gate.py --offline-only           # fixture-match only (no GDAL)
+```
+
+### End-to-end (Playwright -- opt-in)
+
+Browser-based e2e tests. Not part of the offline suite.
+
+```bash
+cd tests/e2e
+npm install
+npx playwright install chromium
+
+# Full suite (boots serve.py, needs GIS for proof tests)
+npx playwright test
+
+# Landing/nav only (no GIS needed)
+npx playwright test tests/01-landing.spec.js
+```
+
+### CI workflows
+
+Two GitHub Actions workflows run automatically:
+
+| Workflow | File | Trigger | What it checks |
+|----------|------|---------|----------------|
+| Offline test pyramid | `.github/workflows/ci.yml` | push/PR to `main` | pytest suite, recipe roundtrip, coverage, release gate (offline), changelog |
+| Reproducibility gate | `.github/workflows/reproducibility.yml` | manual / weekly (Mon 06:00 UTC) | Real-data double-render determinism on a self-hosted GDAL runner |
+
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `HYDRO_ART_EXTERNAL_ROOT` | Redirect cache/datasets/output to an external drive |
+| `DATABASE_URL` | PostgreSQL connection string for the operations ledger (optional; falls back to JSON) |
+| `HYDRO_ART_GMAIL_APP_PASSWORD` | Gmail app password for email delivery (optional) |
+| `SOURCE_DATE_EPOCH` | Set to `0` for deterministic timestamps in rasterized output |
+| `HYDRO_ART_REAL_DATA` | Set to `1` to enable `@pytest.mark.real_data` tests |
+
+## Project structure
+
+```
+build.py              # CLI entry point (GIS-to-SVG pipeline)
+serve.py              # Dev server (web control surface + API)
+config.yaml           # Default pipeline configuration
+src/                  # Core library (offline-safe, no top-level GDAL imports)
+tests/                # Offline test suite (pytest)
+  e2e/                # Playwright browser tests (opt-in)
+tools/                # Ad-hoc operator scripts (import GIS eagerly)
+web/                  # Self-contained HTML/JS control surface (no build step)
+deploy/               # Docker + Cloudflare deployment
+migrations/           # PostgreSQL schema migrations
+notebooks/            # Ad-hoc GIS exploration (Jupyter)
+agent-os/             # Specs, retrospectives, roadmap
+```
+
+## License
+
+See repository for license details. Data sources (USGS NHDPlus HR, NHD, WBD, 3DEP, nClimGrid) are US federal public domain.
