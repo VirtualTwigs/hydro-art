@@ -9,9 +9,6 @@ Pure and offline — no database, no network, no GDAL.
 
 from __future__ import annotations
 
-import re
-from datetime import datetime, timezone
-
 import pytest
 
 from src.ledger import (
@@ -39,7 +36,6 @@ from src.ledger import (
     validate_rights_status,
     validate_visibility,
 )
-
 
 # ---------------------------------------------------------------------------
 # Group 1 — Entity dataclasses

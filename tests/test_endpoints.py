@@ -273,7 +273,7 @@ def test_conus_request_passes_rights_gate():
 
 def test_kind_for_unknown_format_raises():
     """EndpointContract.kind_for raises KeyError for unknown format."""
-    contract = list(ENDPOINT_CONTRACTS.values())[0]
+    contract = next(iter(ENDPOINT_CONTRACTS.values()))
     with pytest.raises(KeyError):
         contract.kind_for("nonexistent_format")
 

@@ -5,8 +5,6 @@ Offline — uses fakes for vendor client. No network, no SDK.
 
 from __future__ import annotations
 
-import pytest
-
 from src.print_vendor import (
     build_print_order_payload,
     calculate_print_cost,

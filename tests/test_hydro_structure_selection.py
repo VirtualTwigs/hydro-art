@@ -152,6 +152,7 @@ def test_injectable_reproject_seam_used():
 def test_geometry_kind_geometry_collection_returns_other():
     """_geometry_kind with a GeometryCollection falls through to 'other' (line 86)."""
     from shapely.geometry import GeometryCollection
+
     from src.hydro_structure_selection import _geometry_kind
 
     gc = GeometryCollection([Point(0, 0), LineString([(0, 0), (1, 1)])])
@@ -180,6 +181,7 @@ def test_structure_with_none_geometry_excluded():
 def test_structure_geometry_dropped_in_repair_excluded():
     """Structure whose geometry becomes None after repair is excluded (lines 185-187)."""
     from unittest.mock import patch
+
     from src.geometry import RepairOutcome
 
     feat = _structure(LineString([(0, 0), (1, 1)]), source_id="bad_repair")

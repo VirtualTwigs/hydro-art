@@ -10,13 +10,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.fulfillment import OrderError
 from src.ledger import (
     Asset,
     Delivery,
     LedgerError,
     validate_delivery_access,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fake psycopg objects
@@ -34,7 +34,7 @@ class FakeCursor:
         # result_sets: list of list-of-tuples, one per query
         self._result_sets: list[list[tuple]] = list(result_sets or [])
         self._current: list[tuple] = []
-        self.executed: list[tuple[str, Any]] = []
+        self.executed: list[tuple[str, object]] = []
 
     def execute(self, sql, params=None):
         self.executed.append((sql, params))
@@ -144,7 +144,7 @@ class TestCreateRequest:
             [_REQ_ROW],   # SELECT requests (from get())
             [],           # SELECT events (from get())
         ])
-        repo, conn = _make_repo(cursor=cursor)
+        repo, _conn = _make_repo(cursor=cursor)
         payload = {
             "email": "test@example.com",
             "product": "neon-basin 18x24",
@@ -183,7 +183,7 @@ class TestGet:
             [_REQ_ROW],  # SELECT requests
             [],          # SELECT events
         ])
-        repo, conn = _make_repo(cursor=cursor)
+        repo, _conn = _make_repo(cursor=cursor)
         result = repo.get("REQ-20260901-0001")
         # Should have issued a SELECT with parameterized query
         sel = [(sql, p) for sql, p in cursor.executed if "SELECT" in sql]
@@ -197,7 +197,7 @@ class TestGet:
         cursor = FakeCursor(result_sets=[
             [],  # SELECT returns no rows
         ])
-        repo, conn = _make_repo(cursor=cursor)
+        repo, _conn = _make_repo(cursor=cursor)
         with pytest.raises(KeyError):
             repo.get("REQ-99999999-0001")
 
@@ -209,8 +209,8 @@ class TestUpdateStatus:
             [_FULFILLED_ROW],  # SELECT requests (from get())
             [],                # SELECT events (from get())
         ])
-        repo, conn = _make_repo(cursor=cursor)
-        with pytest.raises(Exception):
+        repo, _conn = _make_repo(cursor=cursor)
+        with pytest.raises(OrderError):
             # fulfilled -> accepted is not allowed
             repo.update_status("REQ-20260901-0001", "accepted")
 
@@ -280,7 +280,7 @@ class TestGetAssetsForOrder:
         cursor = FakeCursor(result_sets=[
             [asset_row],
         ])
-        repo, conn = _make_repo(cursor=cursor)
+        repo, _conn = _make_repo(cursor=cursor)
         assets = repo.get_assets_for_order("ORD-20260901-0001")
         assert isinstance(assets, list)
         assert len(assets) == 1
@@ -338,7 +338,7 @@ class TestNoStringInterpolation:
         lines = source.split("\n")
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
-            if stripped.startswith("#") or stripped.startswith('"""'):
+            if stripped.startswith(("#", '"""')):
                 continue
             sql_kws = ("INSERT", "SELECT", "UPDATE", "DELETE", "WHERE")
             has_sql = any(kw in line.upper() for kw in sql_kws)

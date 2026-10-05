@@ -166,7 +166,6 @@ def test_repair_drops_geometry_excluded():
 
 def test_clip_returns_none_excluded():
     """Feature that intersects boundary but clip returns None is excluded."""
-    from shapely.geometry import LineString
 
     boundary = _square(0, 0, 100)
     # A very thin sliver polygon that intersects but clips to nothing useful

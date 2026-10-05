@@ -6,13 +6,10 @@ No database, no filesystem, no network.
 
 from __future__ import annotations
 
-import json
-import sys
 from pathlib import Path
 from typing import Any
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Import the tool module (it's under tools/, outside the package)

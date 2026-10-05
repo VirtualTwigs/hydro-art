@@ -34,7 +34,7 @@ from src.config import (
     build_settings,
 )
 from src.fulfillment import ORDER_STYLES, SIZES, build_order
-from src.orders import OrderStore, Request
+from src.orders import OrderStore
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "web"
@@ -191,7 +191,6 @@ class TestOrderResponseContract:
 
     def test_error_response_shape(self, tmp_path):
         """On validation error, server sends {"error": "message"}."""
-        from src.fulfillment import OrderError
         from src.server import handle_request
 
         store = OrderStore(tmp_path / "orders")
@@ -404,7 +403,7 @@ class TestCliConfigContract:
         """Every field on Settings must have a non-sentinel value after build."""
         settings = build_settings({"region": ["Oregon"]})
         for f in fields(settings):
-            val = getattr(settings, f.name)
+            getattr(settings, f.name)
             # None is acceptable for optional fields (county, etc.)
             # but the field must exist and be accessible
             assert hasattr(settings, f.name), f"Settings missing field: {f.name}"

@@ -162,6 +162,7 @@ def test_areal_feature_with_none_geometry_excluded():
 def test_areal_feature_geometry_dropped_in_repair_excluded():
     """Feature whose geometry becomes None after repair is excluded (lines 149-151)."""
     from unittest.mock import patch
+
     from src.geometry import RepairOutcome
 
     bad_geom = _square(0, 0, 10)
@@ -190,6 +191,7 @@ def test_point_feature_with_none_geometry_excluded():
 def test_point_feature_geometry_dropped_in_repair_excluded():
     """Point feature whose geometry becomes None after repair is excluded (lines 295-297)."""
     from unittest.mock import patch
+
     from src.geometry import RepairOutcome
 
     feat = _point(Point(1, 1), source_id="bad_repair_pt")

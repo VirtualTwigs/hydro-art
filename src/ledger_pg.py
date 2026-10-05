@@ -11,8 +11,6 @@ from __future__ import annotations
 
 import json
 import time
-from dataclasses import asdict
-from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from src.ledger import (
@@ -139,8 +137,8 @@ class PgOrderRepository:
 
     def update_status(self, request_id: str, new_status: str) -> Any:
         """Transition a request to a new status with state-machine enforcement."""
-        from src.orders import TRANSITIONS
         from src.fulfillment import OrderError
+        from src.orders import TRANSITIONS
 
         req = self.get(request_id)
         allowed = TRANSITIONS.get(req.status, frozenset())

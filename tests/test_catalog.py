@@ -9,9 +9,7 @@ from pathlib import Path
 import pytest
 
 from src.catalog import (
-    CATALOG_SCHEMA,
     DEFAULT_SECTIONS,
-    ENTRY_STATUSES,
     STATUS_TRANSITIONS,
     CatalogEntry,
     CatalogError,
@@ -24,7 +22,6 @@ from src.catalog import (
     seed_from_gallery_matrix,
     validate_entry,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

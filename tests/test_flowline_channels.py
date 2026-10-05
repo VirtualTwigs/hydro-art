@@ -9,7 +9,6 @@ from src.flowline_channels import (
     ENGINEERED_CLASSES,
     FLOWLINE_CHANNEL_CLASSES,
     FLOWLINE_CHANNEL_FTYPE_CLASS,
-    FLOWLINE_CHANNEL_FTYPE_LABELS,
     FLOWLINE_CHANNEL_POLICY_VERSION,
     build_channel_dashes,
     classify_ftype,

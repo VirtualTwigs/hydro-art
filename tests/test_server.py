@@ -702,7 +702,7 @@ def test_gallery_outputs_lists_files(tmp_path):
     assert "art.png" in names
     assert "_cache.json" not in names
     # SVG/PNG get preview URLs
-    svg_entry = [f for f in data["files"] if f["name"] == "art.svg"][0]
+    svg_entry = next(f for f in data["files"] if f["name"] == "art.svg")
     assert "preview" in svg_entry
 
 

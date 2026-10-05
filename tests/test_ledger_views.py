@@ -10,8 +10,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import pytest
-
 VIEWS_SQL_PATH = Path(__file__).resolve().parent.parent / "migrations" / "003_operator_views.sql"
 
 # Read once at module level (it's a static file, no I/O seam needed).

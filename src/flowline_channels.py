@@ -18,7 +18,8 @@ so it runs fully offline without even shapely.
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 __all__ = [
     "DEFAULT_CHANNEL_DASHES",

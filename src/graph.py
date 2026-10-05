@@ -143,12 +143,12 @@ def build_graph(layers: Iterable[Layer], snap_tolerance: float = 0.0) -> HydroGr
                 if start == end:
                     dropped += 1
                     continue
-                edge_data: dict[str, Any] = dict(
-                    segment_id=segment_id,
-                    geometry=segment,
-                    length=segment.length,
-                    huc4=layer.huc4,
-                )
+                edge_data: dict[str, Any] = {
+                    "segment_id": segment_id,
+                    "geometry": segment,
+                    "length": segment.length,
+                    "huc4": layer.huc4,
+                }
                 if attrs is not None:
                     ftype = attrs.get("FType")
                     if ftype is not None:

@@ -155,7 +155,7 @@ def test_render_svg_stream_byte_identical_to_render_svg():
 
 def test_render_svg_stream_byte_identical_with_glow():
     """Streaming matches string output when glow is enabled."""
-    kwargs = dict(glow=True, glow_mode="blur", glow_radius=3.0)
+    kwargs = {"glow": True, "glow_mode": "blur", "glow_radius": 3.0}
     string_svg = render_svg(_STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS, **kwargs)
     buf = io.StringIO()
     render_svg_stream(buf, _STREAM_GEOMS, _STREAM_COLORS, _STREAM_WATERSHEDS, **kwargs)
@@ -177,16 +177,15 @@ def test_render_svg_stream_writes_valid_svg():
 # Coverage additions for missing lines
 # ---------------------------------------------------------------------------
 
-import math
 
 from shapely.geometry import Point, Polygon
 
+from src import rendering
 from src.rendering import (
     hypsometric_colors,
     polygon_path_d,
     stream_order_widths,
 )
-from src import rendering
 
 
 def test_path_d_none_returns_empty():
@@ -301,9 +300,8 @@ def test_render_svg_structure_polygon_outline_with_dash():
 # Additional coverage for uncovered lines
 # ---------------------------------------------------------------------------
 
-from shapely.geometry import box, MultiPolygon
 
-from src.rendering import polygon_bounds, polygon_path_d
+from src.rendering import polygon_bounds
 
 
 class _FakeLineString:
@@ -311,7 +309,7 @@ class _FakeLineString:
 
     is_empty = False
     geom_type = "LineString"
-    coords = []
+    coords = ()  # type: ignore[assignment]
 
 
 def test_path_d_continue_on_empty_transform(monkeypatch):
@@ -334,7 +332,7 @@ def test_path_d_multiline_skips_degenerate_part():
     class _FakeMulti:
         is_empty = False
         geom_type = "MultiLineString"
-        geoms = [_FakeLineString(), LineString([(0.0, 10.0), (5.0, 0.0)])]
+        geoms = (_FakeLineString(), LineString([(0.0, 10.0), (5.0, 0.0)]))
 
     d = path_d(_FakeMulti(), min_x=0.0, max_y=10.0, precision=3)
     assert d.count("M") == 1
@@ -362,9 +360,9 @@ def test_polygon_path_d_skips_ring_with_fewer_than_2_points():
         geom_type = "Polygon"
 
         class exterior:
-            coords = [(5.0, 5.0), (5.0, 5.0)]
+            coords = ((5.0, 5.0), (5.0, 5.0))
 
-        interiors = []
+        interiors = ()  # type: ignore[assignment]
 
     result = polygon_path_d(_SinglePointPoly(), min_x=0.0, max_y=10.0, precision=3)
     assert result == ""

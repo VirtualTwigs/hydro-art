@@ -11,23 +11,21 @@ from __future__ import annotations
 
 import random
 from itertools import product as cartesian
+from typing import ClassVar
 
 import pytest
 
 from src.config import (
     SUPPORTED_COLOR_MODES,
-    SUPPORTED_GLOW_MODES,
     SUPPORTED_HUC_LEVELS,
     SUPPORTED_PALETTES,
     SUPPORTED_REGIONS,
     SUPPORTED_WIDTH_MODES,
-    ConfigError,
     Settings,
     build_settings,
 )
 from src.fulfillment import ORDER_STYLES, SIZES, TITLE_MAX, OrderError, build_order
 from src.orders import OrderStore
-
 
 # ── Seeded PRNG ──────────────────────────────────────────────────────────────
 RNG = random.Random(20260921)
@@ -155,7 +153,7 @@ class TestRandomBuildSettings:
 class TestRandomInvalidPayloads:
     """10 random invalid payloads — each corrupts one field."""
 
-    CORRUPTIONS = [
+    CORRUPTIONS: ClassVar[list] = [
         ("region", ["", "Atlantis", "new york", "  ", None, 42]),
         ("style", ["aurora-glow", "", "NEON-BASIN", None, 42]),
         ("size", ["99x99", "", "18X24", None, "small"]),
@@ -225,7 +223,7 @@ class TestRandomMultiRegionSettings:
 class TestSpecialCharacterEdgeCases:
     """Order payloads with special characters in string fields."""
 
-    SPECIAL_TITLES = [
+    SPECIAL_TITLES: ClassVar[list[str]] = [
         "Clark's Creek",
         "Río Grande",
         "Lac qui Parle",

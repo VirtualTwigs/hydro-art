@@ -55,7 +55,6 @@ from src.rendering import (
     DEFAULT_HYDRO_STRUCTURE_STYLES,
     DEFAULT_POINT_STYLES,
     bounds,
-    render_svg,
     render_svg_stream,
     scaled_widths,
 )
@@ -520,27 +519,27 @@ def _generate_svg_stage(ctx: RunContext) -> None:
     af = ctx.settings.areal_features
     hs = ctx.settings.hydro_structures
     wb_stroke = wb.stroke_width * units_per_px
-    render_kwargs = dict(
-        background=ctx.settings.background,
-        line_width=line_width,
-        stroke_widths=stroke_widths,
-        glow=ctx.settings.glow,
-        glow_mode=ctx.settings.glow_mode,
-        glow_radius=glow_radius,
-        waterbodies=waterbody_items or None,
-        waterbody_color=wb.color,
-        waterbody_stroke_width=wb_stroke,
-        waterbody_order=wb.render_order,
-        areal_features=areal_items or None,
-        areal_feature_styles=_areal_feature_styles(af) if areal_items else None,
-        point_features=point_items or None,
-        point_feature_styles=_point_feature_styles(pf) if point_items else None,
-        point_feature_order=pf.render_order,
-        hydro_structures=hydro_items or None,
-        hydro_structure_styles=_hydro_structure_styles(hs) if hydro_items else None,
-        hydro_structure_order=hs.render_order,
-        channel_dashes=channel_dashes,
-    )
+    render_kwargs = {
+        "background": ctx.settings.background,
+        "line_width": line_width,
+        "stroke_widths": stroke_widths,
+        "glow": ctx.settings.glow,
+        "glow_mode": ctx.settings.glow_mode,
+        "glow_radius": glow_radius,
+        "waterbodies": waterbody_items or None,
+        "waterbody_color": wb.color,
+        "waterbody_stroke_width": wb_stroke,
+        "waterbody_order": wb.render_order,
+        "areal_features": areal_items or None,
+        "areal_feature_styles": _areal_feature_styles(af) if areal_items else None,
+        "point_features": point_items or None,
+        "point_feature_styles": _point_feature_styles(pf) if point_items else None,
+        "point_feature_order": pf.render_order,
+        "hydro_structures": hydro_items or None,
+        "hydro_structure_styles": _hydro_structure_styles(hs) if hydro_items else None,
+        "hydro_structure_order": hs.render_order,
+        "channel_dashes": channel_dashes,
+    }
     buf = io.StringIO()
     render_svg_stream(buf, geometries, segment_colors, watersheds, **render_kwargs)
     svg = buf.getvalue()

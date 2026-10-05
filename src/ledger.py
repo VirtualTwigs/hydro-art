@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
@@ -308,9 +308,9 @@ def validate_delivery_access(delivery: Delivery) -> str:
         return "revoked"
     # Parse ISO timestamp and compare to now
     expires = datetime.fromisoformat(
-        delivery.access_expires_at.replace("Z", "+00:00")
+        delivery.access_expires_at
     )
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     if now >= expires:
         return "expired"
     return "active"
