@@ -1,0 +1,11 @@
+# cloudflared config TEMPLATE for the riverglyph tunnel. deploy/install-riverglyph.sh
+# writes it to ~/.cloudflared/riverglyph.yml with __HOME__ and <TUNNEL-UUID> filled in.
+# This is deliberately a SEPARATE file from ~/.cloudflared/config.yml, which belongs
+# to the bridge-james tunnel. See deploy/CLOUDFLARE.md.
+tunnel: riverglyph
+credentials-file: __HOME__/.cloudflared/<TUNNEL-UUID>.json
+
+ingress:
+  - hostname: riverglyph.enablesu.com
+    service: http://127.0.0.1:8081
+  - service: http_status:404
