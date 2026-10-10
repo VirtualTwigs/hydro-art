@@ -93,12 +93,47 @@ docker compose -f deploy/docker-compose.yml down            # stop
   is mounted, and in local `cache/` when it isn't. If a dataset has already been
   extracted under `datasets/`, nothing is downloaded. Use `--cache-dir` or
   `--external-root` (or `$HYDRO_ART_EXTERNAL_ROOT`) to redirect storage.
-- **Email.** Delivery emails are only sent when `HYDRO_ART_GMAIL_APP_PASSWORD` is
-  set. Otherwise the server logs "email: not configured" and keeps running.
+- **Email.** Order confirmation, proof, and delivery emails are only sent when
+  `HYDRO_ART_GMAIL_APP_PASSWORD` is set. Otherwise the server logs
+  "email: not configured" and keeps running. See [Email setup](#email-setup).
 - **Static pages only.** You can open the `web/` pages straight from disk
   (`file://`). You only need `serve.py` for `/api/*` calls.
 - **No auto-reload.** Restart `serve.py` after you change Python code. Changes to
   `web/` files only need a browser refresh.
+
+### Email setup
+
+`serve.py` sends order emails through Gmail SMTP (`smtp.gmail.com:465`). They are
+sent from the fixed address `FROM_ADDRESS` in `src/email_delivery.py`, which is
+currently `neiljrunde@gmail.com`. To make sending work:
+
+1. Sign in to the `FROM_ADDRESS` Gmail account. 2-Step Verification must be on.
+2. Generate an app password at <https://myaccount.google.com/apppasswords>. It
+   **must** come from the `FROM_ADDRESS` account, because Gmail rejects the login
+   otherwise. A normal account password won't work either.
+3. Export it in the same shell that starts the server:
+
+   ```bash
+   export HYDRO_ART_GMAIL_APP_PASSWORD="xxxx xxxx xxxx xxxx"
+   .venv/bin/python serve.py
+   ```
+
+4. Check that the startup output says `email: configured`. To trigger a proof
+   email, move an order with a buyer email to `proof_ready`. The PATCH response
+   includes `"email_sent": true` when the send succeeded.
+
+To send from a different account, change `FROM_ADDRESS` in `src/email_delivery.py`
+and use an app password from that account.
+
+Known limitations:
+
+- Proof and delivery links in emails are hard-coded to `http://localhost:8765/...`
+  (`src/server.py`, `_update_order`). They only work on the machine running
+  `serve.py`, so they can't reach customers yet.
+- The proof-link signing secret is hard-coded (`b"proof-secret"`) in both
+  `serve.py` and `src/server.py`.
+- If a send fails, the error is logged but the order update still goes through.
+  Check the server console for `Failed to send proof email`.
 
 ## Debugging
 
@@ -264,7 +299,7 @@ Two GitHub Actions workflows run automatically:
 |----------|---------|
 | `HYDRO_ART_EXTERNAL_ROOT` | Redirect cache/datasets/output to an external drive |
 | `DATABASE_URL` | PostgreSQL connection string for the operations ledger (optional; falls back to JSON) |
-| `HYDRO_ART_GMAIL_APP_PASSWORD` | Gmail app password for email delivery (optional) |
+| `HYDRO_ART_GMAIL_APP_PASSWORD` | Gmail app password for `FROM_ADDRESS` (`src/email_delivery.py`). Required for confirmation, proof, and delivery emails. See [Email setup](#email-setup) |
 | `SOURCE_DATE_EPOCH` | Set to `0` for deterministic timestamps in rasterized output |
 | `HYDRO_ART_REAL_DATA` | Set to `1` to enable `@pytest.mark.real_data` tests |
 
