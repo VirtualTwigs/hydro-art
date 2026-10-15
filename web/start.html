@@ -119,6 +119,18 @@
     .nav-links{ display:none; }
   }
   @media (prefers-reduced-motion:reduce){ .reveal{ transition:none; opacity:1; transform:none; } }
+
+  /* ---- Image fallback placeholder ---- */
+  .img-placeholder {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    color:var(--muted); text-align:center; padding:20px;
+  }
+  .img-placeholder svg { opacity:.35; }
+  .img-placeholder span {
+    font-family:var(--mono); font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; opacity:.6;
+  }
 </style>
 </head>
 <body>
@@ -195,7 +207,7 @@
           <div class="thumb">
             <img src="/output/landing/clark-poster.webp" width="1204" height="1500"
                  alt="Neon watershed-colored print of the Clark County river network" loading="lazy"
-                 onerror="this.style.display='none'" />
+                 onerror="imgFallback(this)" />
             <span class="tagpill">Poster / Print</span>
           </div>
           <div class="body">
@@ -215,7 +227,7 @@
             <img src="/output/landing/clark-report.webp" width="1400" height="1275"
                  style="object-position:center top"
                  alt="Salmon Creek watershed report — river network map with year-over-year and typical-year flow charts" loading="lazy"
-                 onerror="this.style.display='none'" />
+                 onerror="imgFallback(this)" />
             <span class="tagpill">Report</span>
           </div>
           <div class="body">
@@ -234,7 +246,7 @@
           <div class="thumb">
             <img src="/output/landing/wa-elevation.webp" width="1600" height="1114"
                  alt="Elevation-tinted render of the Washington State river network" loading="lazy"
-                 onerror="this.style.display='none'" />
+                 onerror="imgFallback(this)" />
             <span class="tagpill">Digital</span>
           </div>
           <div class="body">
@@ -253,7 +265,7 @@
           <div class="thumb">
             <img src="/output/landing/clark-flow.webp" width="1600" height="2004"
                  alt="Animated loop of Clark County rivers swelling and receding through the seasons" loading="lazy"
-                 onerror="this.style.display='none'" />
+                 onerror="imgFallback(this)" />
             <span class="tagpill">Animation</span>
           </div>
           <div class="body">
@@ -286,7 +298,7 @@
                width="8000" height="5000"
                alt="Neon map of every major river basin in the contiguous United States"
                loading="lazy"
-               onerror="this.parentElement.innerHTML='<div style=&quot;display:flex;align-items:center;justify-content:center;height:100%;color:var(--faint);font-size:14px;letter-spacing:.08em;&quot;>CONUS hero image — coming soon</div>'" />
+               onerror="imgFallback(this)" />
           <div class="sheen"></div>
         </div>
         <div class="plate">
@@ -327,6 +339,16 @@
       <div class="attr">A Runde Strategies edition · no account · no tracking</div>
     </div>
   </footer>
+
+  <script>
+  function imgFallback(img) {
+    img.style.display = "none";
+    var ph = document.createElement("div");
+    ph.className = "img-placeholder";
+    ph.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg><span>Artwork preview unavailable</span>';
+    img.parentElement.appendChild(ph);
+  }
+  </script>
 
   <script>
   (function(){
