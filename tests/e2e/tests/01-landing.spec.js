@@ -12,10 +12,20 @@ const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const LANDING_DIR = path.join(REPO_ROOT, 'deploy', 'output', 'landing');
 
 // Collect console errors + uncaught page errors on the current page.
+// Chrome emits a generic "Failed to load resource: …404…" console error for
+// any asset that 404s — including optional gallery images that have onerror
+// fallbacks on start.html.  These fire during navigation (lazy-load race) and
+// carry no URL, so we can't filter by path.  Exclude the network-level 404
+// messages entirely; real asset-resolution tests (landing art, order scripts)
+// use explicit response-status checks instead.
 function trackErrors(page) {
   const errors = [];
   page.on('console', (m) => {
-    if (m.type() === 'error') errors.push(`console: ${m.text()}`);
+    if (m.type() === 'error') {
+      const text = m.text();
+      if (text.includes('Failed to load resource')) return;
+      errors.push(`console: ${text}`);
+    }
   });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
   return errors;

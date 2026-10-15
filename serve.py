@@ -165,6 +165,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     console = Console()
     roots = _serve_roots(external_root=args.external_root, cache_dir=args.cache_dir)
+    # Ensure the output directory exists.  When output/ is a symlink to an
+    # unmounted NAS, the symlink entry exists but its target doesn't —
+    # pathlib mkdir(parents=True) fails.  Fall back to a local directory.
+    try:
+        roots.output.resolve().mkdir(parents=True, exist_ok=True)
+    except (PermissionError, OSError):
+        local_output = Path("output_local")
+        local_output.mkdir(parents=True, exist_ok=True)
+        roots = StorageRoots(
+            cache=roots.cache, datasets=roots.datasets, output=local_output,
+            external_root=roots.external_root,
+            using_external=roots.using_external,
+        )
+        console.print("[yellow]NAS output unreachable; using output_local/[/]")
     console.print(
         f"[dim]storage:[/] cache={roots.cache} datasets={roots.datasets} "
         f"output={roots.output}"

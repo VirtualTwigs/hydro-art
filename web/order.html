@@ -29,11 +29,27 @@
     min-height: calc(100vh - 64px);
   }
 
+  /* ---- Sticky top bar ---- */
+  .sticky-bar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg);
+    border-bottom: var(--edge);
+    padding: 14px 0 12px;
+    margin: -56px -28px 32px;
+    padding-left: 28px; padding-right: 28px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .sticky-bar .btn-row {
+    margin: 0; flex-shrink: 0; gap: 8px;
+  }
+  .sticky-bar .btn { font-size: 11px; padding: 8px 18px; }
+
   /* ---- Progress indicator ---- */
   .progress {
-    display: flex; align-items: center; gap: 0;
-    margin-bottom: 48px; font-family: var(--mono);
+    display: flex; align-items: center; gap: 0; flex: 1; min-width: 0;
+    font-family: var(--mono);
     font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    margin: 0;
   }
   .progress-step {
     display: flex; align-items: center; gap: 8px; color: var(--muted);
@@ -287,18 +303,50 @@
     color: var(--muted); max-width: 480px; margin: 0 auto 28px;
     font-size: 16px; line-height: 1.6;
   }
-  .next-steps {
+  /* ---- Status tracker ---- */
+  .status-tracker {
+    max-width: 480px; margin: 0 auto 28px; text-align: left;
     border: var(--edge); border-radius: 4px;
     background: var(--panel); padding: 24px 28px;
-    max-width: 480px; margin: 0 auto 28px; text-align: left;
   }
-  .next-steps-label {
+  .status-tracker-label {
     font-family: var(--mono); font-size: 10px; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 16px;
   }
-  .next-steps ol {
-    margin: 0; padding-left: 20px;
-    color: var(--muted); font-size: 14px; line-height: 1.9;
+  .status-steps { list-style: none; margin: 0; padding: 0; }
+  .status-steps li {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 14px; color: var(--muted); padding: 6px 0;
+    position: relative;
+  }
+  .status-steps li + li { margin-top: 2px; }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid var(--muted); background: transparent;
+    transition: border-color .3s, background .3s, box-shadow .3s;
+  }
+  .status-steps li.done .status-dot {
+    border-color: var(--spring); background: var(--spring);
+    box-shadow: 0 0 6px rgba(0,255,171,.3);
+  }
+  .status-steps li.done { color: var(--spring); }
+  .status-steps li.active .status-dot {
+    border-color: var(--cyan); background: var(--cyan);
+    box-shadow: 0 0 8px rgba(0,255,255,.4);
+    animation: pulse-dot 1.8s ease-in-out infinite;
+  }
+  .status-steps li.active { color: var(--cyan); font-weight: 500; }
+  .status-steps li.failed .status-dot {
+    border-color: #ff4d6a; background: #ff4d6a;
+    box-shadow: 0 0 6px rgba(255,77,106,.3);
+  }
+  .status-steps li.failed { color: #ff4d6a; }
+  @keyframes pulse-dot {
+    0%, 100% { box-shadow: 0 0 8px rgba(0,255,255,.4); }
+    50% { box-shadow: 0 0 14px rgba(0,255,255,.6); }
+  }
+  .proof-action {
+    text-align: center; margin: 0 auto 28px; max-width: 480px;
   }
 
   /* ---- Error ---- */
@@ -322,11 +370,13 @@
   @media (max-width: 640px) {
     .nav-links { display: none; }
     .choice-grid { grid-template-columns: 1fr; }
-    .btn-row { flex-direction: column; }
+    .step .btn-row { flex-direction: column; }
     .size-grid { flex-direction: column; }
     .size-btn { min-width: 0; text-align: left; }
     .wrap { padding: 40px 20px 72px; }
+    .sticky-bar { margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px; margin-top: -40px; }
     .progress-connector { max-width: 20px; }
+    .progress-label { display: none !important; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -351,36 +401,42 @@
 
 <main class="wrap">
 
-  <!-- Progress bar (steps 1–6, hidden on confirm) -->
-  <div class="progress" id="progress-bar" aria-label="Order steps">
-    <div class="progress-step" id="prog-1">
-      <div class="progress-dot">1</div>
-      <span class="progress-label">Product</span>
+  <!-- Sticky top bar: progress + continue (hidden on confirm) -->
+  <div class="sticky-bar" id="sticky-bar">
+    <div class="progress" id="progress-bar" aria-label="Order steps">
+      <div class="progress-step" id="prog-1">
+        <div class="progress-dot">1</div>
+        <span class="progress-label">Product</span>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step" id="prog-2">
+        <div class="progress-dot">2</div>
+        <span class="progress-label">Location</span>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step" id="prog-3">
+        <div class="progress-dot">3</div>
+        <span class="progress-label">Style</span>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step" id="prog-4">
+        <div class="progress-dot">4</div>
+        <span class="progress-label">Details</span>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step" id="prog-5">
+        <div class="progress-dot">5</div>
+        <span class="progress-label">Contact</span>
+      </div>
+      <div class="progress-connector"></div>
+      <div class="progress-step" id="prog-6">
+        <div class="progress-dot">6</div>
+        <span class="progress-label">Review</span>
+      </div>
     </div>
-    <div class="progress-connector"></div>
-    <div class="progress-step" id="prog-2">
-      <div class="progress-dot">2</div>
-      <span class="progress-label">Location</span>
-    </div>
-    <div class="progress-connector"></div>
-    <div class="progress-step" id="prog-3">
-      <div class="progress-dot">3</div>
-      <span class="progress-label">Style</span>
-    </div>
-    <div class="progress-connector"></div>
-    <div class="progress-step" id="prog-4">
-      <div class="progress-dot">4</div>
-      <span class="progress-label">Details</span>
-    </div>
-    <div class="progress-connector"></div>
-    <div class="progress-step" id="prog-5">
-      <div class="progress-dot">5</div>
-      <span class="progress-label">Contact</span>
-    </div>
-    <div class="progress-connector"></div>
-    <div class="progress-step" id="prog-6">
-      <div class="progress-dot">6</div>
-      <span class="progress-label">Review</span>
+    <div class="btn-row" id="sticky-btns">
+      <button class="btn ghost" id="sticky-back" style="display:none">← Back</button>
+      <button class="btn solid" id="sticky-next" disabled>Continue <span class="arw">→</span></button>
     </div>
   </div>
 
@@ -420,6 +476,7 @@
         <span class="price-hint">from $64</span>
       </button>
     </div>
+
   </div>
 
   <!-- ── Step 2: Location ───────────────────────────────────────────── -->
@@ -438,10 +495,6 @@
       <p class="field-hint">Counties are populated after you choose a state.</p>
     </div>
 
-    <div class="btn-row">
-      <button class="btn ghost" id="btn-back-1">← Back</button>
-      <button class="btn solid" id="btn-next-2" disabled>Continue <span class="arw">→</span></button>
-    </div>
   </div>
 
   <!-- ── Step 3: Style ──────────────────────────────────────────────── -->
@@ -511,10 +564,6 @@
       </button>
     </div>
 
-    <div class="btn-row">
-      <button class="btn ghost" id="btn-back-2">← Back</button>
-      <button class="btn solid" id="btn-next-3" disabled>Continue <span class="arw">→</span></button>
-    </div>
   </div>
 
   <!-- ── Step 4: Details ────────────────────────────────────────────── -->
@@ -545,22 +594,6 @@
       <textarea id="inp-note" placeholder="Any special requests — framing, color tweaks, rush timeline…" maxlength="500"></textarea>
     </div>
 
-    <div class="field" style="border-top:1px solid var(--line); padding-top:20px; margin-top:8px">
-      <label style="display:flex; align-items:center; gap:10px; cursor:pointer">
-        <input type="checkbox" id="inp-trip" style="width:18px; height:18px; accent-color:var(--cyan)">
-        <span>Trip memorial overlay <span style="color:var(--muted); font-size:10px">(+50% surcharge)</span></span>
-      </label>
-      <p style="font-size:12px; color:var(--muted); margin:6px 0 0">Overlay your hiking, paddling, or cycling route onto the artwork.</p>
-    </div>
-    <div class="field" id="trip-upload-row" style="display:none">
-      <label for="inp-trip-file">Upload GPX or KML file</label>
-      <input type="file" id="inp-trip-file" accept=".gpx,.kml" style="color:var(--ink)">
-    </div>
-
-    <div class="btn-row">
-      <button class="btn ghost" id="btn-back-3">← Back</button>
-      <button class="btn solid" id="btn-next-4">Continue <span class="arw">→</span></button>
-    </div>
   </div>
 
   <!-- ── Step 5: Contact ────────────────────────────────────────────── -->
@@ -609,10 +642,6 @@
     </div>
     <div class="error-msg" id="shipping-error">Please fill in all required shipping fields (name, address, city, state, ZIP).</div>
 
-    <div class="btn-row">
-      <button class="btn ghost" id="btn-back-4">← Back</button>
-      <button class="btn solid" id="btn-next-5" disabled>Continue <span class="arw">→</span></button>
-    </div>
   </div>
 
   <!-- ── Step 6: Review ─────────────────────────────────────────────── -->
@@ -636,11 +665,6 @@
     </div>
 
     <div class="error-msg" id="submit-error"></div>
-
-    <div class="btn-row">
-      <button class="btn ghost" id="btn-back-5">← Back</button>
-      <button class="btn solid" id="btn-submit">Submit Order <span class="arw">→</span></button>
-    </div>
   </div>
 
   <!-- ── Confirmation ───────────────────────────────────────────────── -->
@@ -653,14 +677,19 @@
         Your order is in. We will review it and send a proof to
         <strong id="confirm-email"></strong> — usually within one business day.
       </p>
-      <div class="next-steps">
-        <div class="next-steps-label">What happens next</div>
-        <ol>
-          <li>A coordinator reviews your order</li>
-          <li>Your artwork is rendered at full resolution</li>
-          <li>You receive a proof link to review and approve</li>
-          <li>Final files are delivered for download</li>
-        </ol>
+      <div class="status-tracker" id="status-tracker">
+        <div class="status-tracker-label">Processing status</div>
+        <ul class="status-steps" id="status-steps">
+          <li data-status="submitted"><span class="status-dot"></span> Order submitted</li>
+          <li data-status="accepted"><span class="status-dot"></span> Accepted by coordinator</li>
+          <li data-status="rendering"><span class="status-dot"></span> Rendering artwork</li>
+          <li data-status="proof_ready"><span class="status-dot"></span> Proof ready for review</li>
+          <li data-status="approved"><span class="status-dot"></span> Approved — preparing delivery</li>
+          <li data-status="fulfilled"><span class="status-dot"></span> Delivered</li>
+        </ul>
+      </div>
+      <div class="proof-action" id="proof-action" style="display:none">
+        <a class="btn solid" id="btn-view-proof" href="#">View your proof <span class="arw">→</span></a>
       </div>
       <p style="font-family:var(--mono); font-size:12px; color:var(--muted)">
         Track at: <a id="confirm-delivery-link" href="#" style="color:var(--cyan)">—</a>
@@ -697,8 +726,6 @@
     note: "",
     email: "",
     name: "",
-    is_trip_memorial: false,
-    trip_file: null,
     shipping_name: "",
     shipping_line1: "",
     shipping_line2: "",
@@ -720,6 +747,7 @@
     "museum-compass":    "The Compass",
     "museum-almanac":    "The Almanac",
     "museum-divide":     "The Divide",
+    "cream-basin":       "Cream Basin",
     "museum-index":      "The Index",
   };
 
@@ -727,13 +755,19 @@
   var STEP_IDS = ["step-1","step-2","step-3","step-4","step-5","step-6","step-confirm"];
   var PROG_IDS = ["prog-1","prog-2","prog-3","prog-4","prog-5","prog-6"];
 
+  var stickyBar  = document.getElementById("sticky-bar");
+  var stickyBack = document.getElementById("sticky-back");
+  var stickyNext = document.getElementById("sticky-next");
+  var currentStepId = "step-1";
+
   function showStep(id) {
+    currentStepId = id;
     STEP_IDS.forEach(function (s) {
       document.getElementById(s).classList.toggle("active", s === id);
     });
     var num = parseInt(id.replace("step-", ""), 10);
     var isConfirm = id === "step-confirm";
-    document.getElementById("progress-bar").style.display = isConfirm ? "none" : "";
+    stickyBar.style.display = isConfirm ? "none" : "";
     if (!isConfirm) {
       PROG_IDS.forEach(function (p, i) {
         var el = document.getElementById(p);
@@ -741,17 +775,62 @@
         if (i + 1 < num) el.classList.add("done");
         if (i + 1 === num) el.classList.add("active");
       });
+      // Update sticky buttons
+      stickyBack.style.display = (num <= 1) ? "none" : "";
+      if (num === 6) {
+        stickyNext.innerHTML = "Submit Order <span class='arw'>\u2192</span>";
+      } else {
+        stickyNext.innerHTML = "Continue <span class='arw'>\u2192</span>";
+      }
+      syncStickyDisabled();
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function syncStickyDisabled() {
+    var num = parseInt(currentStepId.replace("step-", ""), 10);
+    switch (num) {
+      case 1: stickyNext.disabled = !S.product; break;
+      case 2: stickyNext.disabled = !(S.region && S.county); break;
+      case 3: stickyNext.disabled = !S.style; break;
+      case 4: stickyNext.disabled = false; break;
+      case 5: stickyNext.disabled = !validateEmail((document.getElementById("inp-email") || {}).value || ""); break;
+      case 6: stickyNext.disabled = false; break;
+      default: stickyNext.disabled = true;
+    }
+  }
+
+  function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  // ── Sticky bar click handlers ────────────────────────────────────────────
+  stickyBack.addEventListener("click", function () {
+    var num = parseInt(currentStepId.replace("step-", ""), 10);
+    if (num === 2) { showStep("step-1"); }
+    else if (num === 3) { revalidateStep2(); showStep("step-2"); }
+    else if (num === 4) { showStep("step-3"); }
+    else if (num === 5) { showStep("step-4"); }
+    else if (num === 6) { showStep("step-5"); }
+  });
+
+  stickyNext.addEventListener("click", function () {
+    var num = parseInt(currentStepId.replace("step-", ""), 10);
+    if (num === 1 && S.product) { showStep("step-2"); }
+    else if (num === 2 && S.region && S.county) { showStep("step-3"); }
+    else if (num === 3 && S.style) { showStep("step-4"); }
+    else if (num === 4) { advanceFromStep4(); }
+    else if (num === 5) { advanceFromStep5(); }
+    else if (num === 6) { submitOrder(); }
+  });
+
   // ── Step 1: Product ───────────────────────────────────────────────────────
   var productBtns = document.querySelectorAll("#product-grid .choice");
+
   productBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {
       productBtns.forEach(function (b) { b.classList.remove("selected"); });
       btn.classList.add("selected");
       S.product = btn.getAttribute("data-product");
+      syncStickyDisabled();
       // Auto-advance after a brief moment so the selection is visible
       setTimeout(function () { showStep("step-2"); }, 180);
     });
@@ -760,8 +839,6 @@
   // ── Step 2: Location ──────────────────────────────────────────────────────
   var selState  = document.getElementById("sel-state");
   var selCounty = document.getElementById("sel-county");
-  var btnBack1  = document.getElementById("btn-back-1");
-  var btnNext2  = document.getElementById("btn-next-2");
 
   H.STATES.forEach(function (s) {
     var opt = document.createElement("option");
@@ -782,7 +859,7 @@
     selCounty.innerHTML = '<option value="">Select a county…</option>';
     selCounty.disabled = !S.region;
     S.county = "";
-    btnNext2.disabled = true;
+    syncStickyDisabled();
     if (S.region && H.COUNTIES[S.region]) {
       H.COUNTIES[S.region].forEach(function (c) {
         var opt = document.createElement("option");
@@ -794,15 +871,12 @@
 
   selCounty.addEventListener("change", function () {
     S.county = selCounty.value;
-    btnNext2.disabled = !S.county;
+    syncStickyDisabled();
   });
 
-  btnBack1.addEventListener("click", function () { showStep("step-1"); });
-  btnNext2.addEventListener("click", function () { showStep("step-3"); });
-
-  // Re-validate continue button when returning to step 2
+  // Re-validate sticky button when returning to step 2
   function revalidateStep2() {
-    btnNext2.disabled = !(S.region && S.county);
+    syncStickyDisabled();
   }
 
   // ── Step 3: Style ─────────────────────────────────────────────────────────
@@ -820,8 +894,6 @@
   var previewLabel = document.getElementById("style-preview-label");
 
   var allStyleBtns = document.querySelectorAll("#style-grid .choice, #style-grid-museum .choice");
-  var btnBack2  = document.getElementById("btn-back-2");
-  var btnNext3  = document.getElementById("btn-next-3");
 
   function showStylePreview(style) {
     var src = STYLE_PREVIEWS[style];
@@ -839,18 +911,13 @@
       allStyleBtns.forEach(function (b) { b.classList.remove("selected"); });
       btn.classList.add("selected");
       S.style = btn.getAttribute("data-style");
-      btnNext3.disabled = false;
+      syncStickyDisabled();
       showStylePreview(S.style);
     });
   });
 
-  btnBack2.addEventListener("click", function () { revalidateStep2(); showStep("step-2"); });
-  btnNext3.addEventListener("click", function () { showStep("step-4"); });
-
   // ── Step 4: Details ───────────────────────────────────────────────────────
-  var sizeBtns  = document.querySelectorAll(".size-btn");
-  var btnBack3  = document.getElementById("btn-back-3");
-  var btnNext4  = document.getElementById("btn-next-4");
+  var sizeBtns = document.querySelectorAll(".size-btn");
 
   sizeBtns.forEach(function (btn) {
     btn.addEventListener("click", function () {
@@ -860,48 +927,26 @@
     });
   });
 
-  // Trip overlay toggle
-  var inpTrip     = document.getElementById("inp-trip");
-  var tripUpload  = document.getElementById("trip-upload-row");
-  var inpTripFile = document.getElementById("inp-trip-file");
-
-  inpTrip.addEventListener("change", function () {
-    S.is_trip_memorial = inpTrip.checked;
-    tripUpload.style.display = inpTrip.checked ? "" : "none";
-    if (!inpTrip.checked) { S.trip_file = null; inpTripFile.value = ""; }
-  });
-  inpTripFile.addEventListener("change", function () {
-    S.trip_file = inpTripFile.files[0] || null;
-  });
-
-  btnBack3.addEventListener("click", function () { showStep("step-3"); });
-  btnNext4.addEventListener("click", function () {
+  function advanceFromStep4() {
     S.title    = document.getElementById("inp-title").value.trim();
     S.subtitle = document.getElementById("inp-subtitle").value.trim();
     S.note     = document.getElementById("inp-note").value.trim();
-    // Show shipping fields for print orders
     var shipFields = document.getElementById("shipping-fields");
     if (shipFields) shipFields.style.display = (S.product === "fine-art-print") ? "" : "none";
     showStep("step-5");
-  });
+  }
 
   // ── Step 5: Contact ───────────────────────────────────────────────────────
-  var inpEmail  = document.getElementById("inp-email");
-  var inpName   = document.getElementById("inp-name");
-  var btnBack4  = document.getElementById("btn-back-4");
-  var btnNext5  = document.getElementById("btn-next-5");
-
-  function validateEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  var inpEmail = document.getElementById("inp-email");
+  var inpName  = document.getElementById("inp-name");
 
   inpEmail.addEventListener("input", function () {
-    btnNext5.disabled = !validateEmail(inpEmail.value.trim());
+    syncStickyDisabled();
   });
 
-  btnBack4.addEventListener("click", function () { showStep("step-4"); });
-  btnNext5.addEventListener("click", function () {
+  function advanceFromStep5() {
     S.email = inpEmail.value.trim();
     S.name  = inpName.value.trim();
-    // Capture and validate shipping address for print orders
     if (S.product === "fine-art-print") {
       S.shipping_name  = (document.getElementById("inp-ship-name")  || {}).value || "";
       S.shipping_line1 = (document.getElementById("inp-ship-line1") || {}).value || "";
@@ -918,7 +963,7 @@
     }
     populateReview();
     showStep("step-6");
-  });
+  }
 
   // ── Step 6: Review ────────────────────────────────────────────────────────
   function populateReview() {
@@ -947,18 +992,19 @@
     else     { row.style.display = "none"; }
   }
 
-  document.getElementById("btn-back-5").addEventListener("click", function () {
-    showStep("step-5");
-  });
-
   // ── Submit ────────────────────────────────────────────────────────────────
-  var btnSubmit = document.getElementById("btn-submit");
-  var errorEl   = document.getElementById("submit-error");
+  var errorEl = document.getElementById("submit-error");
 
-  btnSubmit.addEventListener("click", function () {
+  function submitOrder() {
+    // Guard: all required fields must be filled before submit.
+    if (!S.product || !S.region || !S.county || !S.style || !S.email) {
+      errorEl.textContent = "Please complete all required steps before submitting.";
+      errorEl.style.display = "block";
+      return;
+    }
     errorEl.style.display = "none";
-    btnSubmit.disabled = true;
-    btnSubmit.textContent = "Submitting…";
+    stickyNext.disabled = true;
+    stickyNext.textContent = "Submitting\u2026";
 
     var payload = {
       email:   S.email,
@@ -973,7 +1019,6 @@
     if (S.subtitle) payload.subtitle = S.subtitle;
     if (S.note)     payload.note     = S.note;
     if (S.name)     payload.name     = S.name;
-    if (S.is_trip_memorial) payload.is_trip_memorial = true;
     if (S.shipping_line1) {
       payload.shipping_address = {
         name:  S.shipping_name,
@@ -997,8 +1042,8 @@
         if (!r.ok) {
           errorEl.textContent = (r.data && r.data.error) ? r.data.error : ("Error " + r.status + ". Please try again.");
           errorEl.style.display = "block";
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = "Submit Order <span class='arw'>→</span>";
+          stickyNext.disabled = false;
+          stickyNext.innerHTML = "Submit Order <span class='arw'>\u2192</span>";
           return;
         }
         var reqId = r.data.request_id || "—";
@@ -1008,14 +1053,65 @@
         dlLink.href = "delivery.html?order=" + encodeURIComponent(reqId);
         dlLink.textContent = reqId;
         showStep("step-confirm");
+        updateStatusTracker(r.data.status || "submitted");
+        startStatusPolling(reqId);
       })
       .catch(function (err) {
         errorEl.textContent = "Network error: " + (err.message || "unknown");
         errorEl.style.display = "block";
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = "Submit Order <span class='arw'>→</span>";
+        stickyNext.disabled = false;
+        stickyNext.innerHTML = "Submit Order <span class='arw'>\u2192</span>";
       });
-  });
+  }
+
+  // ── Status tracker ────────────────────────────────────────────────────────
+  var STATUS_ORDER = ["submitted","accepted","rendering","proof_ready","approved","fulfilled"];
+  var TERMINAL = {"proof_ready":true,"approved":true,"fulfilled":true,"paid":true};
+  var statusPollTimer = null;
+
+  function updateStatusTracker(currentStatus) {
+    var steps = document.querySelectorAll("#status-steps li");
+    var currentIdx = STATUS_ORDER.indexOf(currentStatus);
+    var isFailed = currentStatus === "render_failed";
+
+    steps.forEach(function (li) {
+      var stepStatus = li.getAttribute("data-status");
+      var stepIdx = STATUS_ORDER.indexOf(stepStatus);
+      li.classList.remove("done", "active", "failed");
+      if (isFailed && stepStatus === "rendering") {
+        li.classList.add("failed");
+        li.querySelector(".status-dot").nextSibling.textContent = " Render failed — we'll retry";
+      } else if (stepIdx < currentIdx) {
+        li.classList.add("done");
+      } else if (stepIdx === currentIdx) {
+        li.classList.add("active");
+      }
+    });
+
+    // Show proof button when proof is ready or later
+    var proofAction = document.getElementById("proof-action");
+    var proofStages = {"proof_ready":true,"approved":true,"fulfilled":true,"paid":true,"payment_pending":true};
+    if (proofStages[currentStatus]) {
+      var proofBtn = document.getElementById("btn-view-proof");
+      var rid = document.getElementById("confirm-id").textContent;
+      proofBtn.href = "delivery.html?order=" + encodeURIComponent(rid);
+      proofAction.style.display = "";
+    }
+  }
+
+  function startStatusPolling(requestId) {
+    if (statusPollTimer) clearInterval(statusPollTimer);
+    statusPollTimer = setInterval(function () {
+      fetch("/api/orders/" + encodeURIComponent(requestId))
+        .then(function (resp) { return resp.ok ? resp.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          updateStatusTracker(data.status);
+          if (TERMINAL[data.status]) clearInterval(statusPollTimer);
+        })
+        .catch(function () { /* silently retry next tick */ });
+    }, 5000);
+  }
 
   // ── URL param pre-fill (report builder, start.html, proof.html handoffs) ──
   var urlParams = new URLSearchParams(window.location.search);
@@ -1055,7 +1151,6 @@
       setTimeout(function () {
         selCounty.value = prefillCounty;
         S.county = prefillCounty;
-        btnNext2.disabled = false;
       }, 0);
       startStep = "step-3"; // location complete — skip to style
     }
@@ -1068,7 +1163,6 @@
       allStyleBtns.forEach(function (b) { b.classList.remove("selected"); });
       styleBtn.classList.add("selected");
       S.style = prefillStyle;
-      btnNext3.disabled = false;
       showStylePreview(prefillStyle);
       startStep = "step-4";
     }

@@ -271,6 +271,25 @@
   <h2>Build a report</h2>
   <p class="lede">Select a location and customize your watershed report. The preview updates live as you make changes.</p>
 
+  <!-- Delivery format -->
+  <div class="section-label" style="margin-top:0; border-top:none; padding-top:0">Delivery format</div>
+
+  <div class="format-grid" id="formatGrid">
+    <button class="format-choice active" data-format="digital">
+      <span class="fmt-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>PDF
+    </button>
+    <button class="format-choice" data-format="print">
+      <span class="fmt-icon"><svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>Print
+    </button>
+    <button class="format-choice" data-format="web">
+      <span class="fmt-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg></span>Web
+    </button>
+  </div>
+
+  <!-- Actions -->
+  <button class="btn solid btn-generate" id="btnGenerate" disabled>Preview report</button>
+  <button class="btn btn-order" id="btnOrder" disabled>Order this report &rarr;</button>
+
   <!-- Location scope -->
   <div class="section-label">Location</div>
 
@@ -429,24 +448,7 @@
     <label class="toggle-switch"><input type="checkbox" checked data-section="composites" /><span class="slider"></span></label>
   </div>
 
-  <!-- Delivery format -->
-  <div class="section-label">Delivery format</div>
 
-  <div class="format-grid" id="formatGrid">
-    <button class="format-choice active" data-format="digital">
-      <span class="fmt-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>PDF
-    </button>
-    <button class="format-choice" data-format="print">
-      <span class="fmt-icon"><svg viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span>Print
-    </button>
-    <button class="format-choice" data-format="web">
-      <span class="fmt-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg></span>Web
-    </button>
-  </div>
-
-  <!-- Actions -->
-  <button class="btn solid btn-generate" id="btnGenerate" disabled>Preview report</button>
-  <button class="btn btn-order" id="btnOrder" disabled>Order this report &rarr;</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
