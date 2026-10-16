@@ -234,7 +234,7 @@
       pollJob(o.job_id, id);
     } else if (o.status === "proof_ready") {
       actions.innerHTML =
-        '<a class="btn" href="proof.html?order=' + id + '">View proof</a>' +
+        '<a class="btn" href="delivery.html?order=' + id + '" target="_blank">View proof</a>' +
         '<button class="btn ghost" id="act-approve">Approve</button>';
       document.getElementById("act-approve").addEventListener("click", function () { patchStatus(id, "approved"); });
     } else if (o.status === "approved") {
