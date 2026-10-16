@@ -155,7 +155,7 @@ test.describe('Section toggles (#142)', () => {
   test('all 10 section toggles exist', async ({ page }) => {
     await page.goto('/web/report.html', { waitUntil: 'load' });
     const toggleCount = await page.locator('[data-section]').count();
-    expect(toggleCount).toBe(10);
+    expect(toggleCount).toBe(14);
   });
 });
 
@@ -330,16 +330,18 @@ test.describe('Order prefill → review (#143 regression)', () => {
 
   // Helper: navigate through steps 3–6 to reach the review, filling required
   // fields along the way. Assumes step 3 (Style) is the starting step.
+  // Uses the sticky-bar Continue button (per-step buttons were removed).
   async function walkToReview(page, { email, name } = {}) {
+    const next = page.locator('#sticky-next');
     // Step 3: select style
     await page.click('[data-style="neon-basin"]');
-    await page.click('#btn-next-3');
+    await next.click();
     // Step 4: title (optional — just proceed)
-    await page.click('#btn-next-4');
+    await next.click();
     // Step 5: contact
     await page.fill('#inp-email', email || 'test@example.com');
     if (name) await page.fill('#inp-name', name);
-    await page.click('#btn-next-5');
+    await next.click();
     // Now on step 6 (review)
     await expect(page.locator('#step-6')).toBeVisible();
   }
@@ -378,7 +380,7 @@ test.describe('Order prefill → review (#143 regression)', () => {
     await expect(page.locator('#step-2')).toBeVisible();
     // Manually select a county
     await page.selectOption('#sel-county', 'Multnomah');
-    await page.click('#btn-next-2');
+    await page.locator('#sticky-next').click();
     await walkToReview(page);
     const location = await page.locator('#rev-location').textContent();
     expect(location).toBe('Multnomah County, Oregon');
