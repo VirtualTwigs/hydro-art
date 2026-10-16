@@ -276,6 +276,23 @@ class TestDeliveryPageContract:
         assert fetched.request_id == req.request_id
         assert fetched.order["region"] == "Washington"
 
+    def test_ops_proof_action_uses_delivery_page(self):
+        """The operator's proof action must open the customer delivery surface."""
+        html = (WEB_DIR / "ops.html").read_text()
+        assert 'href="proof.html?order=' not in html
+        assert 'href="delivery.html?order=' in html
+
+    def test_proof_style_labels_cover_all_order_styles(self):
+        """Proof details must display a friendly label for every order style."""
+        html = (WEB_DIR / "proof.html").read_text()
+        match = re.search(
+            r"function styleLabel\(s\)\s*\{\s*var map\s*=\s*\{([^}]+)\}",
+            html,
+        )
+        assert match, "proof style-label map not found"
+        label_keys = re.findall(r'"([^"]+)":', match.group(1))
+        assert set(label_keys) == set(ORDER_STYLES.keys())
+
 
 # ═════════════════════════════════════════════════════════════════════════════
 # 4. order.html style/size buttons → fulfillment.build_order

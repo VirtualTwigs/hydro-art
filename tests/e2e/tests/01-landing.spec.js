@@ -32,6 +32,26 @@ function trackErrors(page) {
 }
 
 test.describe('Alpha landing (#95, #96)', () => {
+  test('missing artwork displays placeholders without removing card links', async ({ page }) => {
+    await page.route('**/output/**', (route) => route.fulfill({ status: 404 }));
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+
+    const cards = page.locator('#catalog-grid article');
+    for (let index = 0; index < await cards.count(); index++) {
+      const card = cards.nth(index);
+      await card.scrollIntoViewIfNeeded();
+      await expect(card.locator('.img-placeholder')).toBeVisible();
+      await expect(card.locator('.img-placeholder')).toHaveText('Artwork preview unavailable');
+      await expect(card.locator('a.cover')).toHaveAttribute('href', /\S+/);
+    }
+    const gallery = page.locator('img[src*="conus-neon-hero"]').locator('..');
+    await gallery.scrollIntoViewIfNeeded();
+    await expect(gallery.locator('.img-placeholder')).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
   test('start.html loads with no console errors', async ({ page }) => {
     const errors = trackErrors(page);
     const resp = await page.goto('/web/start.html', { waitUntil: 'load' });

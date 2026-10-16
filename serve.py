@@ -20,8 +20,8 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Sequence
 
 from rich.console import Console
 
@@ -133,6 +133,28 @@ def _build_order_store(
     return store
 
 
+def _ensure_output_root(
+    roots: StorageRoots,
+    console: Console,
+    *,
+    fallback: Path = Path("output_local"),
+) -> StorageRoots:
+    """Create the configured output directory or return roots using a local fallback."""
+    try:
+        roots.output.resolve().mkdir(parents=True, exist_ok=True)
+    except (PermissionError, OSError):
+        fallback.mkdir(parents=True, exist_ok=True)
+        roots = StorageRoots(
+            cache=roots.cache,
+            datasets=roots.datasets,
+            output=fallback,
+            external_root=roots.external_root,
+            using_external=roots.using_external,
+        )
+        console.print("[yellow]NAS output unreachable; using output_local/[/]")
+    return roots
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the hydro-art control surface.")
     parser.add_argument("--host", default="127.0.0.1")
@@ -168,17 +190,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # Ensure the output directory exists.  When output/ is a symlink to an
     # unmounted NAS, the symlink entry exists but its target doesn't —
     # pathlib mkdir(parents=True) fails.  Fall back to a local directory.
-    try:
-        roots.output.resolve().mkdir(parents=True, exist_ok=True)
-    except (PermissionError, OSError):
-        local_output = Path("output_local")
-        local_output.mkdir(parents=True, exist_ok=True)
-        roots = StorageRoots(
-            cache=roots.cache, datasets=roots.datasets, output=local_output,
-            external_root=roots.external_root,
-            using_external=roots.using_external,
-        )
-        console.print("[yellow]NAS output unreachable; using output_local/[/]")
+    roots = _ensure_output_root(roots, console)
     console.print(
         f"[dim]storage:[/] cache={roots.cache} datasets={roots.datasets} "
         f"output={roots.output}"

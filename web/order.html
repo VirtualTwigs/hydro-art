@@ -1067,17 +1067,29 @@
 
   // ── Status tracker ────────────────────────────────────────────────────────
   var STATUS_ORDER = ["submitted","accepted","rendering","proof_ready","approved","fulfilled"];
-  var TERMINAL = {"proof_ready":true,"approved":true,"fulfilled":true,"paid":true};
+  var TERMINAL = {"fulfilled":true};
+  var STATUS_LABELS = {
+    "submitted": " Order submitted",
+    "accepted": " Accepted by coordinator",
+    "rendering": " Rendering artwork",
+    "proof_ready": " Proof ready for review",
+    "approved": " Approved — preparing delivery",
+    "fulfilled": " Delivered",
+  };
   var statusPollTimer = null;
 
   function updateStatusTracker(currentStatus) {
     var steps = document.querySelectorAll("#status-steps li");
-    var currentIdx = STATUS_ORDER.indexOf(currentStatus);
+    // Payment is part of preparing delivery; paid orders can still be fulfilled.
+    var trackerStatus = (currentStatus === "payment_pending" || currentStatus === "paid")
+      ? "approved" : currentStatus;
+    var currentIdx = STATUS_ORDER.indexOf(trackerStatus);
     var isFailed = currentStatus === "render_failed";
 
     steps.forEach(function (li) {
       var stepStatus = li.getAttribute("data-status");
       var stepIdx = STATUS_ORDER.indexOf(stepStatus);
+      li.querySelector(".status-dot").nextSibling.textContent = STATUS_LABELS[stepStatus];
       li.classList.remove("done", "active", "failed");
       if (isFailed && stepStatus === "rendering") {
         li.classList.add("failed");

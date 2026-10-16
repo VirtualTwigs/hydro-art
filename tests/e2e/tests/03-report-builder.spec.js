@@ -441,3 +441,74 @@ test.describe('Order prefill → review (#143 regression)', () => {
     }
   });
 });
+
+test.describe('Order confirmation status tracker', () => {
+  test('recovers from render failure and polls through payment until delivery', async ({ page }) => {
+    await page.addInitScript(() => {
+      const nativeSetInterval = window.setInterval;
+      window.setInterval = (fn) => nativeSetInterval(fn, 25);
+    });
+
+    let status = 'render_failed';
+    let pollCount = 0;
+    await page.route('**/api/orders', async (route) => {
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ request_id: 'REQ-STATUS-1', status: 'submitted' }),
+      });
+    });
+    await page.route('**/api/orders/REQ-STATUS-1', async (route) => {
+      pollCount++;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status }),
+      });
+    });
+
+    await page.goto(
+      '/web/order.html?product=watershed-report&region=Washington&county=Clark',
+      { waitUntil: 'load' }
+    );
+    const next = page.locator('#sticky-next');
+    await page.click('[data-style="neon-basin"]');
+    await next.click();
+    await next.click();
+    await page.fill('#inp-email', 'status@example.com');
+    await next.click();
+    await next.click();
+
+    const rendering = page.locator('[data-status="rendering"]');
+    await expect(rendering).toHaveClass(/failed/);
+    await expect(rendering).toContainText("Render failed — we'll retry");
+
+    status = 'rendering';
+    await expect(rendering).toHaveClass(/active/);
+    await expect(rendering).toContainText('Rendering artwork');
+
+    status = 'proof_ready';
+    await expect(page.locator('[data-status="proof_ready"]')).toHaveClass(/active/);
+    await expect(page.locator('#proof-action')).toBeVisible();
+    await expect(page.locator('#btn-view-proof')).toHaveAttribute(
+      'href', 'delivery.html?order=REQ-STATUS-1'
+    );
+
+    status = 'approved';
+    await expect(page.locator('[data-status="approved"]')).toHaveClass(/active/);
+
+    for (const paymentStatus of ['payment_pending', 'paid']) {
+      status = paymentStatus;
+      const previousPollCount = pollCount;
+      await expect.poll(() => pollCount).toBeGreaterThan(previousPollCount);
+      await expect(page.locator('[data-status="approved"]')).toHaveClass(/active/);
+      await expect(page.locator('[data-status="proof_ready"]')).toHaveClass(/done/);
+    }
+
+    status = 'fulfilled';
+    await expect(page.locator('[data-status="fulfilled"]')).toHaveClass(/active/);
+    const finalPollCount = pollCount;
+    await page.waitForTimeout(150);
+    expect(pollCount).toBe(finalPollCount);
+  });
+});

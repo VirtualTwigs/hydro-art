@@ -133,6 +133,28 @@ test("applyPreset is a no-op for unknown id", () => {
   assert.deepStrictEqual(HydroUX.toRecipe(out), HydroUX.toRecipe(s));
 });
 
+// --- state/county CLI mapping -------------------------------------------------
+test("stateAbbr and scopeToken cover multi-word and fallback state names", () => {
+  const cases = [
+    ["Alabama", "AL"],
+    ["New York", "NY"],
+    ["Rhode Island", "RI"],
+    ["Washington", "WA"],
+    ["Atlantis", "Atlantis"],
+  ];
+  for (const [name, abbreviation] of cases) {
+    assert.strictEqual(HydroUX.stateAbbr(name), abbreviation);
+    assert.strictEqual(
+      HydroUX.scopeToken(baseState({ state: name, scope: "county", county: "Example" })),
+      `county:Example,${abbreviation}`
+    );
+  }
+  assert.strictEqual(
+    HydroUX.scopeToken(baseState({ state: "New York", scope: "state", county: null })),
+    "region:New York"
+  );
+});
+
 // --- applyRecipe preserves preview-only fields --------------------------------
 test("applyRecipe preserves preview-only fields", () => {
   const s = baseState({ previewSource: "loaded", loadedName: "foo.gdb", _nudge: 7, month: 3 });
