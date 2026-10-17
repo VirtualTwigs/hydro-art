@@ -6,6 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Hydrographic Vector Art Generator (`hydro-art`, v1.0.0): a Python 3.12+ CLI (active interpreter: 3.14) that turns public USGS hydrography (NHDPlus HR / NHD / WBD) into layered, neon-colored SVG river art. Regions: all 50 US states (`SUPPORTED_REGIONS` in `src/config.py` — single source of truth); `--county` targets one county. Single-command GIS→SVG pipeline; deterministic (identical inputs → identical output). See `docs/PRD.md` and `agent-os/product/mission.md`.
 
+## Setup
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e .                        # core deps (enough for offline test suite)
+.venv/bin/pip install -r requirements.txt         # full GIS stack (needed for real renders)
+.venv/bin/pip install -e '.[dev]'                 # dev tools (pytest, ruff)
+```
+
 ## Commands
 
 ```bash
@@ -19,7 +28,9 @@ python tools/coverage_report.py --fail-under 90    # offline coverage gate (scop
 python tools/release_gate.py                        # v1.0 release readiness (goldens + determinism)
 python tools/update_status.py                       # stamp HANDOFF.md + roadmap on epoch close
 python tools/detect_unfinished.py                   # report-only: open tasks, missing retros, dirty tree
-python serve.py                                      # dev server (http://127.0.0.1:8765); needs GIS stack
+.venv/bin/python serve.py                            # dev server (http://127.0.0.1:8765); needs GIS stack
+.venv/bin/python -X dev serve.py --port 9000       # dev mode (extra warnings) + custom port
+.venv/bin/python serve.py --web-root .             # serve repo root (for e2e harness)
 
 # E2E (Playwright, opt-in — NOT part of the offline suite; needs Node 18+)
 cd tests/e2e && npm install && npx playwright install chromium
@@ -125,6 +136,16 @@ Self-contained HTML/JS (no build step, `file://`-safe). `studio.html` is the can
 - Runtime dirs `datasets/`/`cache/`/`output/`/`logs/` are git-ignored (regenerable). `.venv/` is the interpreter.
 - `notebooks/` — ad-hoc GIS exploration; imports GIS eagerly, outside the suite. Committed notebooks are tracked; `.ipynb_checkpoints/` + scratch `Untitled.ipynb` are git-ignored.
 - **Commit style:** Conventional Commit subjects with optional issue refs — `feat(#46): add yearly renderer`, `fix(#32): preserve source CRS`, `docs: update guide`. Keep commits focused.
+
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `HYDRO_ART_EXTERNAL_ROOT` | Redirect cache/datasets/output to an external drive (also `--external-root`) |
+| `DATABASE_URL` | PostgreSQL connection for operations ledger (optional; falls back to JSON) |
+| `HYDRO_ART_GMAIL_APP_PASSWORD` | Gmail app password for order emails (optional; logs "not configured" if unset) |
+| `SOURCE_DATE_EPOCH` | Set to `0` for deterministic timestamps in rasterized output |
+| `HYDRO_ART_REAL_DATA` | Set to `1` to enable `@pytest.mark.real_data` tests |
 
 ## Known debt / gotchas
 
