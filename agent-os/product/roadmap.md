@@ -20,6 +20,7 @@
 | 142–145 | 32 | Report builder with paywall preview | **Done** (2026-09-21) | — |
 | 146–153 | 33 | Gallery catalog management | **Done** (2026-09-29) | — |
 | 154–158 | 34 | Jupyter notebook report + PDF export | Not started | — |
+| 159–162 | 35 | Email & secrets configuration hardening | Not started | — |
 
 **Revenue gate timing:** measure #59 for 60 days from the actual listing go-live date. The
 2026-08-30 planning window did not start the measurement clock; record the launch date in the
@@ -644,6 +645,36 @@ Epoch gate: `tools/build_watershed_report.py --notebook --pdf` produces a
 readable Jupyter notebook and PDF from real watershed data; the notebook
 round-trips through `nbformat.read`; the PDF renders all sections legibly with
 the dark neon theme; the offline suite stays green; no `PIPELINE_STAGES` change.
+
+---
+
+### Epoch 35 — Email & secrets configuration hardening · not started
+
+Replace hardcoded localhost URLs, signing secrets, and Gmail sender config with
+environment-variable-driven configuration. Unblocks production email delivery
+(proof links, delivery links reachable by customers). No pipeline changes.
+
+159. [ ] SmtpSender refactor — `SmtpSender.__init__` gains `host`/`port`/
+`sender_email` kwargs; all `_build_*` helpers accept `from_address` override.
+`HYDRO_ART_SENDER_EMAIL`, `HYDRO_ART_SMTP_HOST`, `HYDRO_ART_SMTP_PORT` env vars.
+5 offline tests. `S`
+
+160. [ ] Base URL + secrets threading — `serve()` gains `base_url` kwarg;
+`_update_order` uses it for proof/delivery URLs instead of `localhost:8765`.
+`HYDRO_ART_PROOF_SECRET` and `HYDRO_ART_DELIVERY_SECRET` replace hardcoded
+`b"proof-secret"`. 6 offline tests. `S`
+
+161. [ ] serve.py env var wiring — reads all 6 new env vars, passes to
+`SmtpSender` and `serve()`. Rich startup config summary. Dev-mode defaults with
+warnings for secrets. 4 offline tests. `S`
+
+162. [ ] Documentation + close — README known-limitations cleanup, CLAUDE.md env
+vars table, full suite regression. `XS`
+
+Epoch gate: `serve.py` starts with zero env vars set (all defaults); setting
+`HYDRO_ART_BASE_URL=https://riverglyph.enablesu.com` produces proof/delivery
+emails with reachable URLs; the offline suite stays green; no `PIPELINE_STAGES`
+change.
 
 ---
 

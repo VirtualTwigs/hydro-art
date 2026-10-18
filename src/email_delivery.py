@@ -37,8 +37,18 @@ class SenderLike(Protocol):
 class SmtpSender:
     """Real Gmail SMTP sender. Reads the app password from the environment."""
 
-    def __init__(self, *, app_password: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        app_password: str | None = None,
+        host: str = "smtp.gmail.com",
+        port: int = 465,
+        sender_email: str = FROM_ADDRESS,
+    ) -> None:
         self._password = app_password or os.environ.get(APP_PASSWORD_ENV, "")
+        self._host = host
+        self._port = port
+        self._sender = sender_email
 
     @property
     def configured(self) -> bool:
@@ -50,8 +60,8 @@ class SmtpSender:
                 "No Gmail app password configured (%s). Email not sent.", APP_PASSWORD_ENV
             )
             return False
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as conn:
-            conn.login(FROM_ADDRESS, self._password)
+        with smtplib.SMTP_SSL(self._host, self._port) as conn:
+            conn.login(self._sender, self._password)
             conn.send_message(msg)
         return True
 
@@ -63,6 +73,7 @@ def _build_message(
     *,
     product: str = "",
     location: str = "",
+    from_address: str = FROM_ADDRESS,
 ) -> MIMEMultipart:
     """Build the delivery notification email."""
     subject = f"Your artwork is ready — {order_id}"
@@ -105,7 +116,7 @@ All source data is U.S. federal public domain.
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = FROM_ADDRESS
+    msg["From"] = from_address
     msg["To"] = to
     msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))
@@ -118,6 +129,7 @@ def _build_confirmation_message(
     *,
     product: str = "",
     location: str = "",
+    from_address: str = FROM_ADDRESS,
 ) -> MIMEMultipart:
     """Build the acknowledgement sent after a buyer submits a request."""
     subject = f"We received your Riverglyph request — {request_id}"
@@ -153,7 +165,7 @@ Hydrographic artwork produced by Runde Strategies.
 """
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = FROM_ADDRESS
+    msg["From"] = from_address
     msg["To"] = to
     msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))
@@ -190,6 +202,7 @@ def _build_proof_message(
     proof_url: str,
     *,
     title: str = "",
+    from_address: str = FROM_ADDRESS,
 ) -> MIMEMultipart:
     """Build the proof-ready notification email."""
     subject = f"Your proof is ready for review — {request_id}"
@@ -230,7 +243,7 @@ Hydrographic artwork produced by Runde Strategies.
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = FROM_ADDRESS
+    msg["From"] = from_address
     msg["To"] = to
     msg.attach(MIMEText(text, "plain"))
     msg.attach(MIMEText(html, "html"))

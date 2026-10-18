@@ -25,7 +25,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from src.email_delivery import APP_PASSWORD_ENV, SmtpSender
+from src.email_delivery import APP_PASSWORD_ENV, FROM_ADDRESS, SmtpSender
 from src.jobs import JobRunner
 from src.ledger import LedgerError, repository_factory
 from src.orders import OrderStore
@@ -155,6 +155,46 @@ def _ensure_output_root(
     return roots
 
 
+def _read_config() -> dict[str, object]:
+    """Read all 6 email/secrets env vars and return a config dict.
+
+    Extracted for testability — ``main()`` calls this and threads the values
+    into ``SmtpSender`` and ``serve()``.
+
+    Keys returned:
+
+    - ``base_url``: ``str | None``
+    - ``proof_secret``: ``bytes`` (default ``b"proof-secret"``)
+    - ``delivery_secret``: ``bytes`` (default ``b"delivery-secret"``)
+    - ``sender_email``: ``str | None`` (``None`` => SmtpSender default)
+    - ``smtp_host``: ``str | None`` (``None`` => SmtpSender default)
+    - ``smtp_port``: ``int | None`` (``None`` => SmtpSender default)
+    """
+    base_url = os.environ.get("HYDRO_ART_BASE_URL") or None
+
+    raw_proof = os.environ.get("HYDRO_ART_PROOF_SECRET", "")
+    proof_secret = raw_proof.encode() if raw_proof else b"proof-secret"
+
+    raw_delivery = os.environ.get("HYDRO_ART_DELIVERY_SECRET", "")
+    delivery_secret = (
+        raw_delivery.encode() if raw_delivery else b"delivery-secret"
+    )
+
+    sender_email = os.environ.get("HYDRO_ART_SENDER_EMAIL") or None
+    smtp_host = os.environ.get("HYDRO_ART_SMTP_HOST") or None
+    raw_port = os.environ.get("HYDRO_ART_SMTP_PORT", "")
+    smtp_port = int(raw_port) if raw_port else None
+
+    return {
+        "base_url": base_url,
+        "proof_secret": proof_secret,
+        "delivery_secret": delivery_secret,
+        "sender_email": sender_email,
+        "smtp_host": smtp_host,
+        "smtp_port": smtp_port,
+    }
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the hydro-art control surface.")
     parser.add_argument("--host", default="127.0.0.1")
@@ -186,6 +226,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     from src.pipeline import Pipeline
 
     console = Console()
+
+    # --- Read env-var config --------------------------------------------------
+    cfg = _read_config()
+
+    # Warn on default secrets.
+    if cfg["proof_secret"] == b"proof-secret":
+        console.print(
+            "[yellow]Using default proof secret -- "
+            "set HYDRO_ART_PROOF_SECRET for production[/]"
+        )
+    if cfg["delivery_secret"] == b"delivery-secret":
+        console.print(
+            "[yellow]Using default delivery secret -- "
+            "set HYDRO_ART_DELIVERY_SECRET for production[/]"
+        )
+
     roots = _serve_roots(external_root=args.external_root, cache_dir=args.cache_dir)
     # Ensure the output directory exists.  When output/ is a symlink to an
     # unmounted NAS, the symlink entry exists but its target doesn't —
@@ -205,19 +261,63 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     )
     order_store = _build_order_store(roots.output / "orders", console)
-    email_sender = SmtpSender()
+
+    # Build SmtpSender with env-var overrides.
+    smtp_kwargs: dict[str, object] = {}
+    if cfg["smtp_host"] is not None:
+        smtp_kwargs["host"] = cfg["smtp_host"]
+    if cfg["smtp_port"] is not None:
+        smtp_kwargs["port"] = cfg["smtp_port"]
+    if cfg["sender_email"] is not None:
+        smtp_kwargs["sender_email"] = cfg["sender_email"]
+    email_sender = SmtpSender(**smtp_kwargs)  # type: ignore[arg-type]
+
     web_root = Path(args.web_root).resolve() if args.web_root else WEB_ROOT
     url = f"http://{args.host}:{args.port}/"
+
+    # --- Startup config summary -----------------------------------------------
+    effective_sender = cfg["sender_email"] or FROM_ADDRESS
+    effective_host = cfg["smtp_host"] or "smtp.gmail.com"
+    effective_port = cfg["smtp_port"] or 465
+    effective_base = cfg["base_url"] or f"http://localhost:{args.port}"
+    proof_status = (
+        "[green]configured[/]"
+        if cfg["proof_secret"] != b"proof-secret"
+        else "[yellow]default[/]"
+    )
+    delivery_status = (
+        "[green]configured[/]"
+        if cfg["delivery_secret"] != b"delivery-secret"
+        else "[yellow]default[/]"
+    )
+    app_pw_status = (
+        "[green]configured[/]"
+        if email_sender.configured
+        else f"[yellow]not configured[/] (set {APP_PASSWORD_ENV})"
+    )
+
     console.print(f"[bold green]Control surface:[/] {url}  (Ctrl-C to stop)")
     console.print(f"[dim]web root:[/] {web_root}")
-    console.print(
-        f"[dim]email:[/] {'[green]configured[/]' if email_sender.configured else '[yellow]not configured[/] (set ' + APP_PASSWORD_ENV + ')'}"
-    )
-    proof_secret = b"proof-secret"  # matches _update_order's hardcoded secret
+    console.print(f"[dim]base URL:[/] {effective_base}")
+    console.print(f"[dim]email sender:[/] {effective_sender}")
+    console.print(f"[dim]SMTP:[/] {effective_host}:{effective_port}")
+    console.print(f"[dim]proof secret:[/] {proof_status}")
+    console.print(f"[dim]delivery secret:[/] {delivery_status}")
+    console.print(f"[dim]app password:[/] {app_pw_status}")
+
     try:
-        serve(runner, host=args.host, port=args.port, web_root=web_root,
-              output_root=roots.output, order_store=order_store,
-              email_sender=email_sender, proof_secret=proof_secret)
+        serve(
+            runner,
+            host=args.host,
+            port=args.port,
+            web_root=web_root,
+            output_root=roots.output,
+            order_store=order_store,
+            email_sender=email_sender,
+            proof_secret=cfg["proof_secret"],  # type: ignore[arg-type]
+            delivery_secret=cfg["delivery_secret"],  # type: ignore[arg-type]
+            base_url=cfg["base_url"],  # type: ignore[arg-type]
+        )
     except KeyboardInterrupt:
         console.print("\n[bold]Stopped.[/]")
     return 0

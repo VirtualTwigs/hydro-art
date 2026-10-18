@@ -103,14 +103,24 @@ docker compose -f deploy/docker-compose.yml down            # stop
 
 ### Email setup
 
-`serve.py` sends order emails through Gmail SMTP (`smtp.gmail.com:465`). They are
-sent from the fixed address `FROM_ADDRESS` in `src/email_delivery.py`, which is
-currently `neiljrunde@gmail.com`. To make sending work:
+`serve.py` sends order emails via SMTP. By default it connects to Gmail
+(`smtp.gmail.com:465`) using the `FROM_ADDRESS` in `src/email_delivery.py`.
+All of these can be overridden with environment variables:
 
-1. Sign in to the `FROM_ADDRESS` Gmail account. 2-Step Verification must be on.
-2. Generate an app password at <https://myaccount.google.com/apppasswords>. It
-   **must** come from the `FROM_ADDRESS` account, because Gmail rejects the login
-   otherwise. A normal account password won't work either.
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `HYDRO_ART_GMAIL_APP_PASSWORD` | *(none)* | SMTP auth password (required for sending) |
+| `HYDRO_ART_SENDER_EMAIL` | `FROM_ADDRESS` in `src/email_delivery.py` | From address on all emails |
+| `HYDRO_ART_SMTP_HOST` | `smtp.gmail.com` | SMTP server hostname |
+| `HYDRO_ART_SMTP_PORT` | `465` | SMTP server port |
+| `HYDRO_ART_BASE_URL` | `http://localhost:{port}` | Base URL for proof/delivery links in emails |
+| `HYDRO_ART_PROOF_SECRET` | dev default (with warning) | HMAC secret for proof token signing |
+| `HYDRO_ART_DELIVERY_SECRET` | dev default (with warning) | HMAC secret for delivery token signing |
+
+**Quick start (Gmail):**
+
+1. Enable 2-Step Verification on the sender Gmail account.
+2. Generate an app password at <https://myaccount.google.com/apppasswords>.
 3. Export it in the same shell that starts the server:
 
    ```bash
@@ -122,16 +132,14 @@ currently `neiljrunde@gmail.com`. To make sending work:
    email, move an order with a buyer email to `proof_ready`. The PATCH response
    includes `"email_sent": true` when the send succeeded.
 
-To send from a different account, change `FROM_ADDRESS` in `src/email_delivery.py`
-and use an app password from that account.
+**Production deployment:** Set `HYDRO_ART_BASE_URL` to your public domain
+(e.g. `https://riverglyph.enablesu.com`), set unique `HYDRO_ART_PROOF_SECRET`
+and `HYDRO_ART_DELIVERY_SECRET` values, and optionally point SMTP at a
+non-Gmail provider with `HYDRO_ART_SMTP_HOST`/`HYDRO_ART_SMTP_PORT`/
+`HYDRO_ART_SENDER_EMAIL`.
 
 Known limitations:
 
-- Proof and delivery links in emails are hard-coded to `http://localhost:8765/...`
-  (`src/server.py`, `_update_order`). They only work on the machine running
-  `serve.py`, so they can't reach customers yet.
-- The proof-link signing secret is hard-coded (`b"proof-secret"`) in both
-  `serve.py` and `src/server.py`.
 - If a send fails, the error is logged but the order update still goes through.
   Check the server console for `Failed to send proof email`.
 
@@ -300,6 +308,12 @@ Two GitHub Actions workflows run automatically:
 | `HYDRO_ART_EXTERNAL_ROOT` | Redirect cache/datasets/output to an external drive |
 | `DATABASE_URL` | PostgreSQL connection string for the operations ledger (optional; falls back to JSON) |
 | `HYDRO_ART_GMAIL_APP_PASSWORD` | Gmail app password for `FROM_ADDRESS` (`src/email_delivery.py`). Required for confirmation, proof, and delivery emails. See [Email setup](#email-setup) |
+| `HYDRO_ART_BASE_URL` | Base URL for proof/delivery email links (e.g. `https://riverglyph.enablesu.com`; falls back to `http://localhost:{port}`) |
+| `HYDRO_ART_PROOF_SECRET` | HMAC signing secret for proof tokens (falls back to dev default with warning) |
+| `HYDRO_ART_DELIVERY_SECRET` | HMAC signing secret for delivery tokens (falls back to dev default with warning) |
+| `HYDRO_ART_SENDER_EMAIL` | Override the From address on order emails (falls back to `FROM_ADDRESS` in `src/email_delivery.py`) |
+| `HYDRO_ART_SMTP_HOST` | SMTP server hostname (falls back to `smtp.gmail.com`) |
+| `HYDRO_ART_SMTP_PORT` | SMTP server port (falls back to `465`) |
 | `SOURCE_DATE_EPOCH` | Set to `0` for deterministic timestamps in rasterized output |
 | `HYDRO_ART_REAL_DATA` | Set to `1` to enable `@pytest.mark.real_data` tests |
 

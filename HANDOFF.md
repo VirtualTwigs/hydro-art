@@ -1,6 +1,24 @@
 # Handoff — hydro-art
 
-_Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#153); Epoch 32 complete (report builder with paywall preview, #142-#145); Epoch 31 complete (Riverglyph brand transition, #137-#141); Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+_Last updated: 2026-10-17, Email config hardening complete; Epoch 33 complete (gallery catalog management, #146-#153); Epoch 32 complete (report builder with paywall preview, #142-#145); Epoch 31 complete (Riverglyph brand transition, #137-#141); Epochs 28-30 complete (self-serve customer journey, #120-136); Epoch 24 complete (alpha-journey e2e, #94-98); Generation 1 complete (Epochs 19-23, #79-93); v1.0 ready to tag pending real double-render gate._
+
+## Current state (2026-10-17)
+
+- **Email & Secrets Configuration Hardening DONE (2026-10-17).**
+  Replaced all hardcoded secrets, URLs, and SMTP coordinates in the server and
+  email modules with environment-variable-driven configuration. The ordering flow
+  can now run outside localhost with proper signing secrets and a custom email domain.
+  - **`src/email_delivery.py`**: `SmtpSender.__init__` gained `host`, `port`,
+    `sender_email` kwargs. All `_build_*` helpers gained `from_address` param.
+  - **`src/server.py`**: `serve()` gained `base_url` kwarg. `_update_order` gained
+    `base_url` and `proof_secret` kwargs. Hardcoded localhost URLs and
+    `b"proof-secret"` replaced with parameters.
+  - **`serve.py`**: `_read_config()` reads 6 env vars (`HYDRO_ART_BASE_URL`,
+    `HYDRO_ART_PROOF_SECRET`, `HYDRO_ART_DELIVERY_SECRET`, `HYDRO_ART_SENDER_EMAIL`,
+    `HYDRO_ART_SMTP_HOST`, `HYDRO_ART_SMTP_PORT`). Rich startup config summary.
+  - **Suite:** 1753 tests passing (+15 new). Recipe roundtrip 12 green.
+    `PIPELINE_STAGES` untouched. No regressions. 2D default build byte-identical.
+  - Spec: `agent-os/specs/2026-10-17-email-config-hardening/`.
 
 ## Current state (2026-09-29)
 
@@ -27,7 +45,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 
 - **Epoch 33 DONE (2026-09-29) — Gallery catalog management (#146-#153).**
   Operational inventory layer between raw render output and the public gallery. Tracks
-  rendered artwork through a status lifecycle (draft → review → published → archived),
+  rendered artwork through a status lifecycle (draft -> review -> published -> archived),
   auto-generates thumbnails on ingest, supports structured gallery sections, and versions
   entries when re-rendered.
   - **`src/catalog.py`** (pure/offline): `CatalogEntry` frozen dataclass (18 fields),
@@ -39,7 +57,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
     published per key, grouped by section), `seed_from_gallery_matrix`.
   - **`tools/catalog.py`** (operator CLI): `ingest` (batch scan + SHA-256 hashing + PIL
     thumbnail generation), `list`, `review`, `publish`, `reject`, `archive`, `update`,
-    `export-public` (→ `web/data/gallery.json`), `seed`.
+    `export-public` (-> `web/data/gallery.json`), `seed`.
   - **`web/gallery.html`** upgraded: tries curated `data/gallery.json` first (structured
     sections with headings, descriptions, thumbnails, metadata, "Order" links); falls back
     to raw output browser when file missing.
@@ -88,7 +106,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 
 - **Epochs 28-30 DONE (2026-09-16) — self-serve customer journey (#120-136).** Three epochs
   landed in commit `803f4ae`; roadmap ticked in `921b136`. The automated no-account customer
-  experience: form → queue → proof → accept/revise → pay → deliver → print fulfillment.
+  experience: form -> queue -> proof -> accept/revise -> pay -> deliver -> print fulfillment.
   - **Epoch 28** (#120-126): order form schema & validation (`src/fulfillment.py`), web UI
     (`web/order.html`), automated render queue, proof generation with HMAC-signed URLs
     (`src/proof.py`), proof review page (`web/proof.html`), order event log (`OrderEvent` +
@@ -116,7 +134,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 - **Epoch 24 DONE (2026-09-12) — alpha customer-journey e2e (#94-98).** #94 (offline suite):
   draft `png_size` tier (512/1024/2048 added to `SUPPORTED_PNG_SIZES`, default stays 4096, 2D
   output byte-identical). #95-98: a **non-offline, opt-in Playwright harness** under `tests/e2e/`
-  that walks the alpha site (`web/start.html` → four catalog pages → a low-res proof per endpoint)
+  that walks the alpha site (`web/start.html` -> four catalog pages -> a low-res proof per endpoint)
   against a live `serve.py`. Gate green: **`npx playwright test` 13/13 (13.7m)** on a staged Clark
   County, WA — landing/nav 8/8, digital SVG + poster PNG via `/api/render` at the draft tier,
   watershed report figures, animation GIF. Real-run-only findings baked into the harness:
@@ -124,7 +142,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   `global-setup.js` stages a REAL (non-symlinked) served root (`web/` + `deploy/output/`) served via
   `--web-root <staged>`; staging runs at Playwright config load, not the `globalSetup` hook (readiness
   is probed first). (2) A Clark `/api/render` proof is **~6 min** — the full-Washington GIS load
-  dominates (county clip → SVG → PNG is ~13s once reprojected); `RENDER_TIMEOUT_MS` default → 600s.
+  dominates (county clip -> SVG -> PNG is ~13s once reprojected); `RENDER_TIMEOUT_MS` default -> 600s.
   (3) County value must be the Census `NAME` `Clark` (not `NAMELSAD`); the county clip needs the
   Census counties shapefile at `/tmp/counties_shp/` (public-domain, documented in the e2e README, not
   committed). Committed `f01a0c3`; spec `agent-os/specs/2026-09-11-alpha-journey-e2e/`; retrospective
@@ -142,35 +160,35 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   `src.historical_flow.ClimateProvider` seam; nClimGrid is a stacked NetCDF addressed by band
   (GDAL NETCDF driver), rasterio **lazy-imported** so the module is GDAL-free at import. New
   **`tools/nclimgrid_fetch.py`** stages the two NetCDFs (`prcp` 1.47 GB + `tavg` 1.06 GB, 1579
-  bands = Jan 1895 → Jul 2026) with a Content-Length check (caught + fixed a silent truncation).
+  bands = Jan 1895 -> Jul 2026) with a Content-Length check (caught + fixed a silent truncation).
   Provider is selectable via **`--climate-source {nclimgrid,prism}` (default nclimgrid)** through
   one `_make_provider` factory in `render_state_yoy.py`, threaded into
   `report_common.load_watershed_series` / `build_watershed_report.py`. **Real-data validation:**
   nClimGrid-vs-PRISM Dec-2017 Salmon Creek precip agree to **0.6%** (254.4 vs 255.8 mm); full
   engine peak-flow ratios 0.987 (2017) / 1.091 (2015). Suite **666 passing** (+9); no
-  `PIPELINE_STAGES` / `src.historical_flow` / `src.monthly_flow` edit → default render
+  `PIPELINE_STAGES` / `src.historical_flow` / `src.monthly_flow` edit -> default render
   byte-identical. Spec `agent-os/specs/2026-09-01-license-free-climate/`. PRISM stays A/B-only via
   `--climate-source prism` and remains **non-sellable**.
 - **#40 DONE (2026-08-31) — golden-output fixtures (Phase 10.1 close).** Gave the #39
   verifier a committed fixture + a second checksum dimension. **`src/raster.grid_checksum`**
   (pure/offline: versioned header + crs + canonical-LE transform/shape + nodata sentinel +
-  NaN-canonical LE-float64 values → sha256; endianness/contiguity-stable). **Two-checksum
+  NaN-canonical LE-float64 values -> sha256; endianness/contiguity-stable). **Two-checksum
   golden registry** in `src/determinism.py`: new `Golden(svg_sha256, dem_mosaic_sha256=None)`
   value type; `load_registry` parses object form + #39 bare strings; `evaluate(..., dem_sha=)`
   adds a soft `dem_ok`; `record_golden` merges halves; `dump_registry`/`format_verdict` updated.
   **`tools/verify_determinism.py`** grew `--check-dem`/`--dem` (county-aware DEM clip via
   `county_boundary` bounds so a county golden doesn't over-acquire the state's 3DEP) and a
-  fixed latent `export_paths` str→`Path` crash in `_render_once`. **Committed fixture**
+  fixed latent `export_paths` str->`Path` crash in `_render_once`. **Committed fixture**
   `tests/fixtures/golden/registry.json` — **Wahkiakum, WA** (HUC4 1708): SVG sha
-  `3c725d66…6457fafc` (run-to-run OK, cross-host invariant) + county-scoped DEM mosaic sha
-  `a84769ec…a7c6ae92a` (single tile `USGS_1_n47w124.tif`, reproducible twice — **same-host
+  `3c725d66...6457fafc` (run-to-run OK, cross-host invariant) + county-scoped DEM mosaic sha
+  `a84769ec...a7c6ae92a` (single tile `USGS_1_n47w124.tif`, reproducible twice — **same-host
   regression only**, GDAL/PROJ-version sensitive; the SVG sha is the stronger invariant).
   Suite **644 passing** (+14), node 11+8; no `PIPELINE_STAGES` touched (2D byte-identical).
   Spec `agent-os/specs/2026-08-31-golden-output-fixtures/`. **#41 (real-data smoke harness)
   remains.** Uncommitted: `src/raster.py`, `src/determinism.py`, `tools/verify_determinism.py`,
   `tests/{test_raster,test_determinism}.py`, `tests/fixtures/golden/registry.json`, spec +
   roadmap/HANDOFF edits (committed `3835024`).
-- **Epoch 12 DONE (2026-08-31) — watershed report analytics (#48–#55).** Promoted the
+- **Epoch 12 DONE (2026-08-31) — watershed report analytics (#48-#55).** Promoted the
   one-off `notebooks/salmon_creek_yoy.ipynb` into a reusable, credible watershed report.
   Spec `agent-os/specs/2026-08-30-watershed-report-analytics/`. One pure numpy-only
   offline `src/` module holds all statistics: **`src/flow_metrics.py`** (#48 peak/low/COT/
@@ -189,10 +207,10 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   the GIS/NAS host — all cells run, 7 panels render inline. Gotcha: the setup cell
   `os.chdir(REPO)` so `report_common`'s repo-root-relative caches resolve under nbconvert
   (CWD = the notebook dir otherwise). **Credibility finding (#50):** the first run scored
-  the basin *outlet* vs the gauge (NSE=−9.86, bias=+166.9) — the outlet is the basin mouth
-  ~23 km / ~3.7× drainage below the mid-watershed Battle Ground gauge. Snapping to the
+  the basin *outlet* vs the gauge (NSE=-9.86, bias=+166.9) — the outlet is the basin mouth
+  ~23 km / ~3.7x drainage below the mid-watershed Battle Ground gauge. Snapping to the
   model reach *at the gauge* (`gauge_reach_index` via the NWIS site lat/lon, idx 597, 10.3 m)
-  → **r=0.78, NSE=+0.50, bias=+18.6, RMSE=44.9**; verdict "weak" only because NSE misses the
+  -> **r=0.78, NSE=+0.50, bias=+18.6, RMSE=44.9**; verdict "weak" only because NSE misses the
   0.50 cutoff by 0.0007. Suite: **630 passing**, recipe roundtrip 11 + report helpers 8, no
   regressions; no `PIPELINE_STAGES` touched (2D default byte-identical). Retrospective:
   `agent-os/retrospectives/2026-08-31-epoch-12-watershed-report.md`. Implementation report:
@@ -213,41 +231,41 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 ## Current state (2026-08-30)
 
 - **Epoch 11.5 #56/#57 fulfillment core — implemented (committed `a644c91`).** The
-  reproducible, rights-compliant **order → deliverable plan → manifest** core for
+  reproducible, rights-compliant **order -> deliverable plan -> manifest** core for
   made-to-order county watershed prints (Revenue Validation gate). Spec
   `agent-os/specs/2026-08-30-order-fulfillment/`. New **`src/fulfillment.py`** (stdlib-only,
   imports only stdlib + `src.config` `SUPPORTED_REGIONS`; not in `PIPELINE_STAGES`):
   frozen value objects (`Order`/`StyleSpec`/`Size`/`DataSource`/`Deliverable`/
   `DeliverablePlan`), injectable `ORDER_STYLES`/`SIZES` catalogs, `build_order`
-  (validate-at-boundary/fail-fast → frozen `Order`, no payload mutation), **Rights gate**
+  (validate-at-boundary/fail-fast -> frozen `Order`, no payload mutation), **Rights gate**
   `assert_sellable` (refuses any `uses_prism` style; the two approved directions
   `neon-basin`/`elevation-tint` are PRISM-free), `attribution_line`/`title_block`
   (deterministic USGS credit), `deliverable_plan` (add-on-order-independent), and
-  `fulfillment_manifest` (checksums must cover the plan exactly → `sort_keys`
+  `fulfillment_manifest` (checksums must cover the plan exactly -> `sort_keys`
   byte-identical for equal inputs). TDD: `tests/test_fulfillment.py` (29 tests, 4 groups).
   New non-offline **`tools/fulfill_order.py`** executor (outside the suite): `--order
-  order.json`/flags → `build_order` → dispatch on `StyleSpec.renderer` (`pipeline` =
-  neon-basin county clip via `render_common`; `mono` fails fast → use `neon-basin`) →
-  stamp title block into the SVG → export each plan item at `Size.px` (PNG via `rasterize`,
-  PDF via `rsvg-convert`, SVG, license) → sha256 → manifest at
+  order.json`/flags -> `build_order` -> dispatch on `StyleSpec.renderer` (`pipeline` =
+  neon-basin county clip via `render_common`; `mono` fails fast -> use `neon-basin`) ->
+  stamp title block into the SVG -> export each plan item at `Size.px` (PNG via `rasterize`,
+  PDF via `rsvg-convert`, SVG, license) -> sha256 -> manifest at
   `output/orders/<order_id>/`. Docs: spec `sample_order.json` + `presets.md`;
   `implementation/report.md`. Suite: **573 passing** (+29), recipe roundtrip 11, no
   regressions; no `PIPELINE_STAGES` touched (2D default byte-identical). **Real smoke
   (Clark County, WA):** clipped 11,374 flowlines from HUC4 1708, 4 deliverables +
   manifest, title block stamped correctly. **Reproducible re-order:** first re-run's PDF
-  sha differed (cairo stamped a wall-clock PDF CreationDate) → fixed by pinning
+  sha differed (cairo stamped a wall-clock PDF CreationDate) -> fixed by pinning
   `SOURCE_DATE_EPOCH=0` on the `rsvg-convert` call; two full re-runs now yield a
-  byte-identical manifest (`ed669ae0…`). Roadmap #56/#57 stay `[ ]` (listing + intake +
+  byte-identical manifest (`ed669ae0...`). Roadmap #56/#57 stay `[ ]` (listing + intake +
   funnel ops live in `agent-os/product/revenue-ledger.md`, not code — a status note under
   Epoch 11.5 records the code core landed). **Known executor caveat:** the rasterized
-  print takes the county's natural aspect at the ordered width (18x24 → 5400×5862, not
-  the full 5400×7200 canvas the plan/manifest record). Smoke needs the public Census
+  print takes the county's natural aspect at the ordered width (18x24 -> 5400x5862, not
+  the full 5400x7200 canvas the plan/manifest record). Smoke needs the public Census
   county/state boundary shapefiles staged under `/tmp/{counties,states}_shp` (not
   repo-tracked).
 
 ## Current state (2026-08-25)
 
-- **Epoch 9 DONE (2026-08-25) — codebase health & maintainability (#33–#38).** A
+- **Epoch 9 DONE (2026-08-25) — codebase health & maintainability (#33-#38).** A
   2026-08-25 audit surfaced maintainability debt (triplicated `clip_flowlines`,
   scattered `EPSG:5070` literal, hand-mirrored `STATE_HUC4`, duplicated `web/` view
   helpers, missing `test_pipeline.py`, uncommitted noise, zero retrospectives). Spec
@@ -265,7 +283,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   a real GDAL svg_sha256 compare wasn't possible offline — carry-forward).
 - **Epoch 8 #32 DONE (2026-08-25) — terrain-print real-tile closeout.** The real
   WA statewide auto-acquire run surfaced a bug the offline fakes couldn't: `normalize_dem`
-  warped each 1°×1° 3DEP tile to EPSG:5070 independently, so per-tile output resolution
+  warped each 1 degree 3DEP tile to EPSG:5070 independently, so per-tile output resolution
   drifted with latitude and the warped tiles no longer shared a pixel grid. Fixed by
   mosaicking the tiles in their shared source CRS first, then warping the single mosaic
   once; `_require_aligned` now compares pixel sizes with a relative tolerance (last-float-
@@ -273,7 +291,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   `src/` capability; 12 raster tests green (`0954c69`). Retrospective:
   `agent-os/retrospectives/2026-08-25-epoch-8-terrain-print.md` (`d44dad1`) — the lesson
   is that injected-fake offline coverage exercised only the reprojector's identity
-  short-circuit, so the real-tile run first fired the EPSG:4269→5070 warp branch.
+  short-circuit, so the real-tile run first fired the EPSG:4269->5070 warp branch.
 - **#29 DONE — external-storage layout & output migration — implemented, commit
   pending.** Opens Epoch 7. Puts the large files a build reads/writes (extracted
   GDB datasets, the archive cache, rendered output) on a configurable external
@@ -284,17 +302,17 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   or its parent/mount-point exists) so an unmounted drive never crashes a build;
   `plan_migration`/`apply_migration` move an existing local tree (default `output/`)
   onto the drive and leave a directory **symlink** behind so old paths keep
-  resolving (idempotent/resumable; mount guard → `StorageError` before any move).
+  resolving (idempotent/resumable; mount guard -> `StorageError` before any move).
   Wired into `build.py` (new `--external-root`/`--datasets-dir`/`--output-dir`/
   `--staging`; NAS cache default preserved when no external root) and `serve.py`
   (`_serve_roots`, keeps its NAS-when-mounted cache default). Optional `--staging`
   local working copy threaded through `_export_stage` (render locally, move finished
   file to output; `None` = byte-identical). New thin `tools/migrate_storage.py`
-  (`python -m tools.migrate_storage --external-root … [--kind output|datasets]
-  [--dry-run] [--no-symlink]`; drive-mounted check → non-zero + StorageError). Storage
+  (`python -m tools.migrate_storage --external-root ... [--kind output|datasets]
+  [--dry-run] [--no-symlink]`; drive-mounted check -> non-zero + StorageError). Storage
   location is **not** in `Settings` and never affects rendered bytes; a no-flag/no-env
   build is byte-identical. TDD: `tests/test_storage.py` (+14), `test_build.py` (+4),
-  `test_serve.py` (+3), `test_migrate_storage.py` (+4, stdlib-only → offline),
+  `test_serve.py` (+3), `test_migrate_storage.py` (+4, stdlib-only -> offline),
   `test_export_pipeline.py` (+1 staging). Suite: **488 passing** (+26), no regressions.
   Smoke: dry-run reported the real `output/` (352 files, 2.3 GiB); missing-root and
   unmounted-drive exit 1. Spec `agent-os/specs/2026-08-17-external-storage-layout/`.
@@ -307,7 +325,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   a stray `.DS_Store` left in a source dir blocks the auto-symlink (source not fully
   drained); remove it and re-run to finish the symlink step. **Verified end-to-end** via
   a full `build.py --region Oregon`: read all GDBs through the `datasets` symlink
-  (`datasets/nhdplus_hr/1801/…`, `datasets/wbd/{17,18}/…`), download+extract stages
+  (`datasets/nhdplus_hr/1801/...`, `datasets/wbd/{17,18}/...`), download+extract stages
   short-circuited (**zero downloads/network**, first stage to log was `validate`),
   rendered 1.77M segments, and wrote `output/oregon.svg` (1,062,115,316 B) back through
   the `output` symlink onto the NAS — exit 0. `.gitignore` gained slash-less `output`
@@ -331,10 +349,10 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   deliberate non-goal, not a gap; this CLI *is* the real entry point.** With this,
   every #21 concern (CA+Idaho states, tile-budget, resumable jobs, portable manifests,
   real acquisition entry point) is met.
-- **#21 Region expansion → Idaho — implemented (committed in Generation 1).** Adds Idaho as a
+- **#21 Region expansion -> Idaho — implemented (committed in Generation 1).** Adds Idaho as a
   fourth supported region (the first of #21's two remaining directions). HUC4 basins
   derived from local WBD via `tools/derive_state_huc4.py Idaho --min-overlap-frac 0.01`
-  → `("1701", "1704", "1705", "1706")` (Snake system + panhandle, all HU2 region 17;
+  -> `("1701", "1704", "1705", "1706")` (Snake system + panhandle, all HU2 region 17;
   the SE Bear-River corner in HU2 16 is omitted, same caveat as California's desert
   fringes — no national WBD locally or on the NAS). Wired into `SUPPORTED_REGIONS`
   (`src/config.py`), `REGION_HUC4` (`src/datasets.py`), `STATE_FIPS` (`src/counties.py`),
@@ -355,9 +373,9 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   lists any missing/mismatched keys) and `format_diff` (one "in sync" line, else the
   non-empty added/removed/changed groups + unchanged count). New thin
   `tools/cache_manifest.py` (mirrors `tools/package_cache.py`; reads a real cache, so
-  not in the offline suite) has three subcommands: `write --region … --cache-dir …
-  [--out] [--strict]` (`manifest_for_settings` → `write_manifest`; `--strict` → exit 1
-  on an un-recorded required file), `verify MANIFEST --cache-dir …` (exit 0 iff
+  not in the offline suite) has three subcommands: `write --region ... --cache-dir ...
+  [--out] [--strict]` (`manifest_for_settings` -> `write_manifest`; `--strict` -> exit 1
+  on an un-recorded required file), `verify MANIFEST --cache-dir ...` (exit 0 iff
   complete), `diff OLD NEW` (exit 0 iff synced). Smoke-tested `main()` offline against
   a fabricated Oregon tmp cache — all exit codes correct. Tests: `tests/test_manifest.py`
   (+4). Suite: **456 passing** (+4), no regressions. **Left on #21:** region expansion
@@ -378,7 +396,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   prefers the NAS only when mounted (its parent exists), else falls back to local
   `cache/`; a `--cache-dir` flag always wins. **Verified end-to-end**: served
   `POST /api/render` `{"region":["Oregon"],"county":"Deschutes","output":["svg"]}`
-  → job `succeeded` → artifact `output/oregon-deschutes.svg` (8.4 MB, sha256
+  -> job `succeeded` -> artifact `output/oregon-deschutes.svg` (8.4 MB, sha256
   `0f1f0976e6c4b93e2cc46f136ce84c8e5cf3cdad1e259bad03309a89a4055733`), identical
   to the direct `Pipeline` build, with **no downloads triggered**. Tests:
   `tests/test_cache.py` (+4), `tests/test_acquisition_integration.py` (+1),
@@ -388,25 +406,25 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   offline slices have now shipped. **(3) Web delivery** (committed in Generation 1): new pure module
   `src/delivery.py` (same spec `agent-os/specs/2026-08-12-print-experience-modes/`) packages the two
   prior products — a hillshade `RasterGrid` + a camera path of `CameraPose`s — into one stable,
-  browser-loadable **experience document**: `hillshade_layer(grid)` (row-major `shade`, nodata→`None`,
+  browser-loadable **experience document**: `hillshade_layer(grid)` (row-major `shade`, nodata->`None`,
   `bounds`/`cell_size_m`/valid-only `value_range`), `camera_track(poses)`
   (`[{position,target,up,fov_deg}]`), `experience_document(*, hillshade_grid, camera_poses, crs=None)`
-  → `{generator, crs, hillshade, camera:{frame_count, track}}`, and `experience_json` (deterministic
+  -> `{generator, crs, hillshade, camera:{frame_count, track}}`, and `experience_json` (deterministic
   `sort_keys`). `DeliveryError` on empty grid / empty path. Mirrors `src/preview.py`'s conventions;
   imports only `json` + `src.raster`/`src.camera`; not in `PIPELINE_STAGES`; `src/` never imports
   `web/`. New self-contained `web/experience.html` viewer loads a document, paints the hillshade to a
   `<canvas>` (grayscale, nodata transparent), and plays/scrubs the camera track. Tested in
   `tests/test_delivery.py` (7 tests); viewer script `node --check`-clean and a real document parses
-  browser-side. Suite: **423 passing** (+7). **Deferred (not gating #22):** hillshade↔river-SVG
+  browser-side. Suite: **423 passing** (+7). **Deferred (not gating #22):** hillshade<->river-SVG
   compositing in a `tools/` print renderer, a live `/api/experience` server route over a real DEM, and
   richer camera motion (easing/quaternion). — Prior slices below.
 
 - **#22 slices 1-2 (context).** #22 spans three concerns; the first two offline slices shipped.
   **(1) Terrain-aware 2D hillshade** (committed `a0674c4`): `src/hillshade.py` `hillshade(grid, *,
   azimuth_deg=315, altitude_deg=45, z_factor=1.0, nodata=-1.0)` computes Lambertian shaded relief
-  (0-255) from a `RasterGrid` via Horn's 3×3 `dz/dx`/`dz/dy` + the ESRI/GDAL illumination model;
+  (0-255) from a `RasterGrid` via Horn's 3x3 `dz/dx`/`dz/dy` + the ESRI/GDAL illumination model;
   edge-replicated borders keep the input shape, nodata is **never invented** (a cell or its
-  8-neighborhood touching nodata → output sentinel), `z_factor` is shading-only, boundary-validated
+  8-neighborhood touching nodata -> output sentinel), `z_factor` is shading-only, boundary-validated
   (`HillshadeError`), deterministic (numpy + `src.raster`/`src.elevation` only). Tested in
   `tests/test_hillshade.py` (8 tests). **(2) Animation/camera paths** (committed in Generation 1): new pure module
   `src/camera.py` (same spec `agent-os/specs/2026-08-12-print-experience-modes/`) interpolates
@@ -414,9 +432,9 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   lerps position/target/fov + normalized-lerps the up vector; `camera_path(keyframes, *,
   steps_per_segment, loop=False)` samples each segment start-inclusive/end-exclusive so shared
   keyframes never duplicate — **open** paths append a closing pose ending exactly on the last keyframe
-  (`(n-1)·steps + 1`), **looping** paths add a `last→first` wrap for a seamless cycle (`n·steps`).
+  (`(n-1)*steps + 1`), **looping** paths add a `last->first` wrap for a seamless cycle (`n*steps`).
   Up vectors are always unit-length; `CameraPathError` guards `<2` keyframes / `steps_per_segment<1`
-  / `t∉[0,1]` / zero-length up. `math` + `src.scene` only, offline/deterministic, not in
+  / `t not in [0,1]` / zero-length up. `math` + `src.scene` only, offline/deterministic, not in
   `PIPELINE_STAGES`. Tested in `tests/test_camera.py` (7 tests). Suite: **416 passing** (+7).
   **Deferred on #22:** web delivery (serving the hillshade image + camera-path animation), compositing
   hillshade under the river SVG in a `tools/` print renderer, and richer camera motion (easing /
@@ -425,22 +443,22 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   delivers only the fully-offline **portable cache manifests**. New pure module
   `src/manifest.py` (spec `agent-os/specs/2026-08-12-regional-scale-offline-packaging/`) turns
   a `Cache`'s recorded provenance into a deterministic, portable manifest: `build_manifest` /
-  `manifest_for_settings` (region→manifest via `resolve_required_files`, so OR/WA/CA round-trip
-  through one manifest), stable sorted JSON with **cache-relative** paths (no wall-clock time →
-  byte-identical for equal state), `verify_manifest` (recomputes sha256+size → ok/missing/
+  `manifest_for_settings` (region->manifest via `resolve_required_files`, so OR/WA/CA round-trip
+  through one manifest), stable sorted JSON with **cache-relative** paths (no wall-clock time ->
+  byte-identical for equal state), `verify_manifest` (recomputes sha256+size -> ok/missing/
   mismatched, never mutates), and `diff_manifests` (added/removed/changed/unchanged). **numpy-
   free & GDAL-free** (imports only stdlib + `src.datasets`/`src.config`/`src.cache`; verified no
   heavy modules pulled in). Not wired into `PIPELINE_STAGES`. Tested in `tests/test_manifest.py`
   (13 tests). A second slice added **tile-budget controls**: `ElevationSettings.tile_budget`
   (0 = unlimited, boundary-validated in `_coerce_elevation`) + `src/dem.py` `count_tiles` (pure
-  offline preflight) + an `acquire_dem(max_tiles=…)` guard that raises `ElevationError` **before any
+  offline preflight) + an `acquire_dem(max_tiles=...)` guard that raises `ElevationError` **before any
   COG download** when a region's tile count exceeds the budget (+4 config, +4 dem tests). Also
   confirmed **resumable jobs** are essentially already built — `src/download.py` `Downloader` streams
   to `.part`, resumes via HTTP `Range`, verifies, atomically moves; `acquire`/`acquire_dem` skip
   cached files — so an interrupted acquisition resumes on re-run. A third (uncommitted) slice adds a
   **package preflight planner**: pure/offline `src/packaging.py` composes the manifest + tile-budget
   primitives into one "is this cache ready to ship?" verdict — `plan_package(cache, settings, *,
-  tile_count=None)` → frozen `PackagePlan` (disjoint `present`/`missing`/`corrupt` over
+  tile_count=None)` -> frozen `PackagePlan` (disjoint `present`/`missing`/`corrupt` over
   `resolve_required_files`, `total_bytes`, injected-tile-count preflight) with `is_complete` /
   `within_tile_budget` / `is_ready`, plus `format_plan` for a one-block summary. Driven by the thin
   non-offline `tools/package_cache.py` (`--region`/`--cache-dir`/`--config`/`--tile-count`; exits 0
@@ -449,8 +467,8 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   a **settings-driven DEM acquisition entry point**: `src/dem.py`
   `acquire_dem_for_settings(settings, *, boundary, cache, downloader)` reads
   `elevation.tier`/`tile_budget`/`cache_policy` off the validated `Settings` and forwards to
-  `acquire_dem` — guarding on `enabled` (disabled → `ElevationError` before any discovery), mapping
-  `cache_policy=="refresh"` → `refresh=True`, and feeding `tile_budget` into the existing fail-fast
+  `acquire_dem` — guarding on `enabled` (disabled -> `ElevationError` before any discovery), mapping
+  `cache_policy=="refresh"` -> `refresh=True`, and feeding `tile_budget` into the existing fail-fast
   budget guard. This is the "wire `tile_budget` into a live DEM entry point" gap closed; new import
   `from src.config import Settings` is cycle-free. Tested in `tests/test_dem.py` (+5). Suite:
   **435 passing** (+5 over the packaging slice's 430).
@@ -477,11 +495,11 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 - **W4 waterbody preset *mechanism + scale-split values* — uncommitted.** Closes the W4 "establish
   print and screen presets" plumbing (spec `agent-os/specs/2026-08-12-waterbody-regional-presets/`).
   `src/config.py` `WATERBODY_PRESETS` now holds three bundles: `screen` (default on-screen), plus
-  scale-specific print presets — `print-state` (100k/250k m², whole-state/large-format) and
-  `print-county` (25k/50k m², single-county). The split is backed by real evidence: at county zoom the
-  state thresholds over-prune (Clark County, WA: 100k m² keeps only 24 of 830 waterbodies; 25k m² keeps
+  scale-specific print presets — `print-state` (100k/250k m2, whole-state/large-format) and
+  `print-county` (25k/50k m2, single-county). The split is backed by real evidence: at county zoom the
+  state thresholds over-prune (Clark County, WA: 100k m2 keeps only 24 of 830 waterbodies; 25k m2 keeps
   a readable ~62). `_coerce_waterbodies` pops a `preset` directive and layers `defaults < preset <
-  explicit` (unknown → `ConfigError`), consuming `preset` so it never lands on the frozen
+  explicit` (unknown -> `ConfigError`), consuming `preset` so it never lands on the frozen
   `WaterbodySettings` (no-preset builds byte-identical). `src/cli.py` `--waterbody-preset`
   (`choices=SUPPORTED_WATERBODY_PRESETS`, auto-derived) and — critically — a nested `waterbodies` merge
   base of `{}` (not `dict(DEFAULTS["waterbodies"])`) so a preset isn't shadowed by pre-seeded defaults.
@@ -500,8 +518,8 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   round-trip is exact (`decodeRecipe(encodeRecipe(s))` deep-equals `toRecipe(s)`).
   The module is now Node-loadable (`module.exports`) and round-trip-tested
   headlessly in `tests/test_recipe_roundtrip.cjs` (11 tests, stdlib `node` only).
-  `web/studio.html` adds a **Presets & sharing** fieldset (buttons + "⧉ Copy share
-  link" → `location.hash`), a `syncControls()` that pushes `state` back onto every
+  `web/studio.html` adds a **Presets & sharing** fieldset (buttons + "Copy share
+  link" -> `location.hash`), a `syncControls()` that pushes `state` back onto every
   DOM control, and a boot `restoreFromHash()`. Closes **Epoch 6**. Deferred: the
   live `file://` browser smoke (Chrome extension wasn't connected this session);
   the pure logic and inline-script syntax are verified headlessly. Suite:
@@ -512,30 +530,30 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   `agent-os/specs/2026-08-12-live-pipeline-integration/`). New `src/jobs.py`
   (stdlib + `src.config` only, GDAL-free): `settings_from_payload` whitelists the
   DEFAULTS keys and validates via `build_settings`; `JobRunner` validates at
-  `submit` (→ 400) then runs an **injected**, duck-typed pipeline off-thread
+  `submit` (-> 400) then runs an **injected**, duck-typed pipeline off-thread
   (default 1-worker `ThreadPoolExecutor`; tests inject an inline executor),
-  tracking `pending→running→succeeded|failed` and capturing
+  tracking `pending->running->succeeded|failed` and capturing
   `export_paths`/`svg_sha256`. New `src/server.py` (stdlib `http.server`): pure
   `handle_request` dispatcher (`POST /api/render`, `GET /api/jobs/<id>`,
-  `GET …/artifact?fmt=`, static `web/` with a path-traversal guard) + a thin
+  `GET .../artifact?fmt=`, static `web/` with a path-traversal guard) + a thin
   `serve()`. New top-level `serve.py` builds the real
   `Pipeline(cache_dir=NAS_CACHE_DIR)` and serves localhost. `web/shared/hydro-ux.js`
   adds a pure `renderRequest(state)` payload builder; `web/studio.html` gains a
   "Run pipeline" button (enabled only when served, disabled over `file://`) that
-  POSTs → polls → shows the SVG + download. `color_by=elevation` and non-annual
+  POSTs -> polls -> shows the SVG + download. `color_by=elevation` and non-annual
   `--months` surface as a **failed job** with the honest fail-fast message.
   Deferred: the browser + real-dataset smoke needs the GIS stack/NAS. Suite:
   **361 passing** (+8 `test_jobs.py`, +8 `test_server.py`).
 - **#26 Web control surface — committed (`0f2c7eb`).** Promoted
   `web/proto-a-studio.html` (via `git mv`) to the canonical `web/studio.html` (spec
-  `agent-os/specs/2026-08-10-web-control-surface/`). Because #23–#25 have shipped,
+  `agent-os/specs/2026-08-10-web-control-surface/`). Because #23-#25 have shipped,
   `cliMapping`/`yamlMapping` in `web/shared/hydro-ux.js` were rewritten to emit those
   as **real `build.py` flags** (`--color-by`/`--single-color`, `--width-by` +
   `--width-min/max/gamma`, `--county`, `--months`) instead of `(proposed)` markers.
   Two options are shipped-as-flags but still fail fast in the 2D pipeline and carry an
   honest caveat note (appended as commented `# notes:` lines below the command, so the
-  paste stays runnable): `color_by=elevation` (needs the DEM subsystem →
-  `tools/render_state_mono.py`) and non-annual `--months` (live frames land in #27 →
+  paste stays runnable): `color_by=elevation` (needs the DEM subsystem ->
+  `tools/render_state_mono.py`) and non-annual `--months` (live frames land in #27 ->
   `tools/render_monthly.py`). Base `line_width`/`background` are YAML-only (no CLI
   flag). Added source-pointer comments at the `MONTH_ABBR`/`HUC_LEVELS` option blocks
   and a `mappingSelfCheck(state)` helper (exported on `window.HydroUX`). Verified
@@ -602,25 +620,25 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   shared `web/shared/` foundation (`ux.css` + `hydro-ux.js`) + three prototypes
   (`proto-a/b/c`); chosen direction is Prototype A studio + Prototype B month
   timeline (spec `agent-os/specs/2026-08-10-web-control-surface/`). CLI/YAML output
-  contract emits shipped flags in the command with `(proposed)` #23–#25 flags as
-  comments. Roadmap **Epoch 6 (#23–#28)** now formalized in `roadmap.md`. Still a
+  contract emits shipped flags in the command with `(proposed)` #23-#25 flags as
+  comments. Roadmap **Epoch 6 (#23-#28)** now formalized in `roadmap.md`. Still a
   **mapping target only** — no live pipeline run (that's #27).
 - **3D Lab upgrade (`10b0624`):** `web/3d.html` gains NOAA-style solar-position
   terrain lighting (real reading date/time), a filled sun-shaded terrain mesh,
-  Terrain/Hydrography/Terrain-only layer toggles, and 4K–12K print PNG export.
+  Terrain/Hydrography/Terrain-only layer toggles, and 4K-12K print PNG export.
 - **`.theia/` gitignored (`6db2c7d`).** Working tree clean.
-- Full suite: **276 passing**. All of #23–#28 are still **spec/mapping only** —
+- Full suite: **276 passing**. All of #23-#28 are still **spec/mapping only** —
   the pipeline itself is unchanged behind the new UX; promoting the proposed flags
-  (#23–#25) and wiring live runs (#27) is the next implementation work.
+  (#23-#25) and wiring live runs (#27) is the next implementation work.
 
 ---
 
 ## Prior state (2026-07-30) — DEM/3D spec complete
 
-- **Epoch 1 (#1–10):** complete and committed.
-- **Epoch 1.5 waterbodies (W1–W4):** complete and committed
-  (`46a0766`…`fc60c5c`). Note: the roadmap.md restructure that adds Epochs
-  1.5–5 does not tick W1–W4 (pre-existing inconsistency, left as-is).
+- **Epoch 1 (#1-10):** complete and committed.
+- **Epoch 1.5 waterbodies (W1-W4):** complete and committed
+  (`46a0766`...`fc60c5c`). Note: the roadmap.md restructure that adds Epochs
+  1.5-5 does not tick W1-W4 (pre-existing inconsistency, left as-is).
 - **Epoch 2 #11 (elevation settings & provenance contract):** committed
   `33a60d9`. `src/config.py` elevation block, `src/elevation.py`, CLI flags.
 - **Epoch 2 #12 (3DEP DEM discovery & cache):** committed `d2296aa`. `src/dem.py`
@@ -630,7 +648,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 - **Epoch 2 #13 (DEM mosaic/clip/pyramid + bilinear sampling):** committed
   `c3468f0`. `src/raster.py` — numpy `RasterGrid`, `mosaic`/`clip_grid`/
   `build_pyramid`, `sample_bilinear` + `GridSampler`, `normalize_dem`
-  orchestrating read→reproject(EPSG:5070)→mosaic→clip→pyramid via injected
+  orchestrating read->reproject(EPSG:5070)->mosaic->clip->pyramid via injected
   `RasterReader`/`RasterReprojector` seams.
 - **Epoch 3 #14 (terrain sampling service):** committed. `src/terrain.py` +
   `tests/test_terrain.py` (8): `densify_line`
@@ -642,13 +660,13 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   detection, opt-in render-only `repair_monotonic` + `RepairPolicy`, `render_z`.
 - **Epoch 3 #16 (adaptive terrain mesh):** committed `4b4c0a6`. `src/mesh.py` +
   `tests/test_mesh.py` (8): `build_terrain_mesh` = greedy error-bounded TIN
-  (Garland–Heckbert), crack-free fan retriangulation, nodata-footprint dropping,
-  `max_points` cap, true-1×-meter `TerrainMesh` with source-raster + deterministic
+  (Garland-Heckbert), crack-free fan retriangulation, nodata-footprint dropping,
+  `max_points` cap, true-1x-meter `TerrainMesh` with source-raster + deterministic
   geometry hashes; `mesh_from_dem` selects a pyramid LOD. Decision #3 (mesh/error
   budget) resolved: error-bounded max-vertical-deviation.
 - **Epoch 4 #17 (3D scene assembly):** committed `4702a50`. `src/scene.py` +
-  `tests/test_scene.py` (8): `assemble_scene` → immutable `SceneModel` joining
-  terrain, Z-rivers (source Z at 1× m), deduped `Material`s, N/S/E/W
+  `tests/test_scene.py` (8): `assemble_scene` -> immutable `SceneModel` joining
+  terrain, Z-rivers (source Z at 1x m), deduped `Material`s, N/S/E/W
   `CardinalAnnotation`s + `AxisInfo`, deterministic top/iso/south `CameraPreset`s,
   display-only `DisplaySettings`; `render_river_vertices` applies exaggeration+lift
   on demand; deterministic `scene_hash`; no browser state. Task Group 5 complete.
@@ -657,19 +675,19 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
   `scene_to_glb` (pure-stdlib deterministic binary glTF), `scene_to_obj`
   (OBJ/MTL), `build_manifest` (source/raster/geometry/scene hashes + settings),
   `export_scene` (writes .glb/.obj/.mtl/.manifest.json via injected writer, with
-  per-asset SHA-256). Geometry exported at true 1× m; exaggeration recorded, not
+  per-asset SHA-256). Geometry exported at true 1x m; exaggeration recorded, not
   baked. **Decision #4 resolved: GLB + OBJ** (GeoTIFF deferred). Built before #18
-  per the spec's Phase F→G dependency. No open spec decisions remain.
+  per the spec's Phase F->G dependency. No open spec decisions remain.
 - **Epoch 4 #18 (progressive 3D preview):** committed (`6b0df6a`).
   `src/preview.py` + `tests/test_preview.py` (8):
-  `build_preview_asset` → deterministic coarse-`interaction` + fine-`commit`
-  heightfield tiles (row-major z, nodata → `null`), bounds/z-range from the
+  `build_preview_asset` -> deterministic coarse-`interaction` + fine-`commit`
+  heightfield tiles (row-major z, nodata -> `null`), bounds/z-range from the
   commit grid, per-LOD `cell_size_m`, optional Z-rivers as `[x,y,z]` meter
   polylines; `preview_json` = stable `sort_keys` serializer. `web/3d.html` gains
-  a "Load DEM preview…" control; `elevationAt()` bilinearly samples the
+  a "Load DEM preview..." control; `elevationAt()` bilinearly samples the
   interaction tile while orbiting / commit tile on release, replacing the
   synthetic field (now labeled experimental, still toggleable).
-- **Spec complete:** all coded items (#11–19) done. Remaining acceptance gate:
+- **Spec complete:** all coded items (#11-19) done. Remaining acceptance gate:
   a real (non-offline) Clark County / Oregon end-to-end DEM build to generate a
   live preview asset — needs GDAL + network.
 - Full suite: **276 passing**. Spec artifacts:
@@ -679,7 +697,7 @@ _Last updated: 2026-09-29, Epoch 33 complete (gallery catalog management, #146-#
 
 
 ## Project
-Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS→SVG
+Hydrographic Vector Art Generator: a Python 3.12+ (running 3.14.6) GIS->SVG
 pipeline turning USGS hydrography into neon river art for Oregon/Washington.
 Built incrementally following the Builder Methods Agent OS spec-driven workflow
 (specs in `agent-os/specs/YYYY-MM-DD-<name>/`).
@@ -688,14 +706,14 @@ Built incrementally following the Builder Methods Agent OS spec-driven workflow
 User drives with two commands:
 1. **"create tasks and implement item #N"** — write spec artifacts
    (`planning/requirements.md`, `spec.md`, `tasks.md`), then TDD-implement in
-   task groups (2–8 tests first per group, run ONLY those), mark `tasks.md`
+   task groups (2-8 tests first per group, run ONLY those), mark `tasks.md`
    checkboxes, write `implementation/report.md`, run full suite for
    regressions, smoke-test, then report and STOP.
 2. **"commit item #N"** — commit that item as a separate explicit step. Never
    commit without this.
 
 ## Status
-All 10 roadmap items implemented — the PRD §8 pipeline runs end-to-end with no
+All 10 roadmap items implemented — the PRD section 8 pipeline runs end-to-end with no
 stubs. All 10 items committed. Full suite: 147 tests passing (as of item #10).
 
 | # | Item | State |
@@ -723,9 +741,9 @@ stubs. All 10 items committed. Full suite: 147 tests passing (as of item #10).
 - Module errors subclass `AcquisitionError` (`src/datasets.py`).
 
 ## Roadmap complete — where things stand
-- The full PRD §8 pipeline is implemented (`download → extract → validate →
-  repair_geometries → reproject → clip_to_region → build_graph →
-  compute_watersheds → assign_colors → generate_svg → optimize_svg → export`);
+- The full PRD section 8 pipeline is implemented (`download -> extract -> validate ->
+  repair_geometries -> reproject -> clip_to_region -> build_graph ->
+  compute_watersheds -> assign_colors -> generate_svg -> optimize_svg -> export`);
   no stage is a stub.
 - `export` (`src/pipeline.py` `_export_stage`) writes `output_dir/<regions>.<fmt>`
   for each `settings.outputs`, records `artifacts["export_paths"]` and
@@ -736,4 +754,4 @@ stubs. All 10 items committed. Full suite: 147 tests passing (as of item #10).
   outputs; without them SVG still ships.
 - Possible follow-ups (not roadmap items): package/document the optional CLI
   tools (or add a `cairosvg` fallback), real raster tiling for 65536px, and the
-  PRD §33 future-work outputs (web/animated/GeoJSON/vector tiles).
+  PRD section 33 future-work outputs (web/animated/GeoJSON/vector tiles).

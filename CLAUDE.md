@@ -145,6 +145,12 @@ Self-contained HTML/JS (no build step, `file://`-safe). `studio.html` is the can
 | `HYDRO_ART_EXTERNAL_ROOT` | Redirect cache/datasets/output to an external drive (also `--external-root`) |
 | `DATABASE_URL` | PostgreSQL connection for operations ledger (optional; falls back to JSON) |
 | `HYDRO_ART_GMAIL_APP_PASSWORD` | Gmail app password for order emails (optional; logs "not configured" if unset) |
+| `HYDRO_ART_BASE_URL` | Base URL for proof/delivery email links (e.g. `https://riverglyph.enablesu.com`; falls back to `http://localhost:{port}`) |
+| `HYDRO_ART_PROOF_SECRET` | HMAC signing secret for proof tokens (falls back to dev default with warning) |
+| `HYDRO_ART_DELIVERY_SECRET` | HMAC signing secret for delivery tokens (falls back to dev default with warning) |
+| `HYDRO_ART_SENDER_EMAIL` | Override the From address on order emails (falls back to `FROM_ADDRESS` in `src/email_delivery.py`) |
+| `HYDRO_ART_SMTP_HOST` | SMTP server hostname (falls back to `smtp.gmail.com`) |
+| `HYDRO_ART_SMTP_PORT` | SMTP server port (falls back to `465`) |
 | `SOURCE_DATE_EPOCH` | Set to `0` for deterministic timestamps in rasterized output |
 | `HYDRO_ART_REAL_DATA` | Set to `1` to enable `@pytest.mark.real_data` tests |
 

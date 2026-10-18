@@ -141,6 +141,28 @@ def _order_payload(**overrides):
     return base
 
 
+def _email_plain_text(msg):
+    """Extract the decoded plain-text body from a (possibly multipart) email."""
+    payload = msg.get_payload()
+    if isinstance(payload, list):
+        for part in payload:
+            if part.get_content_type() == "text/plain":
+                raw = part.get_payload(decode=True)
+                if isinstance(raw, bytes):
+                    return raw.decode("utf-8", errors="replace")
+                return str(raw)
+        # Fallback: first part
+        raw = payload[0].get_payload(decode=True)
+        if isinstance(raw, bytes):
+            return raw.decode("utf-8", errors="replace")
+        return str(raw)
+    # Simple (non-multipart) message
+    raw = msg.get_payload(decode=True)
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", errors="replace")
+    return str(payload)
+
+
 def test_post_order_creates_request(tmp_path):
     from src.orders import OrderStore
 
@@ -267,7 +289,7 @@ def test_order_submit_auto_dispatches_render(tmp_path):
 
 
 def test_order_submit_bad_region_returns_400(tmp_path):
-    """Invalid region → 400."""
+    """Invalid region -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -279,7 +301,7 @@ def test_order_submit_bad_region_returns_400(tmp_path):
 
 
 def test_order_submit_missing_email_returns_400(tmp_path):
-    """No email → 400."""
+    """No email -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -291,7 +313,7 @@ def test_order_submit_missing_email_returns_400(tmp_path):
 
 
 def test_order_submit_prism_style_returns_400(tmp_path):
-    """PRISM art direction → 400 (rights gate)."""
+    """PRISM art direction -> 400 (rights gate)."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -320,7 +342,7 @@ def _setup_proof_ready_order(tmp_path):
 
 
 def test_proof_page_valid_token_200(tmp_path):
-    """Signed token → 200 with proof data."""
+    """Signed token -> 200 with proof data."""
     store, req, token, secret = _setup_proof_ready_order(tmp_path)
     runner = FakeRunner()
     resp = handle_request(
@@ -333,7 +355,7 @@ def test_proof_page_valid_token_200(tmp_path):
 
 
 def test_proof_page_expired_token_410(tmp_path):
-    """Expired token → 410 Gone."""
+    """Expired token -> 410 Gone."""
     from src.orders import OrderStore
     from src.proof import sign_proof_url
 
@@ -352,7 +374,7 @@ def test_proof_page_expired_token_410(tmp_path):
 
 
 def test_proof_page_invalid_token_403(tmp_path):
-    """Bad signature → 403 Forbidden."""
+    """Bad signature -> 403 Forbidden."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -364,7 +386,7 @@ def test_proof_page_invalid_token_403(tmp_path):
 
 
 def test_proof_approve_transitions_order(tmp_path):
-    """POST approve → order status = approved."""
+    """POST approve -> order status = approved."""
     store, req, token, secret = _setup_proof_ready_order(tmp_path)
     resp = handle_request(
         runner=FakeRunner(), method="POST", path=f"/api/proof/{token}/approve",
@@ -379,7 +401,7 @@ def test_proof_approve_transitions_order(tmp_path):
 
 
 def test_proof_adjust_triggers_rerender(tmp_path):
-    """POST adjust → order status = rendering."""
+    """POST adjust -> order status = rendering."""
     store, _req, token, secret = _setup_proof_ready_order(tmp_path)
     runner = FakeRunner()
     adjust_payload = json.dumps({"style": "neon-basin"}).encode()
@@ -504,7 +526,7 @@ def test_webhook_bad_signature_rejected(tmp_path):
 # --- Epoch 29: delivery routes --------------------------------------------
 
 def test_delivery_valid_token_200(tmp_path):
-    """Signed delivery token → 200 with order data."""
+    """Signed delivery token -> 200 with order data."""
     from src.orders import OrderStore
     from src.proof import sign_delivery_url
 
@@ -532,7 +554,7 @@ def test_delivery_valid_token_200(tmp_path):
 
 
 def test_delivery_expired_token_410(tmp_path):
-    """Expired delivery token → 410."""
+    """Expired delivery token -> 410."""
     from src.orders import OrderStore
     from src.proof import sign_delivery_url
 
@@ -552,7 +574,7 @@ def test_delivery_expired_token_410(tmp_path):
 # --- Coverage gap: PATCH error paths (lines 268-276) -------------------------
 
 def test_patch_order_bad_json_returns_400(tmp_path):
-    """PATCH with non-JSON body → 400."""
+    """PATCH with non-JSON body -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -564,7 +586,7 @@ def test_patch_order_bad_json_returns_400(tmp_path):
 
 
 def test_patch_order_missing_status_returns_400(tmp_path):
-    """PATCH with empty JSON (no status field) → 400."""
+    """PATCH with empty JSON (no status field) -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -576,7 +598,7 @@ def test_patch_order_missing_status_returns_400(tmp_path):
 
 
 def test_patch_order_unknown_id_returns_404(tmp_path):
-    """PATCH a nonexistent order → 404."""
+    """PATCH a nonexistent order -> 404."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -637,7 +659,7 @@ def test_patch_to_fulfilled_sends_delivery_email(tmp_path):
 # --- Coverage gap: _start_render route (lines 319-344) -----------------------
 
 def test_start_render_unknown_id_returns_404(tmp_path):
-    """POST /api/orders/<unknown>/render → 404."""
+    """POST /api/orders/<unknown>/render -> 404."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -667,7 +689,7 @@ def test_start_render_accepted_order_returns_202(tmp_path):
 
 
 def test_start_render_config_error_returns_400(tmp_path):
-    """POST /api/orders/<id>/render with ConfigError from runner → 400."""
+    """POST /api/orders/<id>/render with ConfigError from runner -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -707,7 +729,7 @@ def test_gallery_outputs_lists_files(tmp_path):
 
 
 def test_gallery_outputs_empty_dir(tmp_path):
-    """GET /api/gallery/outputs when directory does not exist → empty list."""
+    """GET /api/gallery/outputs when directory does not exist -> empty list."""
     resp = handle_request(
         FakeRunner(), "GET", "/api/gallery/outputs", b"",
         web_root=str(tmp_path), output_root=str(tmp_path / "nonexistent"),
@@ -735,7 +757,7 @@ def test_output_static_proxy_serves_file(tmp_path):
 # --- Coverage gap: POST body-is-not-object check (line 97) ------------------
 
 def test_post_render_non_object_json_returns_400(tmp_path):
-    """POST /api/render with JSON array → 400."""
+    """POST /api/render with JSON array -> 400."""
     resp = _req(FakeRunner(), "POST", "/api/render", b'[1, 2]', web_root=tmp_path)
     assert resp.status == 400
     assert "object" in json.loads(resp.body)["error"].lower()
@@ -744,7 +766,7 @@ def test_post_render_non_object_json_returns_400(tmp_path):
 # --- Coverage gap: POST order body-is-not-object (line 209) ------------------
 
 def test_post_order_non_object_json_returns_400(tmp_path):
-    """POST /api/orders with JSON array → 400."""
+    """POST /api/orders with JSON array -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -776,7 +798,7 @@ def test_create_order_runner_failure_still_creates_request(tmp_path):
 # --- Coverage gap: proof unknown request_id (lines 440-441) ------------------
 
 def test_proof_valid_token_unknown_request_404(tmp_path):
-    """Signed token for a request_id not in store → 404."""
+    """Signed token for a request_id not in store -> 404."""
     from src.orders import OrderStore
     from src.proof import sign_proof_url
 
@@ -793,7 +815,7 @@ def test_proof_valid_token_unknown_request_404(tmp_path):
 # --- Coverage gap: proof fallthrough (line 474) ------------------------------
 
 def test_proof_unmatched_method_returns_404(tmp_path):
-    """GET /api/proof/<token>/approve (GET + action) → 404."""
+    """GET /api/proof/<token>/approve (GET + action) -> 404."""
     store, _req, token, secret = _setup_proof_ready_order(tmp_path)
     resp = handle_request(
         runner=FakeRunner(), method="GET", path=f"/api/proof/{token}/approve",
@@ -806,7 +828,7 @@ def test_proof_unmatched_method_returns_404(tmp_path):
 # --- Coverage gap: webhook unknown request_id (lines 382-383) ----------------
 
 def test_webhook_unknown_request_id_returns_404(tmp_path):
-    """Webhook with valid sig but unknown request_id → 404."""
+    """Webhook with valid sig but unknown request_id -> 404."""
     import hashlib
     import hmac as hmac_mod
     import time as time_mod
@@ -843,7 +865,7 @@ def test_webhook_unknown_request_id_returns_404(tmp_path):
 # --- Coverage gap: delivery invalid token (line 354) -------------------------
 
 def test_delivery_invalid_token_returns_403(tmp_path):
-    """Bad delivery token → 403."""
+    """Bad delivery token -> 403."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -859,7 +881,7 @@ def test_delivery_invalid_token_returns_403(tmp_path):
 # --- Coverage gap: delivery valid token, unknown request (lines 360-361) ------
 
 def test_delivery_valid_token_unknown_request_404(tmp_path):
-    """Signed delivery token for unknown request_id → 404."""
+    """Signed delivery token for unknown request_id -> 404."""
     from src.orders import OrderStore
     from src.proof import sign_delivery_url
 
@@ -878,7 +900,7 @@ def test_delivery_valid_token_unknown_request_404(tmp_path):
 # --- Coverage gap: unrouted method falls through (line 145) ------------------
 
 def test_unmatched_method_returns_404(tmp_path):
-    """Non-GET/POST to unknown route → 404."""
+    """Non-GET/POST to unknown route -> 404."""
     resp = _req(FakeRunner(), "DELETE", "/api/something", web_root=tmp_path)
     assert resp.status == 404
 
@@ -886,7 +908,7 @@ def test_unmatched_method_returns_404(tmp_path):
 # --- Coverage gap: order_dispatch POST /render via nested route (lines 188-192)
 
 def test_order_dispatch_post_non_render_suffix_404(tmp_path):
-    """POST /api/orders/<id>/unknown → 404."""
+    """POST /api/orders/<id>/unknown -> 404."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -900,7 +922,7 @@ def test_order_dispatch_post_non_render_suffix_404(tmp_path):
 # --- Coverage gap: order_dispatch fallthrough (line 198) ---------------------
 
 def test_order_dispatch_put_returns_404(tmp_path):
-    """PUT /api/orders → 404 (only GET, POST, PATCH handled)."""
+    """PUT /api/orders -> 404 (only GET, POST, PATCH handled)."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -914,7 +936,7 @@ def test_order_dispatch_put_returns_404(tmp_path):
 # --- Coverage gap: _artifact unknown job (lines 159-160) ---------------------
 
 def test_artifact_unknown_job_returns_404(tmp_path):
-    """GET /api/jobs/<unknown>/artifact → 404."""
+    """GET /api/jobs/<unknown>/artifact -> 404."""
     resp = _req(FakeRunner(), "GET", "/api/jobs/unknown123/artifact?fmt=svg",
                 web_root=tmp_path)
     assert resp.status == 404
@@ -923,7 +945,7 @@ def test_artifact_unknown_job_returns_404(tmp_path):
 # --- Coverage gap: GET on /render route (lines 182-184) ----------------------
 
 def test_get_order_render_returns_405(tmp_path):
-    """GET /api/orders/<id>/render → 405 POST required."""
+    """GET /api/orders/<id>/render -> 405 POST required."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -934,14 +956,14 @@ def test_get_order_render_returns_405(tmp_path):
         web_root=str(tmp_path), order_store=store,
     )
     # The code path is: GET + startswith /api/orders/ + endswith /render
-    # → enters line 181 (method == "POST" is False) → line 184 returns 405
+    # -> enters line 181 (method == "POST" is False) -> line 184 returns 405
     assert resp.status in (404, 405)
 
 
 # --- Coverage gap: create_order bad JSON bytes (lines 206-207) ---------------
 
 def test_create_order_bad_bytes_returns_400(tmp_path):
-    """POST /api/orders with non-decodable bytes → 400."""
+    """POST /api/orders with non-decodable bytes -> 400."""
     from src.orders import OrderStore
 
     store = OrderStore(tmp_path / "orders")
@@ -953,7 +975,7 @@ def test_create_order_bad_bytes_returns_400(tmp_path):
 # --- Coverage gap: webhook invalid transition (lines 389-390) ----------------
 
 def test_webhook_already_paid_returns_400(tmp_path):
-    """Webhook for an order already past payment_pending → 400."""
+    """Webhook for an order already past payment_pending -> 400."""
     import hashlib
     import hmac as hmac_mod
     import time as time_mod
@@ -996,13 +1018,13 @@ def test_webhook_already_paid_returns_400(tmp_path):
 # --- Coverage gap: proof approve invalid transition (lines 449-450) ----------
 
 def test_proof_approve_wrong_state_returns_400(tmp_path):
-    """POST approve on an order not in proof_ready → 400."""
+    """POST approve on an order not in proof_ready -> 400."""
     from src.orders import OrderStore
     from src.proof import sign_proof_url
 
     store = OrderStore(tmp_path / "orders")
     req = store.create_request(_order_payload())
-    # Don't advance to proof_ready — stay in 'submitted'
+    # Don't advance to proof_ready -- stay in 'submitted'
     secret = b"test-secret"
     token = sign_proof_url(req.request_id, secret, expires_in=3600)
     resp = handle_request(
@@ -1016,7 +1038,7 @@ def test_proof_approve_wrong_state_returns_400(tmp_path):
 # --- Coverage gap: proof adjust runner error (lines 469-470) -----------------
 
 def test_proof_adjust_runner_error_returns_400(tmp_path):
-    """POST adjust with runner that raises → 400."""
+    """POST adjust with runner that raises -> 400."""
     store, _r, token, secret = _setup_proof_ready_order(tmp_path)
     runner = FakeRunner(submit_error=ConfigError("bad"))
     resp = handle_request(
@@ -1058,7 +1080,7 @@ def test_start_render_catches_order_error_on_transition(tmp_path):
         path=f"/api/orders/{req.request_id}/render", body=b"",
         web_root=str(tmp_path), order_store=store,
     )
-    # Should succeed (202) — the OrderError from update_status is swallowed
+    # Should succeed (202) -- the OrderError from update_status is swallowed
     assert resp.status == 202
 
 
@@ -1176,3 +1198,165 @@ def test_gallery_outputs_skips_underscore_files(tmp_path):
     names = [f["name"] for f in json.loads(resp.body)["files"]]
     assert "art.svg" in names
     assert "_internal.svg" not in names
+
+
+# --- Email config hardening: base_url + secrets threading (Group 2) ----------
+
+def test_update_order_proof_url_uses_base_url(tmp_path):
+    """_update_order constructs proof_url using provided base_url."""
+    from src.orders import OrderStore
+    from src.server import _update_order
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+
+    sender = FakeEmailSender()
+    body = json.dumps({"status": "proof_ready"}).encode()
+    _update_order(
+        store, req.request_id, body, sender,
+        base_url="https://art.example.com",
+        proof_secret=b"test-secret",
+    )
+    assert len(sender.sent) == 1
+    body_text = _email_plain_text(sender.sent[0])
+    assert "https://art.example.com/proof.html?token=" in body_text
+    assert "localhost" not in body_text
+
+
+def test_update_order_delivery_url_uses_base_url(tmp_path):
+    """_update_order constructs delivery_url using provided base_url."""
+    from src.orders import OrderStore
+    from src.server import _update_order
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+    store.update_status(req.request_id, "proof_ready")
+    store.update_status(req.request_id, "approved")
+    store.update_status(req.request_id, "payment_pending")
+    store.update_status(req.request_id, "paid")
+
+    sender = FakeEmailSender()
+    body = json.dumps({"status": "fulfilled"}).encode()
+    _update_order(
+        store, req.request_id, body, sender,
+        base_url="https://art.example.com",
+        proof_secret=b"test-secret",
+    )
+    assert len(sender.sent) == 1
+    body_text = _email_plain_text(sender.sent[0])
+    assert "https://art.example.com/delivery.html?order=" in body_text
+    assert "localhost" not in body_text
+
+
+def test_update_order_uses_provided_proof_secret(tmp_path):
+    """_update_order uses provided proof_secret for token signing."""
+    from src.orders import OrderStore
+    from src.proof import verify_proof_token
+    from src.server import _update_order
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+
+    sender = FakeEmailSender()
+    custom_secret = b"my-custom-secret-key"
+    body = json.dumps({"status": "proof_ready"}).encode()
+    _update_order(
+        store, req.request_id, body, sender,
+        base_url="http://localhost:9999",
+        proof_secret=custom_secret,
+    )
+    # Extract the token from the proof URL in the email
+    body_text = _email_plain_text(sender.sent[0])
+    # URL is like http://localhost:9999/proof.html?token=<TOKEN>
+    token = body_text.split("token=")[1].split()[0].strip()
+    # Verify the token was signed with the custom secret
+    request_id, valid = verify_proof_token(token, custom_secret)
+    assert request_id == req.request_id
+    assert valid is True
+    # Verify it does NOT validate with the old hardcoded secret
+    _, valid_old = verify_proof_token(token, b"proof-secret")
+    assert valid_old is False
+
+
+def test_handle_request_threads_base_url_to_update_order(tmp_path):
+    """handle_request passes base_url kwarg through to _update_order."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+
+    sender = FakeEmailSender()
+    body = json.dumps({"status": "proof_ready"}).encode()
+    resp = handle_request(
+        FakeRunner(), "PATCH", f"/api/orders/{req.request_id}", body,
+        web_root=str(tmp_path), order_store=store, email_sender=sender,
+        proof_secret=b"test-secret",
+        base_url="https://mysite.example.com",
+    )
+    assert resp.status == 200
+    assert len(sender.sent) == 1
+    body_text = _email_plain_text(sender.sent[0])
+    assert "https://mysite.example.com/proof.html?token=" in body_text
+
+
+def test_handle_request_threads_proof_secret_to_update_order(tmp_path):
+    """handle_request passes proof_secret kwarg through to _update_order."""
+    from src.orders import OrderStore
+    from src.proof import verify_proof_token
+
+    store = OrderStore(tmp_path / "orders")
+    req = store.create_request(_order_payload())
+    store.update_status(req.request_id, "accepted")
+    store.update_status(req.request_id, "rendering")
+
+    sender = FakeEmailSender()
+    custom_secret = b"handle-request-secret"
+    body = json.dumps({"status": "proof_ready"}).encode()
+    resp = handle_request(
+        FakeRunner(), "PATCH", f"/api/orders/{req.request_id}", body,
+        web_root=str(tmp_path), order_store=store, email_sender=sender,
+        proof_secret=custom_secret,
+        base_url="http://localhost:8765",
+    )
+    assert resp.status == 200
+    # Extract token and verify it was signed with the custom secret
+    body_text = _email_plain_text(sender.sent[0])
+    token = body_text.split("token=")[1].split()[0].strip()
+    request_id, valid = verify_proof_token(token, custom_secret)
+    assert request_id == req.request_id
+    assert valid is True
+
+
+def test_serve_default_base_url_uses_port(tmp_path):
+    """Default base_url of None in serve() falls back to http://localhost:{port}."""
+    from unittest.mock import patch
+
+    from src.server import make_handler, serve
+
+    captured = {}
+
+    original_make_handler = make_handler
+
+    def spy_make_handler(*args, **kwargs):
+        captured.update(kwargs)
+        return original_make_handler(*args, **kwargs)
+
+    with patch("src.server.make_handler", side_effect=spy_make_handler), \
+         patch("src.server.ThreadingHTTPServer") as mock_httpd:
+        mock_httpd.return_value.serve_forever.return_value = None
+        serve(
+            FakeRunner(),
+            port=9876,
+            web_root=str(tmp_path),
+            base_url=None,  # should default to http://localhost:9876
+        )
+
+    assert captured.get("base_url") == "http://localhost:9876"

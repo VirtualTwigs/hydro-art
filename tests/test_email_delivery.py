@@ -6,6 +6,7 @@ Offline — uses a fake sender, never touches SMTP.
 from __future__ import annotations
 
 from src.email_delivery import (
+    FROM_ADDRESS,
     _build_confirmation_message,
     _build_message,
     _build_proof_message,
@@ -248,7 +249,7 @@ class TestEmailFailurePaths:
 
 
 def test_send_proof_email_default_sender_no_password(monkeypatch):
-    """send_proof_email with sender=None falls back to SmtpSender (no password → False)."""
+    """send_proof_email with sender=None falls back to SmtpSender (no password -> False)."""
     from src.email_delivery import send_proof_email
 
     monkeypatch.delenv("HYDRO_ART_GMAIL_APP_PASSWORD", raising=False)
@@ -257,7 +258,7 @@ def test_send_proof_email_default_sender_no_password(monkeypatch):
 
 
 def test_send_delivery_email_default_sender_no_password(monkeypatch):
-    """send_delivery_email with sender=None falls back to SmtpSender (no password → False)."""
+    """send_delivery_email with sender=None falls back to SmtpSender (no password -> False)."""
     monkeypatch.delenv("HYDRO_ART_GMAIL_APP_PASSWORD", raising=False)
     result = send_delivery_email("a@b.com", "ORD-001", "http://dl")
     assert result is False
@@ -299,3 +300,59 @@ def test_smtp_sender_send_with_password(monkeypatch):
     sender = SmtpSender()
     assert sender.send(msg) is True
     assert len(sent_messages) == 1
+
+
+# --- Group 1: SmtpSender refactor — configurable host/port/sender -----------
+
+
+class TestSmtpSenderConfigurable:
+    """SmtpSender.__init__ accepts custom host, port, sender_email."""
+
+    def test_stores_custom_host_port_sender(self):
+        from src.email_delivery import SmtpSender
+
+        sender = SmtpSender(
+            app_password="pw",
+            host="mail.example.com",
+            port=587,
+            sender_email="ops@example.com",
+        )
+        assert sender._host == "mail.example.com"
+        assert sender._port == 587
+        assert sender._sender == "ops@example.com"
+
+    def test_defaults_to_gmail(self):
+        from src.email_delivery import SmtpSender
+
+        sender = SmtpSender(app_password="pw")
+        assert sender._host == "smtp.gmail.com"
+        assert sender._port == 465
+        assert sender._sender == FROM_ADDRESS
+
+
+class TestBuildHelpersFromAddress:
+    """_build_* helpers accept optional from_address to override msg['From']."""
+
+    def test_build_proof_message_custom_from(self):
+        custom = "art@runde.co"
+        msg = _build_proof_message(
+            "buyer@example.com", "REQ-001", "http://proof",
+            from_address=custom,
+        )
+        assert msg["From"] == custom
+
+    def test_build_delivery_message_custom_from(self):
+        custom = "art@runde.co"
+        msg = _build_message(
+            "buyer@example.com", "REQ-001", "http://dl",
+            from_address=custom,
+        )
+        assert msg["From"] == custom
+
+    def test_build_confirmation_message_custom_from(self):
+        custom = "art@runde.co"
+        msg = _build_confirmation_message(
+            "buyer@example.com", "REQ-001",
+            from_address=custom,
+        )
+        assert msg["From"] == custom

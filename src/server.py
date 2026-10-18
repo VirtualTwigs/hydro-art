@@ -79,6 +79,7 @@ def handle_request(
     webhook_secret: str | None = None,
     headers: dict[str, str] | None = None,
     delivery_secret: bytes | None = None,
+    base_url: str | None = None,
 ) -> Response:
     """Route one request to the job runner or the static file tree.
 
@@ -128,7 +129,10 @@ def handle_request(
 
     # --- Order routes (concierge flow) ------------------------------------
     if order_store is not None and route.startswith("/api/orders"):
-        return _order_dispatch(order_store, runner, method, route, body, email_sender)
+        return _order_dispatch(
+            order_store, runner, method, route, body, email_sender,
+            base_url=base_url, proof_secret=proof_secret,
+        )
 
     # --- Gallery output listing ---------------------------------------------
     if method == "GET" and route == "/api/gallery/outputs" and output_root:
@@ -168,6 +172,9 @@ def _artifact(runner: Any, job_id: str, fmt: str) -> Response:
 def _order_dispatch(
     store: Any, runner: Any, method: str, route: str, body: bytes,
     email_sender: Any = None,
+    *,
+    base_url: str | None = None,
+    proof_secret: bytes | None = None,
 ) -> Response:
     """Handle /api/orders routes for the concierge ordering flow."""
     if method == "POST" and route == "/api/orders":
@@ -193,7 +200,10 @@ def _order_dispatch(
 
     if method == "PATCH" and route.startswith("/api/orders/"):
         request_id = route[len("/api/orders/"):]
-        return _update_order(store, request_id, body, email_sender)
+        return _update_order(
+            store, request_id, body, email_sender,
+            base_url=base_url, proof_secret=proof_secret,
+        )
 
     return _json(404, {"error": "Not found."})
 
@@ -262,6 +272,7 @@ def _get_order(store: Any, request_id: str) -> Response:
 
 def _update_order(
     store: Any, request_id: str, body: bytes, email_sender: Any = None,
+    *, base_url: str | None = None, proof_secret: bytes | None = None,
 ) -> Response:
     try:
         payload = json.loads(body or b"{}")
@@ -277,14 +288,17 @@ def _update_order(
     except OrderError as exc:
         return _json(400, {"error": str(exc)})
 
+    # Resolve base_url fallback.
+    effective_base_url = base_url or "http://localhost:8765"
+
     # Send proof email when proof is ready.
     email_sent = False
     if status == "proof_ready" and req.email:
         from src.proof import sign_proof_url
 
-        proof_secret = b"proof-secret"  # TODO: pass from handler config
-        token = sign_proof_url(request_id, proof_secret)
-        proof_url = f"http://localhost:8765/proof.html?token={token}"
+        effective_secret = proof_secret or b"proof-secret"
+        token = sign_proof_url(request_id, effective_secret)
+        proof_url = f"{effective_base_url}/proof.html?token={token}"
         email_sent = send_proof_email(
             req.email,
             request_id,
@@ -299,7 +313,7 @@ def _update_order(
         county = order.get("county", "")
         region = order.get("region", "")
         location = f"{county} County, {region}" if county else region
-        delivery_url = f"http://localhost:8765/delivery.html?order={request_id}"
+        delivery_url = f"{effective_base_url}/delivery.html?order={request_id}"
         email_sent = send_delivery_email(
             req.email,
             request_id,
@@ -519,6 +533,7 @@ def make_handler(
     order_store: Any = None,
     email_sender: Any = None, proof_secret: bytes | None = None,
     webhook_secret: str | None = None, delivery_secret: bytes | None = None,
+    base_url: str | None = None,
 ) -> type[BaseHTTPRequestHandler]:
     """Build a request handler class bound to ``runner`` and ``web_root``."""
 
@@ -539,6 +554,7 @@ def make_handler(
                 webhook_secret=webhook_secret,
                 headers=hdrs or None,
                 delivery_secret=delivery_secret,
+                base_url=base_url,
             )
             self.send_response(resp.status)
             self.send_header("Content-Type", resp.content_type)
@@ -573,18 +589,21 @@ def serve(
     proof_secret: bytes | None = None,
     webhook_secret: str | None = None,
     delivery_secret: bytes | None = None,
+    base_url: str | None = None,
 ) -> ThreadingHTTPServer:
     """Start a localhost server delegating to :func:`handle_request` (blocking).
 
     Thin and not unit tested (sockets stay out of the suite); the routing it delegates
     to is covered by :func:`handle_request` tests.
     """
+    effective_base_url = base_url if base_url is not None else f"http://localhost:{port}"
     handler = make_handler(
         runner, str(web_root),
         output_root=str(output_root) if output_root else None,
         order_store=order_store, email_sender=email_sender,
         proof_secret=proof_secret, webhook_secret=webhook_secret,
         delivery_secret=delivery_secret,
+        base_url=effective_base_url,
     )
     httpd = ThreadingHTTPServer((host, port), handler)
     httpd.serve_forever()
