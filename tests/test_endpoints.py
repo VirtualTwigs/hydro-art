@@ -330,3 +330,37 @@ def test_e2e_digest_duplicate_endpoint_raises():
     req = build_endpoint_request(_payload())
     with pytest.raises(EndpointError, match="Duplicate"):
         e2e_contract_digest([req, req])
+
+
+# --- Group 6: report endpoint notebook/PDF formats (Epoch 27) -----------------
+
+def test_report_contract_includes_notebook_and_pdf_formats():
+    """Report endpoint contract includes ipynb (notebook) and pdf (document)."""
+    contract = ENDPOINT_CONTRACTS["report"]
+    assert ("ipynb", "notebook") in contract.formats
+    assert ("pdf", "document") in contract.formats
+
+
+def test_endpoint_plan_generates_ipynb_and_pdf_deliverables():
+    """endpoint_plan produces {stem}.ipynb and {stem}.pdf for report requests."""
+    req = build_endpoint_request(
+        _payload(endpoint="report", huc="17080003", formats=["ipynb", "pdf"])
+    )
+    plan = endpoint_plan(req)
+    filenames = [d.filename for d in plan.items]
+    assert any(f.endswith(".ipynb") for f in filenames)
+    assert any(f.endswith(".pdf") for f in filenames)
+    # Check kinds are correct.
+    kind_map = {d.fmt: d.kind for d in plan.items}
+    assert kind_map["ipynb"] == "notebook"
+    assert kind_map["pdf"] == "document"
+
+
+def test_report_notebook_pdf_formats_pass_rights_gate():
+    """Requesting notebook or pdf format does not break assert_sellable."""
+    for fmt in ("ipynb", "pdf"):
+        req = build_endpoint_request(
+            _payload(endpoint="report", huc="17080003", formats=[fmt])
+        )
+        # Should not raise -- public-domain sources are sellable.
+        assert_sellable(req)

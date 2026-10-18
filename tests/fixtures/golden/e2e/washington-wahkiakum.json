@@ -71,6 +71,20 @@
         "height_px": null,
         "kind": "figures",
         "width_px": null
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_report.ipynb",
+        "fmt": "ipynb",
+        "height_px": null,
+        "kind": "notebook",
+        "width_px": null
+      },
+      {
+        "filename": "REQ-E2E-1_washington-wahkiakum_neon-basin_report.pdf",
+        "fmt": "pdf",
+        "height_px": null,
+        "kind": "document",
+        "width_px": null
       }
     ]
   },

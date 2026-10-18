@@ -19,6 +19,7 @@
 
 | 142–145 | 32 | Report builder with paywall preview | **Done** (2026-09-21) | — |
 | 146–153 | 33 | Gallery catalog management | **Done** (2026-09-29) | — |
+| 154–158 | 34 | Jupyter notebook report + PDF export | Not started | — |
 
 **Revenue gate timing:** measure #59 for 60 days from the actual listing go-live date. The
 2026-08-30 planning window did not start the measurement clock; record the launch date in the
@@ -609,6 +610,40 @@ By Region, etc.), and versions entries when re-rendered. Operator-facing CLI
 
 Epoch gate: operator can ingest renders, curate through the status lifecycle, and
 export a structured public gallery — all from the CLI, no hand-editing JSON.
+
+---
+
+### Epoch 34 — Jupyter notebook report + PDF export · not started
+
+Programmatic notebook assembly and PDF conversion for the watershed report
+pipeline. Reports delivered as downloadable `.ipynb` or `.pdf` alongside
+existing PNG figures. New `src/notebook_report.py` assembles notebooks from
+pre-computed metrics/figures (offline-testable); `NotebookConverter` protocol
+provides injectable PDF conversion via nbconvert + weasyprint. No pipeline
+changes; report is a parallel subsystem.
+
+154. [ ] Notebook assembly module — `src/notebook_report.py`: `build_notebook`,
+`save_notebook`, section filtering, base64 figure embedding, attribution cell.
+`nbformat` added to `pyproject.toml`. 8 offline tests. `M`
+
+155. [ ] PDF converter seam — `NotebookConverter` protocol, `NbconvertPdfConverter`
+(lazy-imports nbconvert + weasyprint), dark-theme CSS, `SOURCE_DATE_EPOCH`
+determinism. `nbconvert` + `weasyprint` in `requirements.txt`. `S`
+
+156. [ ] Endpoint contract + CLI — `ipynb` + `pdf` formats in report
+`EndpointContract`; `--notebook` / `--pdf` flags on
+`tools/build_watershed_report.py`. 3 tests. `S`
+
+157. [ ] Web report page — PDF + Notebook buttons in `web/report.html` format
+chooser, wired into order CTA URL. `XS`
+
+158. [ ] Real-data smoke + close — CLI notebook + PDF from real watershed data,
+determinism check, full suite regression, docs sweep. `S`
+
+Epoch gate: `tools/build_watershed_report.py --notebook --pdf` produces a
+readable Jupyter notebook and PDF from real watershed data; the notebook
+round-trips through `nbformat.read`; the PDF renders all sections legibly with
+the dark neon theme; the offline suite stays green; no `PIPELINE_STAGES` change.
 
 ---
 

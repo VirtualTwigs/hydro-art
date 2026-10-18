@@ -103,6 +103,7 @@ Three categories of modules live in `src/` — know which you're touching:
    - **3D / terrain:** `dem`/`elevation`/`hydro_z`/`raster`/`raster_io`/`terrain`/`hillshade`/`compositing`/`scene`/`camera`/`mesh`/`export3d`
    - **Flow / climate:** `monthly_flow`/`historical_flow`/`climate_grid`/`flow_metrics`/`flowline_channels`
    - **Commerce / fulfillment:** `orders`/`ledger`/`ledger_pg`/`payment`/`shipping`/`delivery`/`email_delivery`/`print_vendor`/`proof`/`trip_overlay`/`fulfillment`/`preview`
+   - **Report delivery:** `notebook_report` (Jupyter notebook assembly + PDF conversion from pre-computed metrics/figures; `nbformat` at top-level, `nbconvert`/`weasyprint` lazy-imported behind `NotebookConverter` seam)
    - **Production / ops:** `endpoints`/`catalog`/`gallery`/`release`/`manifest`/`changelog`/`analytics`/`accuracy`
    - **Infrastructure:** `determinism`/`status`/`unfinished`/`packaging`/`storage`/`jobs`/`server`
 

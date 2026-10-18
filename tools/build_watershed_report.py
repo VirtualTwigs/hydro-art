@@ -56,6 +56,10 @@ def main() -> int:
                     help="Climate source: nclimgrid (public domain, default) or "
                          "prism (legacy, rights-gated).")
     ap.add_argument("--out-dir", default=str(FIG_DIR))
+    ap.add_argument("--notebook", action="store_true",
+                    help="Write a Jupyter notebook (.ipynb) alongside the figures.")
+    ap.add_argument("--pdf", action="store_true",
+                    help="Write a PDF report (implies --notebook).")
     args = ap.parse_args()
 
     print(f"loading {args.name} ({args.start}–{args.end}) ...")
@@ -87,13 +91,34 @@ def main() -> int:
         index_by_year = idx
         print(f"  index: {len(idx)} years")
 
+    out_dir = Path(args.out_dir)
     summary = build_report(
         ws, gauge_obs=gauge_obs, gauge_loc=gauge_loc, index_by_year=index_by_year,
         index_name=args.index.upper(), creative=not args.no_creative,
-        out_dir=Path(args.out_dir),
+        out_dir=out_dir,
     )
     print(f"\nwrote figures to {args.out_dir}/")
     print(json.dumps(summary, indent=2, sort_keys=True, default=str))
+
+    # Optional notebook / PDF post-processing.
+    if args.notebook or args.pdf:
+        from src.notebook_report import build_notebook, notebook_to_pdf, save_notebook
+
+        tag = ws.name.lower().replace(" ", "_")
+        nb = build_notebook(
+            ws.name,
+            (args.start, args.end),
+            summary,
+            out_dir,
+            fig_prefix=tag + "_",
+        )
+        nb_path = save_notebook(nb, out_dir / f"{tag}_report.ipynb")
+        print(f"Notebook: {nb_path}")
+
+        if args.pdf:
+            pdf_path = notebook_to_pdf(nb, out_dir / f"{tag}_report.pdf")
+            print(f"PDF: {pdf_path}")
+
     return 0
 
 

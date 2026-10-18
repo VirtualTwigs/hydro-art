@@ -114,7 +114,12 @@ ENDPOINT_CONTRACTS: dict[str, EndpointContract] = {
     ),
     "report": EndpointContract(
         endpoint="report",
-        formats=(("html", "document"), ("png", "figures")),
+        formats=(
+            ("html", "document"),
+            ("png", "figures"),
+            ("ipynb", "notebook"),
+            ("pdf", "document"),
+        ),
         stem_suffix="report",
     ),
 }

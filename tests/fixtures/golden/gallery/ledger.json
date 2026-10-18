@@ -1087,6 +1087,22 @@
           "kind": "figures",
           "sha256": null,
           "width_px": null
+        },
+        {
+          "filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.ipynb",
+          "fmt": "ipynb",
+          "height_px": null,
+          "kind": "notebook",
+          "sha256": null,
+          "width_px": null
+        },
+        {
+          "filename": "wa-neon-report_washington-wahkiakum_neon-basin_report.pdf",
+          "fmt": "pdf",
+          "height_px": null,
+          "kind": "document",
+          "sha256": null,
+          "width_px": null
         }
       ],
       "endpoint": "report",
