@@ -172,6 +172,17 @@
   var selected = new Set();   // set of filenames
   var lbIndex = -1;           // current lightbox index in filtered[]
 
+  // ---- Gallery image fallback ----
+
+  /** Replace a failed <img> with the "Preview coming soon" placeholder. */
+  function galleryImgFallback(img) {
+    img.style.display = "none";
+    var ph = document.createElement("div");
+    ph.className = "no-preview";
+    ph.textContent = "Preview coming soon";
+    img.parentElement.appendChild(ph);
+  }
+
   // ---- Curated gallery rendering ----
 
   function renderCuratedGallery(data) {
@@ -209,18 +220,16 @@
 
         var thumb = document.createElement("div");
         thumb.className = "thumb";
-        if (entry.thumbnail) {
-          var img = document.createElement("img");
-          img.src = entry.thumbnail;
-          img.alt = entry.title;
-          img.loading = "lazy";
-          thumb.appendChild(img);
-        } else {
-          var noP = document.createElement("div");
-          noP.className = "no-preview";
-          noP.textContent = "Preview coming soon";
-          thumb.appendChild(noP);
-        }
+
+        var img = document.createElement("img");
+        img.src = entry.thumbnail
+          ? entry.thumbnail
+          : "/output/gallery/" + entry.entry_id + "/" + entry.entry_id + ".png";
+        img.alt = entry.title;
+        img.loading = "lazy";
+        img.onerror = function () { galleryImgFallback(this); };
+        thumb.appendChild(img);
+
         card.appendChild(thumb);
 
         var info = document.createElement("div");

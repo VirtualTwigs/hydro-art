@@ -69,11 +69,11 @@
   .card{ grid-column:span 1; position:relative; display:flex; flex-direction:column; border:var(--edge); border-radius:4px; background:linear-gradient(180deg,var(--panel),var(--bg-2)); overflow:hidden; transition:transform .25s, border-color .25s, box-shadow .25s; }
   .card.feature{ grid-column:span 2; }
   .card:hover{ transform:translateY(-4px); border-color:rgba(0,255,255,.4); box-shadow:0 24px 50px rgba(0,0,0,.5); }
-  .card .thumb{ position:relative; aspect-ratio:4/3; background:#05060a; overflow:hidden; }
+  .card .thumb{ position:relative; aspect-ratio:4/3; background:#05060a; overflow:hidden; z-index:3; cursor:pointer; }
   .card.feature .thumb{ aspect-ratio:16/9; }
   .card .thumb img{ width:100%; height:100%; object-fit:cover; display:block; transform:scale(1.01); transition:transform .5s ease; }
   .card:hover .thumb img{ transform:scale(1.05); }
-  .card .tagpill{ position:absolute; top:12px; left:12px; font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; padding:5px 9px; border-radius:2px; background:rgba(4,8,12,.7); border:1px solid var(--line); color:var(--cyan); backdrop-filter:blur(6px); }
+  .card .tagpill{ position:absolute; top:12px; left:12px; font-family:var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; padding:5px 9px; border-radius:2px; background:rgba(4,8,12,.7); border:1px solid var(--line); color:var(--cyan); backdrop-filter:blur(6px); pointer-events:none; }
   .card .body{ padding:20px 20px 22px; display:flex; flex-direction:column; gap:10px; flex:1; }
   .card .body h3{ font-family:var(--display); font-weight:600; font-size:22px; margin:0; color:#fff; }
   .card.feature .body h3{ font-size:27px; }
@@ -130,6 +130,36 @@
   .img-placeholder span {
     font-family:var(--mono); font-size:10px; letter-spacing:.14em;
     text-transform:uppercase; opacity:.6;
+  }
+
+  /* ---- Lightbox overlay ---- */
+  #lightbox {
+    display:none; position:fixed; inset:0; z-index:9999;
+    background:rgba(0,0,0,.88); backdrop-filter:blur(8px);
+    align-items:center; justify-content:center; flex-direction:column; gap:20px;
+  }
+  #lightbox.open { display:flex; }
+  #lightbox img {
+    max-width:90vw; max-height:78vh; object-fit:contain;
+    border-radius:4px; box-shadow:0 8px 40px rgba(0,0,0,.6);
+  }
+  #lightbox .lightbox-close {
+    position:absolute; top:18px; right:22px;
+    background:none; border:none; color:#fff; font-size:28px;
+    cursor:pointer; opacity:.7; transition:opacity .2s;
+    font-family:var(--mono); line-height:1; padding:8px;
+    z-index:10000;
+  }
+  #lightbox .lightbox-close:hover { opacity:1; }
+  #lightbox .lightbox-cta {
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--mono); font-size:13px; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--cyan); text-decoration:none;
+    padding:12px 24px; border:1px solid var(--cyan); border-radius:4px;
+    transition:background .2s, color .2s;
+  }
+  #lightbox .lightbox-cta:hover {
+    background:var(--cyan); color:#000;
   }
 </style>
 </head>
@@ -212,7 +242,7 @@
           </div>
           <div class="body">
             <h3>Archival poster</h3>
-            <p class="promise">A museum-grade print of your river network on archival paper — sizes up to 24×36. The piece people ask about.</p>
+            <p class="promise">A museum-grade print of your river network on archival paper — sizes up to 24x36. The piece people ask about.</p>
             <div class="fmts">PNG · PDF · TIFF · framed on request</div>
             <div class="foot">
               <div class="price"><em>from</em> <b>$110</b></div>
@@ -340,6 +370,13 @@
     </div>
   </footer>
 
+  <!-- Lightbox overlay -->
+  <div id="lightbox" role="dialog" aria-modal="true" aria-label="Image preview">
+    <button class="lightbox-close" aria-label="Close preview">&times;</button>
+    <img src="" alt="Full-size artwork preview" />
+    <a class="lightbox-cta" href="#">Start design <span>→</span></a>
+  </div>
+
   <script>
   function imgFallback(img) {
     img.style.display = "none";
@@ -348,6 +385,69 @@
     ph.innerHTML = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path d="M2 16l5-5 3 3 4-4 8 8"/></svg><span>Artwork preview unavailable</span>';
     img.parentElement.appendChild(ph);
   }
+  </script>
+
+  <!-- Lightbox logic -->
+  <script>
+  (function(){
+    var lightbox = document.getElementById("lightbox");
+    var lbImg = lightbox.querySelector("img");
+    var lbCta = lightbox.querySelector(".lightbox-cta");
+    var lbClose = lightbox.querySelector(".lightbox-close");
+
+    function openLightbox(imgSrc, ctaHref) {
+      lbImg.src = imgSrc;
+      lbCta.href = ctaHref;
+      lightbox.classList.add("open");
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove("open");
+      lbImg.src = "";
+    }
+
+    // Close on close button click.
+    lbClose.addEventListener("click", function(e) {
+      e.stopPropagation();
+      closeLightbox();
+    });
+
+    // Close on backdrop click (clicks on the overlay itself, not its children).
+    lightbox.addEventListener("click", function(e) {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    // Close on Escape key.
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape" && lightbox.classList.contains("open")) closeLightbox();
+    });
+
+    // Wire up each catalog card's .thumb to open the lightbox.
+    // .thumb has z-index:3 (above .cover's z-index:2) so it captures clicks directly.
+    var thumbs = document.querySelectorAll("#catalog-grid .card .thumb");
+    thumbs.forEach(function(thumb) {
+      thumb.addEventListener("click", function(e) {
+        var card = thumb.closest("article.card");
+        if (!card) return;
+
+        // If this card shows a placeholder (image failed to load), navigate normally.
+        if (thumb.querySelector(".img-placeholder")) {
+          var cover = card.querySelector("a.cover");
+          if (cover) window.location.href = cover.href;
+          return;
+        }
+
+        // Otherwise, open the lightbox with this card's image and order URL.
+        var img = thumb.querySelector("img");
+        var cover = card.querySelector("a.cover");
+        if (img && cover) {
+          e.preventDefault();
+          e.stopPropagation();
+          openLightbox(img.getAttribute("src"), cover.getAttribute("href"));
+        }
+      });
+    });
+  })();
   </script>
 
   <script>

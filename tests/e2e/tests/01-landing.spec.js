@@ -99,15 +99,103 @@ test.describe('Alpha landing (#95, #96)', () => {
     await expect(page.locator('.steps .step')).toHaveCount(3);
   });
 
+  // --- Lightbox tests (Group 3) ---
+
   for (const { card, page: dest } of CATALOG) {
-    test(`catalog "${card}" link navigates without JS errors`, async ({ page }) => {
+    test(`catalog "${card}" thumb click opens lightbox with image`, async ({ page }) => {
       const errors = trackErrors(page);
       await page.goto('/web/start.html', { waitUntil: 'load' });
-      // Find the card by its heading, then click the cover link in the same article.
       const article = page.locator('#catalog-grid article', { has: page.getByRole('heading', { name: card }) });
+      await article.scrollIntoViewIfNeeded();
+
+      // Click the thumb area — should open the lightbox, not navigate.
+      await article.locator('.thumb').click();
+      await expect(page.locator('#lightbox')).toBeVisible();
+
+      // The lightbox image src should match the card's thumb image src.
+      const cardImgSrc = await article.locator('.thumb img').getAttribute('src');
+      const lightboxImgSrc = await page.locator('#lightbox img').getAttribute('src');
+      expect(lightboxImgSrc).toBe(cardImgSrc);
+
+      expect(errors, errors.join('\n')).toEqual([]);
+    });
+  }
+
+  test('lightbox CTA href matches the card order URL', async ({ page }) => {
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+    for (const { card, page: dest } of CATALOG) {
+      const article = page.locator('#catalog-grid article', { has: page.getByRole('heading', { name: card }) });
+      await article.scrollIntoViewIfNeeded();
+      await article.locator('.thumb').click();
+      await expect(page.locator('#lightbox')).toBeVisible();
+
+      // The CTA link in the lightbox should resolve to the card's order page.
+      const ctaHref = await page.locator('#lightbox a.lightbox-cta').getAttribute('href');
+      const coverHref = await article.locator('a.cover').getAttribute('href');
+      expect(ctaHref).toBe(coverHref);
+
+      // Close lightbox before testing the next card.
+      await page.keyboard.press('Escape');
+      await expect(page.locator('#lightbox')).not.toBeVisible();
+    }
+  });
+
+  test('lightbox closes on Escape keypress', async ({ page }) => {
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+    const article = page.locator('#catalog-grid article').first();
+    await article.scrollIntoViewIfNeeded();
+    await article.locator('.thumb').click();
+    await expect(page.locator('#lightbox')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#lightbox')).not.toBeVisible();
+  });
+
+  test('lightbox closes on backdrop click', async ({ page }) => {
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+    const article = page.locator('#catalog-grid article').first();
+    await article.scrollIntoViewIfNeeded();
+    await article.locator('.thumb').click();
+    await expect(page.locator('#lightbox')).toBeVisible();
+
+    // Click the backdrop (top-left corner of the overlay, away from the image).
+    await page.locator('#lightbox').click({ position: { x: 5, y: 5 } });
+    await expect(page.locator('#lightbox')).not.toBeVisible();
+  });
+
+  test('placeholder cards navigate directly without lightbox', async ({ page }) => {
+    // Force all images to 404 so every card shows a placeholder.
+    await page.route('**/output/**', (route) => route.fulfill({ status: 404 }));
+    await page.goto('/web/start.html', { waitUntil: 'load' });
+
+    const { card, page: dest } = CATALOG[0];
+    const article = page.locator('#catalog-grid article', { has: page.getByRole('heading', { name: card }) });
+    await article.scrollIntoViewIfNeeded();
+    await expect(article.locator('.img-placeholder')).toBeVisible();
+
+    // Clicking the thumb area on a placeholder card should navigate, not open lightbox.
+    await Promise.all([
+      page.waitForURL(`**${dest.replace(/\?.*/, '')}*`),
+      article.locator('.thumb').click(),
+    ]);
+    // Lightbox should NOT be visible (we navigated away).
+    // If we got here, waitForURL succeeded — the card navigated as expected.
+  });
+
+  // The cover link still exists and navigates when clicked in the body area.
+  // .thumb (z-index:3) intercepts clicks in the image region for the lightbox,
+  // but .cover (z-index:2) still handles clicks in the body region below.
+  for (const { card, page: dest } of CATALOG) {
+    test(`catalog "${card}" cover link navigates without JS errors`, async ({ page }) => {
+      const errors = trackErrors(page);
+      await page.goto('/web/start.html', { waitUntil: 'load' });
+      const article = page.locator('#catalog-grid article', { has: page.getByRole('heading', { name: card }) });
+      await article.scrollIntoViewIfNeeded();
+      // Click the cover link's lower region (body area) where .thumb doesn't intercept.
+      // Use the card's heading as a reliable click target in the body zone.
       await Promise.all([
         page.waitForURL(`**${dest.replace(/\?.*/, '')}*`),
-        article.locator('a.cover').click(),
+        article.getByRole('heading', { name: card }).click({ force: true }),
       ]);
       await page.waitForLoadState('load');
       expect(errors, errors.join('\n')).toEqual([]);
