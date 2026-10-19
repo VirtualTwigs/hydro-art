@@ -180,3 +180,47 @@ def test_cli_elevation_source_and_cache_policy(tmp_path):
     assert settings.elevation.enabled is True
     assert settings.elevation.source == "3dep"
     assert settings.elevation.cache_policy == "reuse"
+
+
+# --- Symbol key CLI flags ----------------------------------------------------
+
+def test_cli_symbol_key_enabled(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings(["--config", path, "--symbol-key"])
+    assert settings.symbol_key.enabled is True
+
+
+def test_cli_no_symbol_key_disables(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\nsymbol_key:\n  enabled: true\n")
+    settings = resolve_settings(["--config", path, "--no-symbol-key"])
+    assert settings.symbol_key.enabled is False
+
+
+def test_cli_symbol_key_absent_keeps_yaml(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\nsymbol_key:\n  enabled: true\n  position: top-left\n")
+    settings = resolve_settings(["--config", path])
+    assert settings.symbol_key.enabled is True
+    assert settings.symbol_key.position == "top-left"
+
+
+# --- Hydro-structure CLI flags -----------------------------------------------
+
+def test_cli_hydro_structures_enabled(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings(["--config", path, "--hydro-structures"])
+    assert settings.hydro_structures.enabled is True
+
+
+def test_cli_no_hydro_structures_disables(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\nhydro_structures:\n  enabled: true\n")
+    settings = resolve_settings(["--config", path, "--no-hydro-structures"])
+    assert settings.hydro_structures.enabled is False
+
+
+def test_cli_hydro_structure_preset(tmp_path):
+    path = _write(tmp_path, "region:\n  - Oregon\n")
+    settings = resolve_settings([
+        "--config", path, "--hydro-structures",
+        "--hydro-structure-preset", "print-state",
+    ])
+    assert settings.hydro_structures.enabled is True

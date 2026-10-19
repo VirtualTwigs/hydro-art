@@ -681,3 +681,65 @@ class TestBuildSettingsMoreEdgeCases:
     def test_empty_output_list_raises(self):
         with pytest.raises(ConfigError, match="output"):
             build_settings({**DEFAULTS, "output": []})
+
+
+# --- SymbolKeySettings coverage ----------------------------------------------
+
+class TestSymbolKeySettings:
+    def test_defaults(self):
+        s = build_settings(DEFAULTS)
+        assert s.symbol_key.enabled is False
+        assert s.symbol_key.position == "bottom-right"
+        assert s.symbol_key.background == "rgba(0,0,0,0.7)"
+        assert s.symbol_key.font_size == 12
+
+    def test_enabled(self):
+        s = build_settings({**DEFAULTS, "symbol_key": {"enabled": True}})
+        assert s.symbol_key.enabled is True
+        assert s.symbol_key.position == "bottom-right"
+
+    def test_custom_position(self):
+        s = build_settings({**DEFAULTS, "symbol_key": {
+            "enabled": True, "position": "top-left",
+        }})
+        assert s.symbol_key.position == "top-left"
+
+    def test_all_valid_positions(self):
+        for pos in ("top-left", "top-right", "bottom-left", "bottom-right"):
+            s = build_settings({**DEFAULTS, "symbol_key": {"position": pos}})
+            assert s.symbol_key.position == pos
+
+    def test_invalid_position_raises(self):
+        with pytest.raises(ConfigError, match="position"):
+            build_settings({**DEFAULTS, "symbol_key": {"position": "center"}})
+
+    def test_font_size_minimum(self):
+        with pytest.raises(ConfigError, match="font_size"):
+            build_settings({**DEFAULTS, "symbol_key": {"font_size": 0}})
+
+    def test_font_size_negative_raises(self):
+        with pytest.raises(ConfigError, match="font_size"):
+            build_settings({**DEFAULTS, "symbol_key": {"font_size": -5}})
+
+    def test_custom_font_size(self):
+        s = build_settings({**DEFAULTS, "symbol_key": {"font_size": 24}})
+        assert s.symbol_key.font_size == 24
+
+    def test_custom_background(self):
+        s = build_settings({**DEFAULTS, "symbol_key": {"background": "#000"}})
+        assert s.symbol_key.background == "#000"
+
+    def test_non_mapping_raises(self):
+        with pytest.raises(ConfigError, match="symbol_key"):
+            build_settings({**DEFAULTS, "symbol_key": "on"})
+
+    def test_none_uses_defaults(self):
+        s = build_settings({**DEFAULTS, "symbol_key": None})
+        assert s.symbol_key.enabled is False
+        assert s.symbol_key.position == "bottom-right"
+
+    def test_partial_mapping_fills_defaults(self):
+        s = build_settings({**DEFAULTS, "symbol_key": {"font_size": 18}})
+        assert s.symbol_key.font_size == 18
+        assert s.symbol_key.enabled is False
+        assert s.symbol_key.position == "bottom-right"

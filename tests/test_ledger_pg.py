@@ -136,9 +136,10 @@ class TestPgLazyImport:
 
 class TestCreateRequest:
     def test_insert_uses_parameterized_query(self):
-        # create_request does: INSERT requests, INSERT events, commit,
-        # then self.get() -> SELECT requests, SELECT events
+        # create_request does: SELECT COUNT (seq), INSERT requests,
+        # INSERT events, commit, then self.get() -> SELECT requests, SELECT events
         cursor = FakeCursor(result_sets=[
+            [(0,)],       # SELECT COUNT (sequence generation)
             [],           # INSERT requests
             [],           # INSERT events
             [_REQ_ROW],   # SELECT requests (from get())
@@ -165,13 +166,17 @@ class TestCreateRequest:
 
     def test_create_request_commits(self):
         cursor = FakeCursor(result_sets=[
-            [], [], [_REQ_ROW], [],
+            [(0,)], [], [], [_REQ_ROW], [],
         ])
         repo, conn = _make_repo(cursor=cursor)
         payload = {
             "email": "test@example.com",
             "product": "neon-basin 18x24",
-            "order_id": "REQ-20260901-0001",
+            "region": "Washington",
+            "county": "Clark",
+            "style": "neon-basin",
+            "size": "18x24",
+            "formats": ["png"],
         }
         repo.create_request(payload)
         assert conn.committed
@@ -346,3 +351,60 @@ class TestNoStringInterpolation:
                 assert "f'" not in line and 'f"' not in line, (
                     f"Line {i} uses f-string with SQL: {line.strip()}"
                 )
+
+
+# --- Report-product coverage -------------------------------------------------
+
+class TestReportProductPg:
+    def test_report_product_stores_region_only_dict(self):
+        """watershed-report skips build_order, stores region/county/format/basin."""
+        report_row = (
+            "REQ-20260901-0001", "buyer@example.com", "watershed-report",
+            "submitted", None, '{"order_id":"REQ-20260901-0001","region":"Oregon","county":"","format":"pdf","title":null,"basin":"1710"}',
+            "2026-09-01T00:00:00Z", "2026-09-01T00:00:00Z",
+        )
+        cursor = FakeCursor(result_sets=[
+            [(0,)],           # SELECT COUNT (seq)
+            [],               # INSERT requests
+            [],               # INSERT events
+            [report_row],     # SELECT requests (from get())
+            [],               # SELECT events (from get())
+        ])
+        repo, conn = _make_repo(cursor=cursor)
+        req = repo.create_request({
+            "email": "buyer@example.com",
+            "product": "watershed-report",
+            "region": "Oregon",
+            "format": "pdf",
+            "basin": "1710",
+        })
+        assert req.product == "watershed-report"
+        assert req.order["region"] == "Oregon"
+        assert req.order["basin"] == "1710"
+        assert conn.committed
+
+    def test_report_product_missing_region_raises(self):
+        cursor = FakeCursor(result_sets=[[(0,)]])
+        repo, _ = _make_repo(cursor=cursor)
+        with pytest.raises(OrderError, match="region"):
+            repo.create_request({
+                "email": "buyer@example.com",
+                "product": "watershed-report",
+            })
+
+
+class TestValidationPg:
+    def test_missing_email_raises(self):
+        repo, _ = _make_repo()
+        with pytest.raises(OrderError, match="email"):
+            repo.create_request({"product": "neon-basin 18x24", "region": "WA"})
+
+    def test_missing_product_raises(self):
+        repo, _ = _make_repo()
+        with pytest.raises(OrderError, match="product"):
+            repo.create_request({"email": "x@example.com", "region": "WA"})
+
+    def test_empty_email_raises(self):
+        repo, _ = _make_repo()
+        with pytest.raises(OrderError, match="email"):
+            repo.create_request({"email": "  ", "product": "x", "region": "WA"})

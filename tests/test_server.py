@@ -1360,3 +1360,109 @@ def test_serve_default_base_url_uses_port(tmp_path):
         )
 
     assert captured.get("base_url") == "http://localhost:9876"
+
+
+# --- Report-product fast-track (watershed-report) ----------------------------
+
+def _report_payload(**overrides):
+    base = {
+        "email": "buyer@example.com",
+        "product": "watershed-report",
+        "region": "Washington",
+        "county": "Clark",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_post_report_order_returns_201_with_proof_url(tmp_path):
+    """POST /api/orders with product=watershed-report fast-tracks to 201."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    runner = FakeRunner()
+    payload = json.dumps(_report_payload()).encode()
+    resp = handle_request(
+        runner, "POST", "/api/orders", payload,
+        web_root=str(tmp_path), order_store=store,
+        base_url="https://art.example.com", proof_secret=b"test-secret",
+    )
+    assert resp.status == 201
+    data = json.loads(resp.body)
+    assert data["request_id"].startswith("REQ-")
+    assert data["status"] == "proof_ready"
+    assert "proof_url" in data
+    assert data["proof_url"].startswith("https://art.example.com/proof.html?token=")
+
+
+def test_post_report_order_sends_confirmation_email(tmp_path):
+    """Report-product orders still send confirmation email."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    sender = FakeEmailSender()
+    payload = json.dumps(_report_payload()).encode()
+    resp = handle_request(
+        FakeRunner(), "POST", "/api/orders", payload,
+        web_root=str(tmp_path), order_store=store,
+        email_sender=sender, proof_secret=b"s",
+    )
+    data = json.loads(resp.body)
+    assert data["confirmation_email_sent"] is True
+    assert len(sender.sent) == 1
+
+
+def test_post_report_order_uses_default_base_url(tmp_path):
+    """When base_url is None, proof_url falls back to localhost."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps(_report_payload()).encode()
+    resp = handle_request(
+        FakeRunner(), "POST", "/api/orders", payload,
+        web_root=str(tmp_path), order_store=store,
+    )
+    data = json.loads(resp.body)
+    assert data["proof_url"].startswith("http://localhost:8765/proof.html?token=")
+
+
+def test_post_report_order_skips_runner(tmp_path):
+    """Report products should not submit a render job."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    runner = FakeRunner()
+    payload = json.dumps(_report_payload()).encode()
+    handle_request(
+        runner, "POST", "/api/orders", payload,
+        web_root=str(tmp_path), order_store=store,
+    )
+    assert runner.submitted is None
+
+
+def test_post_report_order_missing_region_returns_400(tmp_path):
+    """Report product without region is rejected."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps(_report_payload(region="")).encode()
+    resp = handle_request(
+        FakeRunner(), "POST", "/api/orders", payload,
+        web_root=str(tmp_path), order_store=store,
+    )
+    assert resp.status == 400
+
+
+def test_post_report_order_stores_basin(tmp_path):
+    """Report product with basin stores it in the order dict."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    payload = json.dumps(_report_payload(basin="0207")).encode()
+    resp = handle_request(
+        FakeRunner(), "POST", "/api/orders", payload,
+        web_root=str(tmp_path), order_store=store,
+    )
+    data = json.loads(resp.body)
+    req = store.get(data["request_id"])
+    assert req.order["basin"] == "0207"

@@ -406,3 +406,81 @@ def test_list_all_skips_corrupt_json(tmp_path):
     ids = [r.request_id for r in requests]
     assert req.request_id in ids
     assert "REQ-CORRUPT-0001" not in ids
+
+
+# --- Report-product (watershed-report) coverage ------------------------------
+
+class TestReportProduct:
+    def test_report_products_constant(self):
+        from src.orders import REPORT_PRODUCTS
+        assert "watershed-report" in REPORT_PRODUCTS
+
+    def test_create_report_request_skips_build_order(self, tmp_path):
+        """Report products store region/county/format/basin directly."""
+        store = OrderStore(tmp_path / "orders")
+        req = store.create_request({
+            "email": "buyer@example.com",
+            "product": "watershed-report",
+            "region": "Oregon",
+            "county": "Lane",
+            "format": "pdf",
+            "basin": "1710",
+        })
+        assert req.status == "submitted"
+        assert req.order["region"] == "Oregon"
+        assert req.order["county"] == "Lane"
+        assert req.order["format"] == "pdf"
+        assert req.order["basin"] == "1710"
+
+    def test_report_request_requires_region(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        with pytest.raises(OrderError, match="region"):
+            store.create_request({
+                "email": "buyer@example.com",
+                "product": "watershed-report",
+            })
+
+    def test_report_request_region_whitespace_only_rejected(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        with pytest.raises(OrderError, match="region"):
+            store.create_request({
+                "email": "buyer@example.com",
+                "product": "watershed-report",
+                "region": "   ",
+            })
+
+    def test_report_request_optional_fields_default(self, tmp_path):
+        """Title and basin default to None when absent."""
+        store = OrderStore(tmp_path / "orders")
+        req = store.create_request({
+            "email": "buyer@example.com",
+            "product": "watershed-report",
+            "region": "Oregon",
+        })
+        assert req.order["title"] is None
+        assert req.order["basin"] is None
+        assert req.order["format"] == "digital"
+
+    def test_accepted_to_proof_ready_transition(self, tmp_path):
+        """The accepted → proof_ready direct transition works."""
+        store = OrderStore(tmp_path / "orders")
+        req = store.create_request(_valid_payload())
+        store.update_status(req.request_id, "accepted")
+        updated = store.update_status(req.request_id, "proof_ready")
+        assert updated.status == "proof_ready"
+
+    def test_email_required(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        with pytest.raises(OrderError, match="email"):
+            store.create_request({
+                "product": "watershed-report",
+                "region": "Oregon",
+            })
+
+    def test_product_required(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        with pytest.raises(OrderError, match="product"):
+            store.create_request({
+                "email": "buyer@example.com",
+                "region": "Oregon",
+            })
