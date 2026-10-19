@@ -1466,3 +1466,68 @@ def test_post_report_order_stores_basin(tmp_path):
     data = json.loads(resp.body)
     req = store.get(data["request_id"])
     assert req.order["basin"] == "0207"
+
+
+# --- GET /api/orders?email= filtering ----------------------------------------
+
+def test_get_orders_filtered_by_email(tmp_path):
+    """GET /api/orders?email=alice@example.com returns only that user's orders."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    store.create_request(_order_payload(email="alice@example.com"))
+    store.create_request(_order_payload(email="bob@example.com"))
+    store.create_request(_order_payload(email="alice@example.com"))
+
+    resp = handle_request(
+        FakeRunner(), "GET", "/api/orders?email=alice@example.com", b"",
+        web_root=str(tmp_path), order_store=store,
+    )
+    assert resp.status == 200
+    data = json.loads(resp.body)
+    assert len(data["orders"]) == 2
+    assert all(o["email"] == "alice@example.com" for o in data["orders"])
+
+
+def test_get_orders_email_filter_case_insensitive(tmp_path):
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    store.create_request(_order_payload(email="Alice@Example.COM"))
+
+    resp = handle_request(
+        FakeRunner(), "GET", "/api/orders?email=alice@example.com", b"",
+        web_root=str(tmp_path), order_store=store,
+    )
+    assert resp.status == 200
+    assert len(json.loads(resp.body)["orders"]) == 1
+
+
+def test_get_orders_email_filter_url_encoded(tmp_path):
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    store.create_request(_order_payload(email="a+b@example.com"))
+
+    resp = handle_request(
+        FakeRunner(), "GET", "/api/orders?email=a%2Bb@example.com", b"",
+        web_root=str(tmp_path), order_store=store,
+    )
+    assert resp.status == 200
+    assert len(json.loads(resp.body)["orders"]) == 1
+
+
+def test_get_orders_no_email_returns_all(tmp_path):
+    """GET /api/orders without email param still returns everything."""
+    from src.orders import OrderStore
+
+    store = OrderStore(tmp_path / "orders")
+    store.create_request(_order_payload(email="alice@example.com"))
+    store.create_request(_order_payload(email="bob@example.com"))
+
+    resp = handle_request(
+        FakeRunner(), "GET", "/api/orders", b"",
+        web_root=str(tmp_path), order_store=store,
+    )
+    assert resp.status == 200
+    assert len(json.loads(resp.body)["orders"]) == 2

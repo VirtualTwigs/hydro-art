@@ -484,3 +484,58 @@ class TestReportProduct:
                 "email": "buyer@example.com",
                 "region": "Oregon",
             })
+
+
+# --- list_by_email coverage --------------------------------------------------
+
+class TestListByEmail:
+    def test_filters_by_email(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        store.create_request(_valid_payload(email="alice@example.com"))
+        store.create_request(_valid_payload(email="bob@example.com"))
+        store.create_request(_valid_payload(email="alice@example.com", county="King"))
+
+        results = store.list_by_email("alice@example.com")
+        assert len(results) == 2
+        assert all(r.email == "alice@example.com" for r in results)
+
+    def test_case_insensitive(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        store.create_request(_valid_payload(email="Alice@Example.COM"))
+
+        results = store.list_by_email("alice@example.com")
+        assert len(results) == 1
+
+    def test_returns_empty_for_unknown_email(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        store.create_request(_valid_payload(email="alice@example.com"))
+
+        results = store.list_by_email("nobody@example.com")
+        assert results == []
+
+    def test_returns_empty_when_no_orders(self, tmp_path):
+        store = OrderStore(tmp_path / "orders")
+        assert store.list_by_email("anyone@example.com") == []
+
+
+# --- accepted → proof_ready transition (report fast-track) --------------------
+
+class TestAcceptedToProofReadyTransition:
+    def test_transition_constant_includes_proof_ready(self):
+        assert "proof_ready" in TRANSITIONS["accepted"]
+
+    def test_accepted_to_proof_ready_lifecycle(self, tmp_path):
+        """Walk the report fast-track: submitted → accepted → proof_ready → approved → fulfilled."""
+        store = OrderStore(tmp_path / "orders")
+        req = store.create_request(_valid_payload())
+        for status in ("accepted", "proof_ready", "approved", "fulfilled"):
+            req = store.update_status(req.request_id, status)
+        assert req.status == "fulfilled"
+
+    def test_accepted_to_rendering_still_works(self, tmp_path):
+        """The original accepted → rendering path is preserved."""
+        store = OrderStore(tmp_path / "orders")
+        req = store.create_request(_valid_payload())
+        store.update_status(req.request_id, "accepted")
+        updated = store.update_status(req.request_id, "rendering")
+        assert updated.status == "rendering"

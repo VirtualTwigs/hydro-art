@@ -408,3 +408,85 @@ class TestValidationPg:
         repo, _ = _make_repo()
         with pytest.raises(OrderError, match="email"):
             repo.create_request({"email": "  ", "product": "x", "region": "WA"})
+
+
+class TestAutoIdSequencing:
+    """Verify the REQ-YYYYMMDD-NNNN auto-ID generation logic."""
+
+    def test_first_request_gets_seq_0001(self):
+        cursor = FakeCursor(result_sets=[
+            [(0,)],       # SELECT COUNT → 0 existing today
+            [],           # INSERT requests
+            [],           # INSERT events
+            [_REQ_ROW],   # get() → SELECT requests
+            [],           # get() → SELECT events
+        ])
+        repo, _ = _make_repo(cursor=cursor)
+        repo.create_request({
+            "email": "test@example.com",
+            "product": "neon-basin 18x24",
+            "region": "Washington",
+            "county": "Clark",
+            "style": "neon-basin",
+            "size": "18x24",
+            "formats": ["png"],
+        })
+        # The INSERT should use a request_id ending in -0001.
+        insert_calls = [
+            (sql, params) for sql, params in cursor.executed
+            if "INSERT INTO requests" in sql
+        ]
+        assert len(insert_calls) == 1
+        req_id = insert_calls[0][1][0]  # first param = request_id
+        assert req_id.endswith("-0001")
+
+    def test_second_request_gets_seq_0002(self):
+        cursor = FakeCursor(result_sets=[
+            [(1,)],       # SELECT COUNT → 1 existing today
+            [],           # INSERT requests
+            [],           # INSERT events
+            [_REQ_ROW],   # get() → SELECT requests
+            [],           # get() → SELECT events
+        ])
+        repo, _ = _make_repo(cursor=cursor)
+        repo.create_request({
+            "email": "test@example.com",
+            "product": "neon-basin 18x24",
+            "region": "Washington",
+            "county": "Clark",
+            "style": "neon-basin",
+            "size": "18x24",
+            "formats": ["png"],
+        })
+        insert_calls = [
+            (sql, params) for sql, params in cursor.executed
+            if "INSERT INTO requests" in sql
+        ]
+        req_id = insert_calls[0][1][0]
+        assert req_id.endswith("-0002")
+
+    def test_id_uses_like_pattern_for_date(self):
+        """The COUNT query uses a LIKE pattern scoped to today's date prefix."""
+        import time
+
+        cursor = FakeCursor(result_sets=[
+            [(0,)], [], [], [_REQ_ROW], [],
+        ])
+        repo, _ = _make_repo(cursor=cursor)
+        repo.create_request({
+            "email": "test@example.com",
+            "product": "neon-basin 18x24",
+            "region": "Washington",
+            "county": "Clark",
+            "style": "neon-basin",
+            "size": "18x24",
+            "formats": ["png"],
+        })
+        count_calls = [
+            (sql, params) for sql, params in cursor.executed
+            if "SELECT COUNT" in sql
+        ]
+        assert len(count_calls) == 1
+        sql, params = count_calls[0]
+        date_str = time.strftime("%Y%m%d", time.gmtime())
+        assert params == (f"REQ-{date_str}-%",)
