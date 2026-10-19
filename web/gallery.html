@@ -221,14 +221,19 @@
         var thumb = document.createElement("div");
         thumb.className = "thumb";
 
-        var img = document.createElement("img");
-        img.src = entry.thumbnail
-          ? entry.thumbnail
-          : "/output/gallery/" + entry.entry_id + "/" + entry.entry_id + ".png";
-        img.alt = entry.title;
-        img.loading = "lazy";
-        img.onerror = function () { galleryImgFallback(this); };
-        thumb.appendChild(img);
+        if (entry.thumbnail) {
+          var img = document.createElement("img");
+          img.src = entry.thumbnail;
+          img.alt = entry.title;
+          img.loading = "lazy";
+          img.onerror = function () { galleryImgFallback(this); };
+          thumb.appendChild(img);
+        } else {
+          var ph = document.createElement("div");
+          ph.className = "no-preview";
+          ph.textContent = "Preview coming soon";
+          thumb.appendChild(ph);
+        }
 
         card.appendChild(thumb);
 
